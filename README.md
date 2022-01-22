@@ -9,6 +9,7 @@
 * Display Home Assistant dashboards on a beautiful e-ink display
 * Display WiFi QR Codes for guests/friends to connect to home/guest wifi
 * Can display messages directly from Home Assistant over MQTT
+* Makes full use of the ESP32's cores with [FreeRTOS](https://www.freertos.org/)
 * Reports sensor data to Home Assistant over MQTT (Temperature, Battery, WiFi, etc..)
 * Can change Activity displayed via MQTT Command (HASS dashboard, WiFi QR, Stats, text message, etc..)
 * Syncs RTC over NTP
