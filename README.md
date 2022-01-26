@@ -4,6 +4,8 @@
 
 ![homeplate](https://user-images.githubusercontent.com/164192/150657050-d919b70e-d3a0-42e3-a842-9d7684b0dcc7.jpeg)
 
+## [Activities Screenshots](activities.md)
+
 ## Features
 
 * Display Home Assistant dashboards on a beautiful e-ink display
@@ -28,11 +30,17 @@
 
 ## Setup
 
+### Hardware
+
+See [hardware.md](hardware.md)
+
 ### Home Assistant Dashboard
 
 Create a Home Assistant Dashboard you want to display. I recommend using the [kiosk-mode](https://github.com/maykar/kiosk-mode), [card-mod](https://github.com/thomasloven/lovelace-card-mod) and [layout-card](https://github.com/thomasloven/lovelace-layout-card) plugins to customize and tune the dashboard for your display.
 
 Setup [sibbl](https://github.com/sibbl/)'s [hass-lovelace-kindle-screensaver](https://github.com/sibbl/hass-lovelace-kindle-screensaver) program to regularly screenshot the desired dashboards for the HomePlate.
+
+More information in [hass.md](hass.md).
 
 ### Inkplate
 
