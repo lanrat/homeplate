@@ -412,6 +412,9 @@ void startMQTTTask()
 
   mqttClient.setClientId(HOSTNAME);
   mqttClient.setServer(MQTT_HOST, MQTT_PORT);
+  #ifdef MQTT_USER
+  mqttClient.setCredentials(MQTT_USER, MQTT_PASSWORD);
+  # endif
 
   xTaskCreate(
       connectToMqtt,      /* Task function. */
