@@ -98,7 +98,7 @@ void mqttSendBatteryStatus()
   voltage = display.readBattery();
   i2cEnd();
 
-  voltage = roundf(voltage * 100) / 100; // rounds to 2 decimal places
+  voltage = round(voltage * 100) / 100; // rounds to 2 decimal places
 
   int percent = getBatteryPercent(voltage);
 
@@ -155,6 +155,7 @@ void sendHAConfig()
   doc.clear();
   doc["unique_id"] = "homeplate_wifi_signal";
   doc["device_class"] = "signal_strength";
+  doc["state_class"] = "measurement";
   doc["name"] = "HomePlate WiFi Signal";
   doc["state_topic"] = "homeassistant/sensor/homeplate/homeplate_wifi/state";
   doc["unit_of_measurement"] = "dBm";
@@ -166,6 +167,7 @@ void sendHAConfig()
   doc.clear();
   doc["unique_id"] = "homeplate_temperature";
   doc["device_class"] = "temperature";
+  doc["state_class"] = "measurement";
   doc["name"] = "HomePlate Temperature";
   doc["state_topic"] = "homeassistant/sensor/homeplate/temperature/state";
   doc["unit_of_measurement"] = "°C";
@@ -177,6 +179,7 @@ void sendHAConfig()
   doc.clear();
   doc["unique_id"] = "homeplate_voltage";
   doc["device_class"] = "voltage";
+  doc["state_class"] = "measurement";
   doc["name"] = "HomePlate Voltage";
   doc["state_topic"] = "homeassistant/sensor/homeplate/battery/state";
   doc["unit_of_measurement"] = "V";
@@ -186,6 +189,7 @@ void sendHAConfig()
   doc.clear();
   doc["unique_id"] = "homeplate_battery";
   doc["device_class"] = "battery";
+  doc["state_class"] = "measurement";
   doc["name"] = "HomePlate Battery";
   doc["state_topic"] = "homeassistant/sensor/homeplate/battery/state";
   doc["unit_of_measurement"] = "%";
@@ -196,6 +200,7 @@ void sendHAConfig()
   // boot
   doc.clear();
   doc["unique_id"] = "homeplate_boot";
+  doc["state_class"] = "total_increasing";
   doc["name"] = "HomePlate Boot Count";
   doc["state_topic"] = "homeassistant/sensor/homeplate/boot/state";
   doc["unit_of_measurement"] = "boot";
@@ -226,6 +231,7 @@ void sendHAConfig()
   // activityCount
   doc.clear();
   doc["unique_id"] = "homeplate_activity_count";
+  doc["state_class"] = "total_increasing";
   doc["name"] = "HomePlate Activity Count";
   doc["state_topic"] = "homeassistant/sensor/homeplate/boot/state";
   doc["unit_of_measurement"] = "activities";
