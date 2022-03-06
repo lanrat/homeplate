@@ -5,7 +5,7 @@
 uint getBatteryPercent(double voltage)
 {
     static const double voltage_low = 3.35; // 2.5;
-    static const double voltage_high = 4.3; // 3.7;
+    static const double voltage_high = 4.7; // 3.7;
     uint percentage = ((voltage - voltage_low) * 100.0) / (voltage_high - voltage_low);
     if (percentage > 100)
         percentage = 100;
