@@ -29,10 +29,10 @@ extern uint bootCount, activityCount;
 
 #define VERSION __DATE__ ", " __TIME__
 
-// TODO verify
-#define MIN_BATTERY_VOLTAGE 3.2
-
-#define LOW_BATTERY_WARNING_PERCENT 20
+#define BATTERY_VOLTAGE_HIGH 4.7
+#define BATTERY_VOLTAGE_LOW 3.6
+#define BATTERY_VOLTAGE_WARNING_SLEEP 3.55
+#define BATTERY_PERCENT_WARNING 20
 
 // Image "colors" (3bit mode)
 #define C_BLACK 0

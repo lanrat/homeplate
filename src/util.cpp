@@ -4,9 +4,7 @@
 
 uint getBatteryPercent(double voltage)
 {
-    static const double voltage_low = 3.35; // 2.5;
-    static const double voltage_high = 4.7; // 3.7;
-    uint percentage = ((voltage - voltage_low) * 100.0) / (voltage_high - voltage_low);
+    uint percentage = ((voltage - BATTERY_VOLTAGE_LOW) * 100.0) / (BATTERY_VOLTAGE_HIGH - BATTERY_VOLTAGE_LOW);
     if (percentage > 100)
         percentage = 100;
     if (percentage < 0)
@@ -83,9 +81,9 @@ void lowBatteryCheck()
     i2cEnd();
 
     // if voltage was < 1, it was a bad reading.
-    if (voltage > 1 && voltage <= MIN_BATTERY_VOLTAGE)
+    if (voltage > 1 && voltage <= BATTERY_VOLTAGE_WARNING_SLEEP)
     {
-        Serial.printf("[MAIN] voltage %.2f <= min %.2f, powering down\n", voltage, MIN_BATTERY_VOLTAGE);
+        Serial.printf("[MAIN] voltage %.2f <= min %.2f, powering down\n", voltage, BATTERY_VOLTAGE_WARNING_SLEEP);
         displayStatusMessage("Low Battery");
         // TODO mqtt send low battery sleep notification
         setSleepDuration(0xFFFFFFFF);
@@ -126,7 +124,7 @@ void displayBatteryWarning()
     double voltage = display.readBattery();
     int percent = getBatteryPercent(voltage);
 
-    if (percent > LOW_BATTERY_WARNING_PERCENT)
+    if (percent > BATTERY_PERCENT_WARNING)
     {
         i2cEnd();
         return;
