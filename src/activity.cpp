@@ -55,6 +55,7 @@ void runActivities(void *params)
 {
     while (true)
     {
+        //Serial.println("[ACTIVITY][DEBUG] runActivities loop...\n");
         printDebugStackSpace();
         waitForOTA(); // block if an OTA is running
         if (xQueueReceive(activityQueue, &activityNext, portMAX_DELAY) != pdTRUE)
@@ -65,6 +66,7 @@ void runActivities(void *params)
         }
         waitForOTA();
         resetActivity = false;
+        //Serial.println("[ACTIVITY][DEBUG] runActivities ready...\n");
 
         if (activityNext != NONE)
             delaySleep(10); // bump the sleep timer a little for any ongoing activity

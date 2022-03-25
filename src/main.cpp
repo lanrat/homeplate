@@ -119,6 +119,7 @@ void setup()
 void loop()
 {
     // main loop runs at priority 1
+    //Serial.println("[MAIN][DEBUG] loop...\n");
     vTaskDelay(3 * SECOND/portTICK_PERIOD_MS);
     lowBatteryCheck();
 }
