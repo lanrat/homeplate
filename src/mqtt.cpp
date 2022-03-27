@@ -267,6 +267,7 @@ void connectToMqtt(void *params)
 {
   while (true)
   {
+    printDebug("[MQTT] MQTT loop...");
     // if already connected, do nothing
     if (mqttClient.connected())
     {

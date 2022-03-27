@@ -58,6 +58,7 @@ void checkSleep(void *parameter)
 {
     while (true)
     {
+        printDebug("[SLEEP] sleep loop..");
         // check the sleep time 
         while (sleepTime > millis())
         {

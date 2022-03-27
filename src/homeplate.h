@@ -104,6 +104,7 @@ void printChipInfo();
 void lowBatteryCheck();
 void printDebugStackSpace();
 void displayBatteryWarning();
+void printDebug(const char * s);
 
 // message
 void setMessage(const char * m);

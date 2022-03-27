@@ -1,6 +1,7 @@
 #include "homeplate.h"
 
 #define DEBUG_STACK false
+#define DEBUG_PRINT false
 
 uint getBatteryPercent(double voltage)
 {
@@ -163,4 +164,10 @@ void displayBatteryWarning()
     display.partialUpdate(sleepBoot);
     displayEnd();
     i2cEnd();
+}
+
+void printDebug(const char * s) {
+    if (DEBUG_PRINT) {
+        Serial.printf("[DEBUG]%s\n", s);
+    }
 }

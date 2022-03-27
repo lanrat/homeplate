@@ -23,6 +23,7 @@ void ntpSync(void *parameter)
     NTPClient timeClient(ntpUDP, NTP_SERVER);
     while (true)
     {
+        printDebug("[TIME] loop...");
         waitForWiFi();
         Serial.println("[TIME] Syncing RTC to NTP");
         timeClient.begin();

@@ -45,9 +45,10 @@ void WiFiStationDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
 
 void keepWiFiAlive(void *parameter)
 {
+    printDebug("[WIFI] loop start...");
     while (true)
     {
-        //Serial.println("[WIFI][DEBUG] loop...\n");
+        printDebug("[WIFI] loop...");
         if (WiFi.status() == WL_CONNECTED)
         {
             vTaskDelay(10000 / portTICK_PERIOD_MS);
@@ -110,7 +111,7 @@ void wifiConnectTask()
     WiFi.onEvent(WiFiGotIP, SYSTEM_EVENT_STA_GOT_IP);
     WiFi.onEvent(WiFiStationDisconnected, SYSTEM_EVENT_STA_DISCONNECTED);
 
-    //Serial.println("[WIFI][DEBUG] starting...\n");
+    printDebug("[WIFI] starting...");
     xTaskCreatePinnedToCore(
         keepWiFiAlive,
         "WIFI_TASK",        // Task name

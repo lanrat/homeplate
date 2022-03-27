@@ -45,7 +45,7 @@ void checkButtons(void *params)
             vTaskDelay(250 / portTICK_PERIOD_MS);
             continue;
         }
-        //Serial.println("[INPUT][DEBUG] checking for buttons...\n");
+        printDebug("[INPUT] checking for buttons...");
         i2cStart();
         // check buttons
         if (TOUCHPAD_ENABLE)
