@@ -71,6 +71,7 @@ bool hassImage()
     i2cStart();
     displayStart();
     display.display();
+    sleep(1);
     displayEnd();
     i2cEnd();
     Serial.println("[IMAGE] displaying done.");
