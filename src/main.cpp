@@ -93,25 +93,25 @@ void setup()
         spiEnd();
     }
 
-    //Serial.println("[SETUP] starting button task");
+    Serial.println("[SETUP] starting button task");
     startMonitoringButtonsTask();
 
-    //Serial.println("[SETUP] starting time task");
+    Serial.println("[SETUP] starting time task");
     setupTimeAndSyncTask();
 
     Serial.println("[SETUP] starting WiFi task");
     wifiConnectTask();
 
-    //Serial.println("[SETUP] starting OTA task");
+    Serial.println("[SETUP] starting OTA task");
     startOTATask();
 
-    //Serial.println("[SETUP] starting MQTT task");
+    Serial.println("[SETUP] starting MQTT task");
     startMQTTTask();
 
-    //Serial.println("[SETUP] starting sleep task");
+    Serial.println("[SETUP] starting sleep task");
     sleepTask();
 
-    //Serial.println("[SETUP] starting activities task");
+    Serial.println("[SETUP] starting activities task");
     startActivitiesTask();
 }
 
