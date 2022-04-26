@@ -71,6 +71,8 @@ bool hassImage()
     i2cStart();
     displayStart();
     display.display();
+    // wait before releasing the i2c bus while the display settles. Helps prevent image fadeing
+    vTaskDelay(0.25 * SECOND/portTICK_PERIOD_MS);
     displayEnd();
     i2cEnd();
     Serial.println("[IMAGE] displaying done.");
