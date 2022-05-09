@@ -218,7 +218,7 @@ void sendHAConfig()
   doc["icon"] = "mdi:chart-line-variant";
   doc["value_template"] = "{{ value_json.boot }}";
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
-  doc["entity_category"] = "system";
+  doc["entity_category"] = "diagnostic";
   doc["enabled_by_default"] = false;
   serializeJson(doc, buff);
   mqttClient.publish("homeassistant/sensor/homeplate/boot/config", qos, retain, buff);
@@ -257,7 +257,7 @@ void sendHAConfig()
   doc["icon"] = "mdi:chart-line-variant";
   doc["value_template"] = "{{ value_json.activity_count }}";
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
-  doc["entity_category"] = "system";
+  doc["entity_category"] = "diagnostic";
   doc["enabled_by_default"] = false;
   serializeJson(doc, buff);
   mqttClient.publish("homeassistant/sensor/homeplate/activity_count/config", qos, retain, buff);
