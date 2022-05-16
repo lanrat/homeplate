@@ -7,7 +7,7 @@ All cards use [card-mod](https://github.com/thomasloven/lovelace-card-mod) to ov
 ## View
 
 For the view layout itself, I use 
-[lovelace-layout-card](https://github.com/thomasloven/lovelace-layout-card) with the "Vertical (layout-card) View type with the following config:
+[lovelace-layout-card](https://github.com/thomasloven/lovelace-layout-card) with the "Vertical (layout-card)" View type with the following config:
 
 ```yaml
 max_width: 400
