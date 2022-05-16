@@ -40,7 +40,8 @@ Create a Home Assistant Dashboard you want to display. I recommend using the [ki
 
 Setup [sibbl](https://github.com/sibbl/)'s [hass-lovelace-kindle-screensaver](https://github.com/sibbl/hass-lovelace-kindle-screensaver) program to regularly screenshot the desired dashboards for the HomePlate.
 
-More information in [hass.md](hass.md).
+More information in [hass.md](hass.md) and [dashboard.md](dashboard.md).
+.
 
 ### Inkplate
 

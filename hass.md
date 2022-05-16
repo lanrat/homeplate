@@ -2,6 +2,8 @@
 
 The HomePlate makes use of [MQTT Discovery](https://www.home-assistant.io/docs/mqtt/discovery/) so it should automatically add its sensors to your Home Assistant instance if MQTT is already setup.
 
+For example dashboard yaml see [dashboard.md](dashboard.md).
+
 ## MQTT Commands
 
 You can change the activity running on the HomePlate by publishing the following MQTT message to the topic: `homeplate/activity/run`
