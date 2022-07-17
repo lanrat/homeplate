@@ -35,6 +35,7 @@ void displayBoundaryBox()
 
 void displayInfoScreen()
 {
+    displayStatusMessage("Rendering info page...");
     Serial.printf("Rendering info page\n");
     static char buff[1024];
     esp_chip_info_t chip_info;
