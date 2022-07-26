@@ -8,6 +8,12 @@
 #include "fonts/Roboto_128.h"
 #include "config.h"
 
+// check that config file is correctly set
+#if !defined CONFIG_H
+#error Missing config.h!
+#error HINT: copy config_example.h to config.h and make changes.
+#endif
+
 extern void vApplicationStackOverflowHook(xTaskHandle *pxTask,
 		signed char *pcTaskName);
 

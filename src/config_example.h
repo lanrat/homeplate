@@ -31,3 +31,6 @@
 
 // Disables touchpads if they are overly sensitive and result in phantom touch events
 #define TOUCHPAD_ENABLE true
+
+// keep this to signal the program has a valid config file
+#define CONFIG_H
