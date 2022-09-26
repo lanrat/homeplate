@@ -32,5 +32,9 @@
 // Disables touchpads if they are overly sensitive and result in phantom touch events
 #define TOUCHPAD_ENABLE true
 
+// Sleep
+#define TIME_TO_SLEEP_SEC 20 * 60 // 20 minutes. How long ESP32 will be in deep sleep (in seconds)
+#define TIME_TO_QUICK_SLEEP_SEC 5 * 60 // 5 minutes. How long ESP32 will be in deep sleep (in seconds)
+
 // keep this to signal the program has a valid config file
 #define CONFIG_H

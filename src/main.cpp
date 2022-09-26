@@ -1,6 +1,6 @@
 // Next 3 lines are a precaution, you can ignore those, and the example would also work without them
-#ifndef ARDUINO_INKPLATE10
-#error "Wrong board selection for this example, please select Inkplate 10 in the boards menu."
+#ifndef ARDUINO_INKPLATE6PLUS
+#error "Wrong board selection for this example, please select Inkplate 6 PLUS in the boards menu."
 #endif
 
 #include <driver/rtc_io.h> //ESP32 library used for deep sleep and RTC wake up pins

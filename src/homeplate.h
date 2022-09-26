@@ -76,8 +76,6 @@ void startMonitoringButtonsTask();
 void checkBootPads();
 
 // Sleep
-#define TIME_TO_SLEEP_SEC 20 * 60 // 20 minutes. How long ESP32 will be in deep sleep (in seconds)
-#define TIME_TO_QUICK_SLEEP_SEC 5 * 60 // 5 minutes. How long ESP32 will be in deep sleep (in seconds)
 void startSleep();
 void setSleepDuration(uint32_t sec);
 void gotoSleepNow();
