@@ -223,7 +223,7 @@ void splashScreen()
     // Roboto_128, size: 1, center (285, 461)
     int16_t x = 285;
     int16_t y = 461;
-    bool dynamicPlacement = false;
+    bool dynamicPlacement = true;
     if (dynamicPlacement)
     {
         //get text size for box

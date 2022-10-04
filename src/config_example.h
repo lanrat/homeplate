@@ -18,6 +18,11 @@
 // NTP Time server to set RTC
 #define NTP_SERVER "NTP Server IP"
 
+// Set time zone, change the time offset for your timezone, both daylight and standard.
+// If no DST, just make them both the same as your Standard time offset.
+#define STANDARD_TIME_OFFSET -7 // Pacific Standard Time
+#define DAYLIGHT_TIME_OFFSET -8 // Pacifid Daylight Time
+
 // URL of PNG image to display
 #define IMAGE_URL "HTTP URL of dashboard screenshot to display"
 
