@@ -26,12 +26,12 @@ void ota_handle(void *parameter)
         {
             ArduinoOTA.handle();
             vTaskDelay(500 / portTICK_PERIOD_MS);
-            //printDebugStackSpace();
+            // printDebugStackSpace();
         }
 
         Serial.println("[OTA] OTA stop");
         ArduinoOTA.end();
-        //printDebugStackSpace();
+        // printDebugStackSpace();
     }
 }
 
@@ -54,19 +54,17 @@ void startOTATask()
 
                      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
                      Serial.printf("[OTA] Start OTA updating %s\n", type.c_str());
-                     displayStatusMessage("Start OTA updating %s", type.c_str());
-                 })
+                     displayStatusMessage("Start OTA updating %s", type.c_str()); })
         .onEnd([]()
                {
                    Serial.println("\n[OTA] End");
                    displayStatusMessage("OTA Finished");
                    //otaRunning = false; on finish should restart OTA, going to sleep can interfere.
-               })
-        .onProgress([](unsigned int progress, unsigned int total)
-                {
-                    printDebugStackSpace();
-                    Serial.printf("[OTA] Progress: %u%%\r", (progress / (total / 100)));
                 })
+        .onProgress([](unsigned int progress, unsigned int total)
+                    {
+                    printDebugStackSpace();
+                    Serial.printf("[OTA] Progress: %u%%\r", (progress / (total / 100))); })
         .onError([](ota_error_t error)
                  {
                      Serial.printf("[OTA] Error[%u]: ", error);
@@ -81,8 +79,7 @@ void startOTATask()
                      else if (error == OTA_END_ERROR)
                          Serial.println("End Failed");
                      displayStatusMessage("OTA Error[%u]", error);
-                     otaRunning = false;
-                 });
+                     otaRunning = false; });
 
     xTaskCreate(
         ota_handle,        /* Task function. */

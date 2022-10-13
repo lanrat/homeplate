@@ -2,12 +2,8 @@
 #include <ArduinoJson.h>
 #include "homeplate.h"
 
-#define MQTT_TIMEOUT_MS 20000      // 20 second MQTT connection timeout
-#define MQTT_RECOVER_TIME_MS 30000 // Wait 30 seconds after a failed connection attempt
 #define MQTT_TASK_PRIORITY 3
 #define MQTT_SEND_TASK_PRIORITY 5
-#define MQTT_RESEND_CONFIG_EVERY 10
-#define MQTT_RETAIN_SENSOR_VALUE true
 
 #define MQTT_ACTION_TOPIC "homeplate/activity/run"
 
@@ -17,8 +13,8 @@ bool mqttFailed = false;
 StaticJsonDocument<200> filter;
 
 static bool mqttWaiting; // are we waiting for a MQTT status to be sent
-static bool mqttRun; // should se send another MQTT status update
-static bool mqttKill; // should the status task stop running
+static bool mqttRun;     // should se send another MQTT status update
+static bool mqttKill;    // should the status task stop running
 
 bool getMQTTFailed()
 {
@@ -75,7 +71,7 @@ void mqttSendTempStatus()
   temperature = temperature + display.readTemperature();
   displayEnd();
   i2cEnd();
-  
+
   if (temperature <= 1)
   {
     Serial.printf("[MQTT] Got invalid temperature (%d), not sending status to mqtt\n", temperature);
@@ -144,7 +140,7 @@ void mqttSendBootStatus(uint boot, uint activityCount, const char *bootReason)
 
 void sendHAConfig()
 {
-  // sends MQTT info for autodiscovery
+  // sends MQTT info for auto discovery
   // https://www.home-assistant.io/docs/mqtt/discovery/
   // https://www.home-assistant.io/integrations/sensor.mqtt/
   // NOTE: 'unique_id' needs to be globally unique. If using multiple homeplates, this needs to be changed.
@@ -154,7 +150,7 @@ void sendHAConfig()
   const bool retain = true;
   const int qos = 1;
   char buff[512];
-  const int capacity = JSON_OBJECT_SIZE(10); // intentianally larger than we need.
+  const int capacity = JSON_OBJECT_SIZE(10); // intentionally larger than we need.
   StaticJsonDocument<capacity> doc;
 
   // wifi RSSI
@@ -314,7 +310,7 @@ void onMqttConnect(bool sessionPresent)
   Serial.println(packetIdSub);
 
   // only send this on first boot, or after every 10 sleep boots
-  // depending on MQTT server configuration , some persistant messages may expire after a while, so we'll resend them
+  // depending on MQTT server configuration , some persistent messages may expire after a while, so we'll resend them
   if (!sleepBoot || bootCount % MQTT_RESEND_CONFIG_EVERY)
     sendHAConfig();
 }
@@ -343,18 +339,18 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
   Serial.println(topic);
   Serial.print("  qos: ");
   Serial.println(properties.qos);
-  //Serial.print("  dup: ");
-  //Serial.println(properties.dup);
+  // Serial.print("  dup: ");
+  // Serial.println(properties.dup);
   Serial.print("  retain: ");
   Serial.println(properties.retain);
   Serial.print("  len: ");
   Serial.println(len);
-  //Serial.print("  index: ");
-  //Serial.println(index);
-  //Serial.print("  total: ");
-  //Serial.println(total);
-  //Serial.print("  payload: ");
-  //Serial.println(payload);
+  // Serial.print("  index: ");
+  // Serial.println(index);
+  // Serial.print("  total: ");
+  // Serial.println(total);
+  // Serial.print("  payload: ");
+  // Serial.println(payload);
 
   // if received message is wrong topic, do nothing.
   if (strncmp(topic, MQTT_ACTION_TOPIC, strlen(MQTT_ACTION_TOPIC)) != 0)
@@ -381,7 +377,6 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
     serializeJsonPretty(doc, Serial);
     Serial.printf("\n");
     const char *action = doc["action"];
-
 
     if (strncmp("qr", action, 3) == 0)
     {
@@ -433,7 +428,7 @@ void startMQTTTask()
   mqttClient.onSubscribe(onMqttSubscribe);
   mqttClient.onUnsubscribe(onMqttUnsubscribe);
   mqttClient.onMessage(onMqttMessage);
-  //mqttClient.onPublish(onMqttPublish);
+  // mqttClient.onPublish(onMqttPublish);
 
   // set deserialization filter
   filter["action"] = true;
@@ -441,9 +436,9 @@ void startMQTTTask()
 
   mqttClient.setClientId(HOSTNAME);
   mqttClient.setServer(MQTT_HOST, MQTT_PORT);
-  #ifdef MQTT_USER
+#ifdef MQTT_USER
   mqttClient.setCredentials(MQTT_USER, MQTT_PASSWORD);
-  # endif
+#endif
 
   xTaskCreate(
       connectToMqtt,      /* Task function. */
@@ -496,7 +491,7 @@ void sendMQTTStatusTask(void *param)
 
     mqttSendTempStatus();
     mqttSendBatteryStatus();
-    
+
     mqttWaiting = false;
     mqttRun = false;
     printDebugStackSpace();

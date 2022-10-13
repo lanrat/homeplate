@@ -15,12 +15,12 @@ void displayStats()
     displayEnd();
 }
 
-bool hassImage()
+bool remotePNG(const char* url)
 {
     displayStatusMessage("Downloading image...");
     // set len for png image, or set 54373?
     static int32_t defaultLen = E_INK_WIDTH * E_INK_HEIGHT * 4 + 100;
-    uint8_t *buff = display.downloadFile(IMAGE_URL, &defaultLen);
+    uint8_t *buff = display.downloadFile(url, &defaultLen);
     if (!buff)
     {
         Serial.println("[IMAGE] Download failed");
@@ -71,7 +71,7 @@ bool hassImage()
     i2cStart();
     displayStart();
     display.display();
-    // wait before releasing the i2c bus while the display settles. Helps prevent image fadeing
+    // wait before releasing the i2c bus while the display settles. Helps prevent image fading
     vTaskDelay(0.25 * SECOND/portTICK_PERIOD_MS);
     displayEnd();
     i2cEnd();

@@ -67,15 +67,15 @@ pio device monitor
 ```shell
 git pull
 platformio upgrade
-platformio platform update
-platformio lib update
+platformio pkg update
 ```
 
 ### Debugging
 
 If you get the following error while booting your inkplate, run the [Inkplate_Wavefrom_EEPROM_Programming](https://github.com/e-radionicacom/Inkplate-Arduino-library/tree/master/examples/Inkplate10/Others/Inkplate_Wavefrom_EEPROM_Programming) example to update your Inkplate's waveform.
+
 ```text
-Wavefrom load failed! Upload new waveform in EEPROM. Using default waveform.
+Waveform load failed! Upload new waveform in EEPROM. Using default waveform.
 ```
 
 Older Inkplates don't appear to ship with an updated waveform. I found waveform 3 looks the best for mine.

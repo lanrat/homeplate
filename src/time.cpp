@@ -74,7 +74,7 @@ void setupTimeAndSyncTask()
 char dateStringBuf[17]; // 1990-12-27 13:37
 char *fullDateString()
 {
-    TimeChangeRule *tcr; //pointer to the time change rule, use to get TZ abbrev
+    TimeChangeRule *tcr; // pointer to the time change rule, use to get TZ abbrev
     time_t utc = now();
     time_t local = usPT.toLocal(utc, &tcr);
 
@@ -85,7 +85,7 @@ char *fullDateString()
 char timeStringBuf[6]; // 13:37
 char *timeString()
 {
-    TimeChangeRule *tcr; //pointer to the time change rule, use to get TZ abbrev
+    TimeChangeRule *tcr; // pointer to the time change rule, use to get TZ abbrev
     time_t utc = now();
     time_t local = usPT.toLocal(utc, &tcr);
 

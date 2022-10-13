@@ -1,8 +1,6 @@
 #include <WiFi.h>
 #include "homeplate.h"
 
-#define WIFI_TIMEOUT_MS (20 * SECOND)      // 20 second WiFi connection timeout
-#define WIFI_RECOVER_TIME_MS 30000 // Wait 30 seconds after a failed connection attempt
 #define WIFI_TASK_PRIORITY 2
 
 // static addresses

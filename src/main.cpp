@@ -4,10 +4,8 @@
 #endif
 
 #include <driver/rtc_io.h> //ESP32 library used for deep sleep and RTC wake up pins
-#include <rom/rtc.h> // Include ESP32 library for RTC (needed for rtc_get_reset_reason() function)
+#include <rom/rtc.h>       // Include ESP32 library for RTC (needed for rtc_get_reset_reason() function)
 #include "homeplate.h"
-
-#define USE_SDCARD false
 
 Inkplate display(INKPLATE_1BIT);
 SemaphoreHandle_t mutexI2C, mutexSPI, mutexDisplay;
@@ -22,7 +20,7 @@ void setup()
     Serial.begin(115200);
     Serial.printf("\n\n[SETUP] starting, version(%s) boot: %u\n", VERSION, bootCount);
     ++bootCount;
-    // reset GPIOs used for wake interupt
+    // reset GPIOs used for wake interrupt
     rtc_gpio_deinit(GPIO_NUM_34);
     rtc_gpio_deinit(WAKE_BUTTON);
 
@@ -50,7 +48,7 @@ void setup()
     // Take the mutex
     displayStart();
     i2cStart();
-    display.begin(); // Init Inkplate library (you should call this function ONLY ONCE)
+    display.begin();             // Init Inkplate library (you should call this function ONLY ONCE)
     display.rtcClearAlarmFlag(); // Clear alarm flag from any previous alarm
     // set which pads can allow wakeup
     display.setIntPinInternal(MCP23017_INT_ADDR, display.mcpRegsInt, PAD1, RISING);
@@ -75,7 +73,7 @@ void setup()
     voltage = roundf(voltage * 100) / 100; // rounds to 2 decimal places
     int percent = getBatteryPercent(voltage);
     Serial.printf("[SETUP] Battery: %d%% (%.2fv)\n", percent, voltage);
-    
+
     if (!sleepBoot)
         splashScreen();
 
@@ -120,6 +118,6 @@ void loop()
 {
     // main loop runs at priority 1
     printDebug("[MAIN] loop...");
-    vTaskDelay(3 * SECOND/portTICK_PERIOD_MS);
+    vTaskDelay(3 * SECOND / portTICK_PERIOD_MS);
     lowBatteryCheck();
 }
