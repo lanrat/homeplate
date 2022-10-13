@@ -15,7 +15,4 @@
         "vector": "cpp",
         "functional": "cpp"
     },
-    "files.exclude": {
-        ".vscode/c_cpp_properties.json": true
-    },
 }
