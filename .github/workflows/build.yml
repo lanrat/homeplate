@@ -30,6 +30,8 @@ jobs:
           pip install --upgrade platformio
       - name: Install PlatformIO Libs
         run: pio pkg install
+      - name: Use example config
+        run: cp src/config_example.h src/config.h
       - name: Run PlatformIO
         # empty target to prevent upload
         run: pio run -t ''
