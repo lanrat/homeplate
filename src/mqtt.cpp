@@ -41,7 +41,7 @@ void mqttSendWiFiStatus()
   for (int i = 0; i < samples; i++)
   {
     rssi = rssi + WiFi.RSSI();
-    delay(20);
+    vTaskDelay(20 / portTICK_PERIOD_MS);
   }
 
   rssi = rssi / samples;

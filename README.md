@@ -66,8 +66,9 @@ pio device monitor
 
 ```shell
 git pull
-platformio upgrade
-platformio pkg update
+pio upgrade
+pio pkg update
+pio run --target clean
 ```
 
 ### Debugging

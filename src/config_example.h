@@ -5,7 +5,10 @@
 // WiFi password
 #define WIFI_PASSWORD "WiFi Password"
 
+// hostname
+// NOTE: if using multiple homeplate devices, you MUST make the hostname unique
 #define HOSTNAME "homeplate"
+
 // Static IP information
 // If unset uses DHCP, but updates may be slower, set to use a Static IP
 // #define STATIC_IP "192.168.1.10"

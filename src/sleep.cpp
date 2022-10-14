@@ -21,7 +21,7 @@ void gotoSleepNow()
     mqttStopTask(); // prevent i2c lock in main thread
     wifiStopTask(); // prevent i2c lock in main thread
 
-    // set MCP interupts
+    // set MCP interrupts
     if (TOUCHPAD_ENABLE)
         display.setIntOutputInternal(MCP23017_INT_ADDR, display.mcpRegsInt, 1, false, false, HIGH);
     i2cEnd();
@@ -34,6 +34,7 @@ void gotoSleepNow()
     if (TOUCHPAD_ENABLE)
         esp_sleep_enable_ext1_wakeup(TOUCHPAD_WAKE_MASK, ESP_EXT1_WAKEUP_ANY_HIGH);
     Serial.printf("[SLEEP] entering sleep for %u seconds (%u min)\n\n\n", sleepDuration, sleepDuration / 60);
+    vTaskDelay(50 / portTICK_PERIOD_MS);
     esp_deep_sleep_start(); // Put ESP32 into deep sleep. Program stops here.
 }
 

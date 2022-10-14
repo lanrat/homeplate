@@ -30,7 +30,7 @@ void ntpSync(void *parameter)
         if (!timeClient.forceUpdate())
         {
             Serial.printf("[TIME] NTP Sync failed\n");
-            delay(30 * SECOND);
+            vTaskDelay((30 * SECOND) / portTICK_PERIOD_MS);
             continue;
         }
         timeClient.end();
