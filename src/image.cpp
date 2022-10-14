@@ -1,15 +1,6 @@
 #include "homeplate.h"
 #include <libs/pngle/pngle.h>
 
-// // url buffer
-// static char Image_URL[MESSAGE_BUFFER_SIZE];
-
-// void setImageURL(const char *m)
-// {
-//     strlcpy(Image_URL, m, MESSAGE_BUFFER_SIZE);
-//     Serial.printf("Setting URL: %s -> %s\n", m, Image_URL); // TODO rm
-// }
-
 void displayStats()
 {
     displayStart();
