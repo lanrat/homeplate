@@ -6,6 +6,7 @@ on:
   pull_request:
     # The branches below must be a subset of the branches above
     branches: [ "main" ]
+  workflow_dispatch: # allow manually calling the action
   schedule:
     - cron: '16 11 * * 2'
 
@@ -70,7 +71,6 @@ jobs:
     - name: Run PlatformIO
       # empty target to prevent upload
       run: pio run -t ''
-
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
