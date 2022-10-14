@@ -144,6 +144,7 @@ void sendHAConfig()
   // https://www.home-assistant.io/docs/mqtt/discovery/
   // https://www.home-assistant.io/integrations/sensor.mqtt/
   // NOTE: 'unique_id' needs to be globally unique. If using multiple homeplates, this needs to be changed.
+  // 'state_topic' should also be unique for each device
 
   Serial.println("[MQTT] Sending MQTT Config");
   // retain must be true for config
