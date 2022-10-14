@@ -104,6 +104,20 @@ cards:
           target: {}
         icon: mdi:message
         name: Message
+      - type: button
+        tap_action:
+          action: call-service
+          service: mqtt.publish
+          service_data:
+            topic: homeplate/activity/run
+            qos: '1'
+            retain: true
+            payload_template: >-
+              { "action": "img",  "message": "{{ states('input_text.homeplate_message')
+              }}"}
+          target: {}
+        icon: mdi:image
+        name: Image
     columns: 4
   - type: entities
     entities:

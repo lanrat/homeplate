@@ -21,12 +21,11 @@
 * OTA updates over WiFi
 * Partial screen updates in grayscale mode.
 * Power saving sleep mode.
+* Display any PNG image from MQTT Command
 
 ## Future Ideas
 
 * Incorporate [WiFi Manager](https://github.com/tzapu/WiFiManager) for settings
-* Display any image from MQTT Command
-  * Web Comic mode?
 
 ## Setup
 
