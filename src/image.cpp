@@ -1,6 +1,15 @@
 #include "homeplate.h"
 #include <libs/pngle/pngle.h>
 
+// // url buffer
+// static char Image_URL[MESSAGE_BUFFER_SIZE];
+
+// void setImageURL(const char *m)
+// {
+//     strlcpy(Image_URL, m, MESSAGE_BUFFER_SIZE);
+//     Serial.printf("Setting URL: %s -> %s\n", m, Image_URL); // TODO rm
+// }
+
 void displayStats()
 {
     displayStart();
@@ -15,9 +24,15 @@ void displayStats()
     displayEnd();
 }
 
-bool remotePNG(const char* url)
+bool remotePNG(const char *url)
 {
+    if (url == NULL) {
+         Serial.print("[IMAGE] ERROR: got null image!");
+         return false;
+    }
     displayStatusMessage("Downloading image...");
+    Serial.print("[IMAGE] Downloading image: ");
+    Serial.println(url);
     // set len for png image, or set 54373?
     static int32_t defaultLen = E_INK_WIDTH * E_INK_HEIGHT * 4 + 100;
     uint8_t *buff = display.downloadFile(url, &defaultLen);
@@ -25,7 +40,7 @@ bool remotePNG(const char* url)
     {
         Serial.println("[IMAGE] Download failed");
         displayStatusMessage("Download failed!");
-        return 0;
+        return false;
     }
     // check for stop after download before rendering
     if (stopActivity())
@@ -34,7 +49,7 @@ bool remotePNG(const char* url)
         displayStart();
         display.clearDisplay(); // refresh the display buffer before rendering.
         displayEnd();
-        return 0;
+        return false;
     }
     Serial.println("[IMAGE] Download done");
     displayStatusMessage("Rendering image...");
@@ -65,7 +80,7 @@ bool remotePNG(const char* url)
         displayStart();
         display.clearDisplay(); // refresh the display buffer before rendering.
         displayEnd();
-        return 0;
+        return false;
     }
     Serial.println("[IMAGE] displaying....");
     i2cStart();
@@ -76,7 +91,7 @@ bool remotePNG(const char* url)
     displayEnd();
     i2cEnd();
     Serial.println("[IMAGE] displaying done.");
-    return 1;
+    return true;
 }
 
 static uint16_t _pngX = 0;

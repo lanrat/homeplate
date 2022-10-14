@@ -115,6 +115,7 @@ void printDebug(const char *s);
 // message
 void setMessage(const char *m);
 void displayMessage(const char * = NULL);
+const char* getMessage();
 
 // activity
 enum Activity
@@ -124,6 +125,7 @@ enum Activity
     GuestWifi,
     Info,
     Message,
+    IMG,
 };
 
 #define DEFAULT_ACTIVITY HomeAssistant
@@ -150,7 +152,7 @@ void delaySleep(uint seconds);
 // input debounce
 #define DEBOUNCE_DELAY_MS 500
 
-// MQTT text message
+// MQTT message sizes
 #define MESSAGE_BUFFER_SIZE 2048
 
 // debug settings

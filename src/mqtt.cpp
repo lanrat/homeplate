@@ -365,7 +365,7 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
     // send blank response to clear/ack the MQTT command
     mqttClient.publish(MQTT_ACTION_TOPIC, 1, true);
 
-    StaticJsonDocument<2048> doc;
+    StaticJsonDocument<MESSAGE_BUFFER_SIZE> doc;
     DeserializationError error = deserializeJson(doc, payload, len, DeserializationOption::Filter(filter));
     if (error)
     {
@@ -399,12 +399,24 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
       if (!doc.containsKey("message"))
       {
         Serial.printf("[MQTT][ERROR] message action has no message!\n");
+        return;
       }
       setMessage(doc["message"]);
       startActivity(Message);
       return;
     }
-
+    else if (strncmp("img", action, 4) == 0)
+    {
+      if (!doc.containsKey("message"))
+      {
+        Serial.printf("[MQTT][ERROR] img action has no url message!\n");
+        return;
+      }
+      // use the message buffer to hold the URL
+      setMessage(doc["message"]);
+      startActivity(IMG);
+      return;
+    }
     Serial.printf("[MQTT][ERROR] unable to handle action %s\n", action);
   }
 }

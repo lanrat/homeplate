@@ -13,6 +13,7 @@
         "string": "cpp",
         "string_view": "cpp",
         "vector": "cpp",
-        "functional": "cpp"
+        "functional": "cpp",
+        "system_error": "cpp"
     },
 }

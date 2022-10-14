@@ -1,10 +1,16 @@
 #include "homeplate.h"
 
+// message buffer
 static char message[MESSAGE_BUFFER_SIZE];
 
 void setMessage(const char *m)
 {
-    strncpy(message, m, MESSAGE_BUFFER_SIZE);
+    strlcpy(message, m, MESSAGE_BUFFER_SIZE);
+}
+
+const char* getMessage()
+{
+    return message;
 }
 
 static const GFXfont *fonts[] = {&Roboto_128, &Roboto_64, &Roboto_32, &Roboto_16, &Roboto_12};
