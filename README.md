@@ -43,7 +43,9 @@ Setup [sibbl](https://github.com/sibbl/)'s [hass-lovelace-kindle-screensaver](ht
 
 ### Inkplate
 
-Install [PlatformIO](https://platformio.org/). Then copy `src/config_example.h` to `src/config.h` and enter your settings, and build & run with:
+Install [PlatformIO](https://platformio.org/). Then copy `src/config_example.h` to `src/config.h` and enter your settings.
+
+Build & run with:
 
 ```shell
 pio run

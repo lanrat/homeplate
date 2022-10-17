@@ -3,12 +3,8 @@
 #include <Timezone.h>
 
 #include "homeplate.h"
+#include "timezone_config.h"
 #define NTP_TASK_PRIORITY 3
-
-// US Pacific Time Zone (Los Angeles)
-TimeChangeRule myDST = {"PDT", Second, Sun, Mar, 2, (-7 * 60)}; // Daylight time = UTC - 7 hours
-TimeChangeRule mySTD = {"PST", First, Sun, Nov, 2, (-8 * 60)};  // Standard time = UTC - 8 hours
-Timezone usPT(myDST, mySTD);
 
 bool ntpSynced = false;
 
@@ -76,7 +72,7 @@ char *fullDateString()
 {
     TimeChangeRule *tcr; // pointer to the time change rule, use to get TZ abbrev
     time_t utc = now();
-    time_t local = usPT.toLocal(utc, &tcr);
+    time_t local = tz.toLocal(utc, &tcr);
 
     snprintf(dateStringBuf, 17, "%d-%02d-%02d %02d:%02d", year(local), month(local), day(local), hour(local), minute(local));
     return dateStringBuf;
@@ -87,7 +83,7 @@ char *timeString()
 {
     TimeChangeRule *tcr; // pointer to the time change rule, use to get TZ abbrev
     time_t utc = now();
-    time_t local = usPT.toLocal(utc, &tcr);
+    time_t local = tz.toLocal(utc, &tcr);
 
     snprintf(timeStringBuf, 17, "%02d:%02d", hour(local), minute(local));
     return timeStringBuf;

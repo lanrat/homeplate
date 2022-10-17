@@ -35,6 +35,11 @@
 // Disables touchpads if they are overly sensitive and result in phantom touch events
 #define TOUCHPAD_ENABLE true
 
+
+// Timezone
+// see timezone_config.h for options
+#define TIMEZONE_UTC
+
 // If your Inkplate doesn't have external (or second) MCP I/O expander, you should uncomment next line,
 // otherwise your code could hang out when you send code to your Inkplate.
 // You can easily check if your Inkplate has second MCP by turning it over and 
