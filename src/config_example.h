@@ -35,6 +35,8 @@
 // Disables touchpads if they are overly sensitive and result in phantom touch events
 #define TOUCHPAD_ENABLE true
 
+// How long to sleep between image refreshes
+#define TIME_TO_SLEEP_MIN 20
 
 // Timezone
 // see timezone_config.h for options

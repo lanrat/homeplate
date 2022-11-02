@@ -27,7 +27,10 @@ void gotoSleepNow()
     i2cEnd();
 
     // Go to sleep for TIME_TO_SLEEP seconds
-    esp_sleep_enable_timer_wakeup(sleepDuration * uS_TO_S_FACTOR);
+    if (esp_sleep_enable_timer_wakeup(sleepDuration * uS_TO_S_FACTOR) != ESP_OK) {
+        Serial.printf("[SLEEP] ERROR esp_sleep_enable_timer_wakeup(%u) invalid value", sleepDuration * uS_TO_S_FACTOR);
+    }
+
     // Enable wakeup from deep sleep on gpio 36 (WAKE BUTTON)
     esp_sleep_enable_ext0_wakeup(WAKE_BUTTON, LOW);
     // enable wake from MCP port expander

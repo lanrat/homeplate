@@ -35,11 +35,6 @@ extern uint bootCount, activityCount;
 
 #define VERSION __DATE__ ", " __TIME__
 
-#define BATTERY_VOLTAGE_HIGH 4.7
-#define BATTERY_VOLTAGE_LOW 3.6
-#define BATTERY_VOLTAGE_WARNING_SLEEP 3.55
-#define BATTERY_PERCENT_WARNING 20
-
 // Image "colors" (3bit mode)
 #define C_BLACK 0
 #define C_GREY_1 1
@@ -50,6 +45,7 @@ extern uint bootCount, activityCount;
 #define C_GREY_6 6
 #define C_WHITE 7
 
+// for second to ms conversions
 #define SECOND 1000
 
 // WiFi
@@ -76,8 +72,8 @@ void startMonitoringButtonsTask();
 void checkBootPads();
 
 // Sleep
-#define TIME_TO_SLEEP_SEC 20 * 60      // 20 minutes. How long ESP32 will be in deep sleep (in seconds)
-#define TIME_TO_QUICK_SLEEP_SEC 5 * 60 // 5 minutes. How long ESP32 will be in deep sleep (in seconds)
+#define TIME_TO_SLEEP_SEC (TIME_TO_SLEEP_MIN * 60)    // How long ESP32 will be in deep sleep (in seconds)
+#define TIME_TO_QUICK_SLEEP_SEC 5 * 60 // 5 minutes. How long ESP32 will be in deep sleep (in seconds) for short activities
 void startSleep();
 void setSleepDuration(uint32_t sec);
 void gotoSleepNow();
@@ -139,6 +135,12 @@ void delaySleep(uint seconds);
  * Global Settings
  */
 
+// Battery power thresholds
+#define BATTERY_VOLTAGE_HIGH 4.7
+#define BATTERY_VOLTAGE_LOW 3.6
+#define BATTERY_VOLTAGE_WARNING_SLEEP 3.55
+#define BATTERY_PERCENT_WARNING 20
+
 // enable SD card (currently unused)
 #define USE_SDCARD false
 
@@ -147,10 +149,10 @@ void delaySleep(uint seconds);
 
 // network settings
 #define WIFI_TIMEOUT_MS (20 * SECOND) // 20 second WiFi connection timeout
-#define WIFI_RECOVER_TIME_MS 30000    // Wait 30 seconds after a failed connection attempt
+#define WIFI_RECOVER_TIME_MS (30 * SECOND)    // Wait 30 seconds after a failed connection attempt
 
 // input debounce
-#define DEBOUNCE_DELAY_MS 500
+#define DEBOUNCE_DELAY_MS (SECOND / 2)
 
 // MQTT message sizes
 #define MESSAGE_BUFFER_SIZE 2048
@@ -160,8 +162,8 @@ void delaySleep(uint seconds);
 #define DEBUG_PRINT false
 
 // MQTT
-#define MQTT_TIMEOUT_MS 20000      // 20 second MQTT connection timeout
-#define MQTT_RECOVER_TIME_MS 30000 // Wait 30 seconds after a failed connection attempt
+#define MQTT_TIMEOUT_MS (20 * SECOND)      // 20 second MQTT connection timeout
+#define MQTT_RECOVER_TIME_MS (30 * SECOND) // Wait 30 seconds after a failed connection attempt
 #define MQTT_RESEND_CONFIG_EVERY 10
 #define MQTT_RETAIN_SENSOR_VALUE true
 
