@@ -85,6 +85,6 @@ char *timeString()
     time_t utc = now();
     time_t local = tz.toLocal(utc, &tcr);
 
-    snprintf(timeStringBuf, 17, "%02d:%02d", hour(local), minute(local));
+    snprintf(timeStringBuf, 6, "%02d:%02d", hour(local), minute(local));
     return timeStringBuf;
 }
