@@ -42,7 +42,7 @@
     TimeChangeRule usCST = {"CST", First, Sun, Nov, 2, -360};
     Timezone tz(usCDT, usCST);
 
-#elif defined TIMEZONE_ausET
+#elif defined TIMEZONE_usMT
     // US Mountain Time Zone (Denver, Salt Lake City)
     TimeChangeRule usMDT = {"MDT", Second, Sun, Mar, 2, -360};
     TimeChangeRule usMST = {"MST", First, Sun, Nov, 2, -420};
