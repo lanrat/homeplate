@@ -1,7 +1,6 @@
 #include "homeplate.h"
 
 #define ACTIVITY_TASK_PRIORITY 4
-#define MIN_ACTIVITY_RESTART_SECS 5
 
 static bool resetActivity = false;
 uint activityCount = 0;
@@ -11,14 +10,13 @@ QueueHandle_t activityQueue = xQueueCreate(1, sizeof(Activity));
 static unsigned long lastActivityTime = 0;
 static Activity activityNext, activityCurrent = NONE;
 
-
 void startActivity(Activity activity)
 {
     static SemaphoreHandle_t mutex = xSemaphoreCreateMutex();
     if (xSemaphoreTake(mutex, (SECOND) / portTICK_PERIOD_MS) == pdTRUE)
     {
         // dont re-queue HomeAssistant Activity is run within 60 sec and already running
-        if (activity == HomeAssistant && activityCurrent == HomeAssistant && ((millis() - lastActivityTime)/SECOND < 60))
+        if (activity == HomeAssistant && activityCurrent == HomeAssistant && ((millis() - lastActivityTime) / SECOND < 60))
         {
             Serial.printf("[ACTIVITY] startActivity(%d) HomeAssistant already running within time limit, skipping\n", activity);
             xSemaphoreGive(mutex);
@@ -72,7 +70,7 @@ void runActivities(void *params)
             delaySleep(10); // bump the sleep timer a little for any ongoing activity
 
         // activity debounce
-        if ((activityNext == activityCurrent) && ((millis() - lastActivityTime)/SECOND < MIN_ACTIVITY_RESTART_SECS))
+        if ((activityNext == activityCurrent) && ((millis() - lastActivityTime) / SECOND < MIN_ACTIVITY_RESTART_SECS))
         {
             Serial.printf("[ACTIVITY] same activity %d launched withing min window, skipping\n", activityNext);
             continue;
@@ -92,13 +90,13 @@ void runActivities(void *params)
             waitForWiFiOrActivityChange();
             if (resetActivity)
             {
-                Serial.printf("[ACTIVITY][ERROR] HomeAssistant Activity reset while wating, aborting...\n");
+                Serial.printf("[ACTIVITY][ERROR] HomeAssistant Activity reset while waiting, aborting...\n");
                 continue;
             }
             // get & render hass image
             delaySleep(20);
-            hassImage();
-            //delaySleep(10);
+            remotePNG(IMAGE_URL);
+            // delaySleep(10);
             break;
         case GuestWifi:
             // only change activities if necessary
@@ -115,6 +113,18 @@ void runActivities(void *params)
         case Message:
             setSleepDuration(TIME_TO_SLEEP_SEC);
             displayMessage();
+            break;
+        case IMG:
+            setSleepDuration(TIME_TO_SLEEP_SEC);
+            waitForWiFiOrActivityChange();
+            if (resetActivity)
+            {
+                Serial.printf("[ACTIVITY][ERROR] HomeAssistant Activity reset while waiting, aborting...\n");
+                continue;
+            }
+            // get & render hass image
+            delaySleep(20);
+            remotePNG(getMessage());
             break;
         default:
             Serial.printf("[ACTIVITY][ERROR] runActivities() unhandled Activity: %d\n", activityNext);

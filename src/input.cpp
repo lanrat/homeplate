@@ -1,11 +1,10 @@
 #include "homeplate.h"
 
-#define DEBOUNCE_DELAY_MS 500
 #define INPUT_TASK_PRIORITY 10
 
-#define INT_PAD1 (1 << (PAD1 - 8)) //0x04
-#define INT_PAD2 (1 << (PAD2 - 8)) //0x08
-#define INT_PAD3 (1 << (PAD3 - 8)) //0x10
+#define INT_PAD1 (1 << (PAD1 - 8)) // 0x04
+#define INT_PAD2 (1 << (PAD2 - 8)) // 0x08
+#define INT_PAD3 (1 << (PAD3 - 8)) // 0x10
 
 // read a byte from the expander
 unsigned int readMCPRegister(const byte reg)
@@ -29,7 +28,7 @@ bool checkPad(uint8_t pad)
     return false;
 }
 
-// TODO use a ring buffer for last 5 touchpad events, and if < some threashold, reboot....
+// TODO use a ring buffer for last 5 touchpad events, and if < some threshold, reboot....
 
 void checkButtons(void *params)
 {
@@ -74,11 +73,11 @@ void checkButtons(void *params)
                 startActivity(HomeAssistant);
                 button = true;
             }
-            }
+        }
 
         if (button)
         {
-            // clear the interupt on the MCP
+            // clear the interrupt on the MCP
             readMCPRegister(MCP23017_INTCAPB);
             lastDebounceTime = millis();
             button = false;
@@ -95,13 +94,13 @@ void startMonitoringButtonsTask()
     // inkplate code needs to be on arduino core or may get i2c errors
     // use mutex for all inkplate code
     xTaskCreatePinnedToCore(
-        checkButtons,           /* Task function. */
-        "INPUT_BUTTON_TASK",        /* String with name of task. */
-        4096,              /* Stack size */
-        NULL,              /* Parameter passed as input of the task */
+        checkButtons,        /* Task function. */
+        "INPUT_BUTTON_TASK", /* String with name of task. */
+        4096,                /* Stack size */
+        NULL,                /* Parameter passed as input of the task */
         INPUT_TASK_PRIORITY, /* Priority of the task. */
         NULL,
-        CONFIG_ARDUINO_RUNNING_CORE);     
+        CONFIG_ARDUINO_RUNNING_CORE);
 }
 
 void checkBootPads()
@@ -110,10 +109,10 @@ void checkBootPads()
     i2cStart();
     key = readMCPRegister(MCP23017_INTFB);
     i2cEnd();
-    if (key) // which pin caused interupt
+    if (key) // which pin caused interrupt
     {
-        //Serial.printf("INTFB: %#x\n", keyInt);
-        // value of pin at time of interupt
+        // Serial.printf("INTFB: %#x\n", keyInt);
+        //  value of pin at time of interrupt
         if (key & INT_PAD1)
         {
             Serial.println("[INPUT] boot: PAD1");
@@ -132,21 +131,21 @@ void checkBootPads()
         Serial.println();
 
         i2cStart();
-        key = readMCPRegister(MCP23017_INTCAPB); // this clears the interupt
+        key = readMCPRegister(MCP23017_INTCAPB); // this clears the interrupt
         i2cEnd();
-        //Serial.printf("INTCAP: %#x\n", keyValue);
-        // if (keyValue & INT_PAD1)
-        // {
-        //     Serial.print("PAD1 ");
-        // }
-        // if (keyValue & INT_PAD2)
-        // {
-        //     Serial.print("PAD2 ");
-        // }
-        // if (keyValue & INT_PAD3)
-        // {
-        //     Serial.print("PAD3 ");
-        // }
-        // Serial.println();
+        // Serial.printf("INTCAP: %#x\n", keyValue);
+        //  if (keyValue & INT_PAD1)
+        //  {
+        //      Serial.print("PAD1 ");
+        //  }
+        //  if (keyValue & INT_PAD2)
+        //  {
+        //      Serial.print("PAD2 ");
+        //  }
+        //  if (keyValue & INT_PAD3)
+        //  {
+        //      Serial.print("PAD3 ");
+        //  }
+        //  Serial.println();
     }
 }

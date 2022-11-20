@@ -1,31 +1,4 @@
 {
-    "cSpell.words": [
-        "EEPROM",
-        "eink",
-        "esptool",
-        "homeplate",
-        "ihdr",
-        "inkplate",
-        "INTCAPB",
-        "INTFB",
-        "IRAM",
-        "micropython",
-        "MQTT",
-        "platformio",
-        "pngle",
-        "println",
-        "pyboard",
-        "qrcode",
-        "QRSIZE",
-        "radionica",
-        "Roboto",
-        "sdcard",
-        "sibbl",
-        "spiram",
-        "usbserial",
-        "wrover",
-        "zpvk"
-    ],
     "files.associations": {
         "*.tmpl": "html",
         "__hash_table": "cpp",
@@ -40,9 +13,7 @@
         "string": "cpp",
         "string_view": "cpp",
         "vector": "cpp",
-        "functional": "cpp"
-    },
-    "files.exclude": {
-        ".vscode/c_cpp_properties.json": true
+        "functional": "cpp",
+        "system_error": "cpp"
     },
 }

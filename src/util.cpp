@@ -1,8 +1,5 @@
 #include "homeplate.h"
 
-#define DEBUG_STACK false
-#define DEBUG_PRINT false
-
 uint getBatteryPercent(double voltage)
 {
     uint percentage = ((voltage - BATTERY_VOLTAGE_LOW) * 100.0) / (BATTERY_VOLTAGE_HIGH - BATTERY_VOLTAGE_LOW);
@@ -60,14 +57,15 @@ void printChipInfo()
  * \brief Called if stack overflow during execution
  */
 extern void vApplicationStackOverflowHook(xTaskHandle *pxTask,
-		signed char *pcTaskName)
+                                          signed char *pcTaskName)
 {
-	Serial.printf("\n\n!!! [DEBUG]: stack overflow %x %s\n\n", (unsigned int)pxTask, (portCHAR *)pcTaskName);
-	/* If the parameters have been corrupted then inspect pxCurrentTCB to
-	 * identify which task has overflowed its stack.
-	 */
-	for (;;) {
-	}
+    Serial.printf("\n\n!!! [DEBUG]: stack overflow %x %s\n\n", (unsigned int)pxTask, (portCHAR *)pcTaskName);
+    /* If the parameters have been corrupted then inspect pxCurrentTCB to
+     * identify which task has overflowed its stack.
+     */
+    for (;;)
+    {
+    }
 }
 
 void lowBatteryCheck()
@@ -97,7 +95,7 @@ void printDebugStackSpace()
     if (DEBUG_STACK)
     {
         UBaseType_t uxHighWaterMark;
-        uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
+        uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
         Serial.printf("[DEBUG][HEAP] TASK: %s; stack min remaining(%d) txPortGetFreeHeapSize(%d) xPortGetMinimumEverFreeHeapSize(%d) bytes\n", pcTaskGetTaskName(NULL), uxHighWaterMark, xPortGetFreeHeapSize(), xPortGetMinimumEverFreeHeapSize());
     }
 }
@@ -139,8 +137,8 @@ void displayBatteryWarning()
     display.setFont(&Roboto_16);
     display.setTextSize(1);
 
-    const int16_t pad = 3;           // padding
-    const int16_t mar = 5;           // margin
+    const int16_t pad = 3; // padding
+    const int16_t mar = 5; // margin
     int16_t x = E_INK_WIDTH / 2;
     int16_t y = E_INK_HEIGHT - mar;
 
@@ -153,8 +151,8 @@ void displayBatteryWarning()
 
     // background box to set internal buffer colors
     display.fillRect(x - pad, y - pad - h, w + (pad * 2), h + (pad * 2), WHITE);
-    //Serial.printf("fillRect(x:%u, y:%u, w:%u, h:%u)\n", x-pad, y-pad-h, max(w+(pad*2), 400), h+(pad*2));
-    //display.partialUpdate(sleepBoot);
+    // Serial.printf("fillRect(x:%u, y:%u, w:%u, h:%u)\n", x-pad, y-pad-h, max(w+(pad*2), 400), h+(pad*2));
+    // display.partialUpdate(sleepBoot);
 
     // display status message
     display.setCursor(x, y);
@@ -166,8 +164,10 @@ void displayBatteryWarning()
     i2cEnd();
 }
 
-void printDebug(const char * s) {
-    if (DEBUG_PRINT) {
+void printDebug(const char *s)
+{
+    if (DEBUG_PRINT)
+    {
         Serial.printf("[DEBUG]%s\n", s);
     }
 }

@@ -5,7 +5,10 @@
 // WiFi password
 #define WIFI_PASSWORD "WiFi Password"
 
+// hostname
+// NOTE: if using multiple homeplate devices, you MUST make the hostname unique
 #define HOSTNAME "homeplate"
+
 // Static IP information
 // If unset uses DHCP, but updates may be slower, set to use a Static IP
 // #define STATIC_IP "192.168.1.10"
@@ -32,9 +35,19 @@
 // Disables touchpads if they are overly sensitive and result in phantom touch events
 #define TOUCHPAD_ENABLE true
 
-// Sleep
-#define TIME_TO_SLEEP_SEC 20 * 60 // 20 minutes. How long ESP32 will be in deep sleep (in seconds)
-#define TIME_TO_QUICK_SLEEP_SEC 5 * 60 // 5 minutes. How long ESP32 will be in deep sleep (in seconds)
+// How long to sleep between image refreshes
+#define TIME_TO_SLEEP_MIN 20
+
+// Timezone
+// see timezone_config.h for options
+#define TIMEZONE_UTC
+
+// If your Inkplate doesn't have external (or second) MCP I/O expander, you should uncomment next line,
+// otherwise your code could hang out when you send code to your Inkplate.
+// You can easily check if your Inkplate has second MCP by turning it over and 
+// if there is missing chip near place where "MCP23017-2" is written, but if there is
+// chip soldered, you don't have to uncomment line and use external MCP I/O expander
+//#define ONE_MCP_MODE
 
 // keep this to signal the program has a valid config file
 #define CONFIG_H

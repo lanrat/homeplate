@@ -19,7 +19,7 @@ void displayWiFiQR()
     uint32_t y = (E_INK_HEIGHT - (qrcode.size * size)) / 2;  // center QR code vertically
     uint32_t x = (E_INK_WIDTH - (qrcode.size * size) - 100); // 100 px padding on right side
 
-    //serialPrintQR(qrcode);  // for testing
+    // serialPrintQR(qrcode);  // for testing
     displayStart();
     display.selectDisplayMode(INKPLATE_1BIT);
     display.setTextColor(BLACK, WHITE); // Set text color to black on white
@@ -47,23 +47,23 @@ void displayWiFiQR()
 void renderQR(QRCode qrcode, uint32_t x, uint32_t y, uint32_t size)
 {
     displayStart();
-    // set corect color based on display mode
-    uint16_t forground = BLACK;
+    // set correct color based on display mode
+    uint16_t foreground = BLACK;
     uint16_t background = WHITE;
     if (display.getDisplayMode() == INKPLATE_3BIT)
     {
-        forground = C_BLACK;
+        foreground = C_BLACK;
         background = C_WHITE;
     }
 
-    // set the corect pixels
+    // set the correct pixels
     for (uint8_t j = 0; j < qrcode.size; j++)
     {
         // Each horizontal module
         for (uint8_t i = 0; i < qrcode.size; i++)
         {
             // use filled rect to scale the image
-            display.fillRect(x + (i * size), y + (j * size), size, size, qrcode_getModule(&qrcode, i, j) ? forground : background);
+            display.fillRect(x + (i * size), y + (j * size), size, size, qrcode_getModule(&qrcode, i, j) ? foreground : background);
         }
     }
     displayEnd();

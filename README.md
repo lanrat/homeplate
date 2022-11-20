@@ -21,16 +21,15 @@
 * OTA updates over WiFi
 * Partial screen updates in grayscale mode.
 * Power saving sleep mode.
+* Display any PNG image from MQTT Command
 
 ## Future Ideas
 
 * Incorporate [WiFi Manager](https://github.com/tzapu/WiFiManager) for settings
-* Display any image from MQTT Command
-  * Web Comic mode?
 
 ## Setup
 
-### Hardware
+### [Hardware](hardware.md)
 
 See [hardware.md](hardware.md)
 
@@ -38,14 +37,15 @@ See [hardware.md](hardware.md)
 
 Create a Home Assistant Dashboard you want to display. I recommend using the [kiosk-mode](https://github.com/maykar/kiosk-mode), [card-mod](https://github.com/thomasloven/lovelace-card-mod) and [layout-card](https://github.com/thomasloven/lovelace-layout-card) plugins to customize and tune the dashboard for your display.
 
-Setup [sibbl](https://github.com/sibbl/)'s [hass-lovelace-kindle-screensaver](https://github.com/sibbl/hass-lovelace-kindle-screensaver) program to regularly screenshot the desired dashboards for the HomePlate.
+Setup [sibbl](https://github.com/sibbl/)'s [hass-lovelace-kindle-screensaver](https://github.com/sibbl/hass-lovelace-kindle-screensaver) or [my fork hass-screenshot](https://github.com/lanrat/hass-screenshot) to regularly screenshot the desired dashboards for the HomePlate.
 
-More information in [hass.md](hass.md) and [dashboard.md](dashboard.md).
-.
+### More information in [hass.md](hass.md) and [dashboard.md](dashboard.md)
 
 ### Inkplate
 
-Install [PlatformIO](https://platformio.org/). Then copy `src/config_example.h` to `src/config.h` and enter your settings, and build & run with:
+Install [PlatformIO](https://platformio.org/). Then copy `src/config_example.h` to `src/config.h` and enter your settings.
+
+Build & run with:
 
 ```shell
 pio run
@@ -67,16 +67,17 @@ pio device monitor
 
 ```shell
 git pull
-platformio upgrade
-platformio platform update
-platformio lib update
+pio upgrade
+pio pkg update
+pio run --target clean
 ```
 
 ### Debugging
 
 If you get the following error while booting your inkplate, run the [Inkplate_Wavefrom_EEPROM_Programming](https://github.com/e-radionicacom/Inkplate-Arduino-library/tree/master/examples/Inkplate10/Others/Inkplate_Wavefrom_EEPROM_Programming) example to update your Inkplate's waveform.
+
 ```text
-Wavefrom load failed! Upload new waveform in EEPROM. Using default waveform.
+Waveform load failed! Upload new waveform in EEPROM. Using default waveform.
 ```
 
 Older Inkplates don't appear to ship with an updated waveform. I found waveform 3 looks the best for mine.
