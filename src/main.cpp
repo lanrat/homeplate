@@ -56,6 +56,24 @@ void setup()
     display.setIntPinInternal(MCP23017_INT_ADDR, display.mcpRegsInt, PAD3, RISING);
     pinMode(WAKE_BUTTON, INPUT_PULLUP);
 
+    // Setup mcp interrupts - from Inkplate 6Plus TS wake example
+ //   display.setIntOutput(1, false, false, HIGH);
+ //   display.setIntPin(PAD1, RISING);
+ //   display.setIntPin(PAD2, RISING);
+ //   display.setIntPin(PAD3, RISING);
+
+    // Init touchscreen and power it on after init (send false as argument to put it in deep sleep right after init)
+    if (display.tsInit(true))
+    {
+        Serial.println("[SETUP] Touchscreen init ok");
+    }
+    else
+    {
+        Serial.println("[SETUP] Touchscreen init fail");
+        while (true)
+            ;
+    }
+
     // setup display
     if (sleepBoot)
         display.preloadScreen(); // copy saved screen state to buffer
