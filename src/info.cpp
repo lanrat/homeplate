@@ -1,11 +1,11 @@
 #include "homeplate.h"
 
-#define COL1_NAME_X 1 * (E_INK_WIDTH / 8)
-#define COL1_DATA_X 2 * (E_INK_WIDTH / 8)
-#define COL2_NAME_X 5 * (E_INK_WIDTH / 8)
-#define COL2_DATA_X 6 * (E_INK_WIDTH / 8)
+#define COL1_NAME_X 1 * (E_INK_WIDTH / 12)
+#define COL1_DATA_X 3 * (E_INK_WIDTH / 12)
+#define COL2_NAME_X 7 * (E_INK_WIDTH / 12)
+#define COL2_DATA_X 9 * (E_INK_WIDTH / 12)
 
-const static int lineHeight = 20;
+const static int lineHeight = 25;
 
 const char *wl_status_to_string(wl_status_t status)
 {
@@ -53,17 +53,19 @@ void displayInfoScreen()
   display.clearDisplay();
 
   // Title
+  display.setFont(&Roboto_64);
+  display.setTextSize(1);
+  uint32_t y = centerTextX("HomePlate Info", 0, E_INK_WIDTH, 80, false);
+  // version
   display.setFont(&Roboto_32);
   display.setTextSize(1);
-  uint32_t y = centerTextX("HomePlate Info", 0, E_INK_WIDTH, 100, false);
-  display.setFont(&Roboto_16);
-  // version
   snprintf(buff, 1024, "Version: [%s]", VERSION);
-  y = centerTextX(buff, 0, E_INK_WIDTH, y + 110, false);
+  y = centerTextX(buff, 0, E_INK_WIDTH, y + 100, false);
 
+  display.setFont(&Roboto_Condensed_24);
   // column 1
   // HW
-  y = 250;
+  y = 240;
   display.setCursor(COL1_NAME_X, y);
   display.printf("Hardware:");
   display.setCursor(COL1_DATA_X, y);
@@ -147,7 +149,7 @@ void displayInfoScreen()
   display.printf("%dC (%dF)", temp, tempF);
 
   // column 2
-  y = 250;
+  y = 240;
   // network
   display.setCursor(COL2_NAME_X, y);
   display.printf("Hostname:");
