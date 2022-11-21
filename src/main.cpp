@@ -1,6 +1,6 @@
 // Next 3 lines are a precaution, you can ignore those, and the example would also work without them
-#ifndef ARDUINO_INKPLATE6PLUS
-#error "Wrong board selection for this example, please select Inkplate 6 PLUS in the boards menu."
+#if !defined(ARDUINO_INKPLATE10) && !defined(ARDUINO_INKPLATE6PLUS)
+#error "Wrong board selection for this example, please select Inkplate 10 or 6 PLUS in the boards menu."
 #endif
 
 #include <driver/rtc_io.h> //ESP32 library used for deep sleep and RTC wake up pins
@@ -56,23 +56,20 @@ void setup()
     display.setIntPinInternal(MCP23017_INT_ADDR, display.mcpRegsInt, PAD3, RISING);
     pinMode(WAKE_BUTTON, INPUT_PULLUP);
 
-    // Setup mcp interrupts - from Inkplate 6Plus TS wake example
- //   display.setIntOutput(1, false, false, HIGH);
- //   display.setIntPin(PAD1, RISING);
- //   display.setIntPin(PAD2, RISING);
- //   display.setIntPin(PAD3, RISING);
-
+#ifdef ARDUINO_INKPLATE6PLUS
     // Init touchscreen and power it on after init (send false as argument to put it in deep sleep right after init)
+    // This currently doesn't do anything
     if (display.tsInit(true))
     {
         Serial.println("[SETUP] Touchscreen init ok");
     }
     else
     {
-        Serial.println("[SETUP] Touchscreen init fail");
+        Serial.println("[SETUP] Touchscreen init failed");
         while (true)
-            ;
+        ;
     }
+#endif
 
     // setup display
     if (sleepBoot)
