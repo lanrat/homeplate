@@ -66,8 +66,7 @@ void setup()
     else
     {
         Serial.println("[SETUP] Touchscreen init failed");
-        while (true)
-        ;
+        while (true);
     }
 #endif
 

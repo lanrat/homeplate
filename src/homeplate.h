@@ -6,6 +6,8 @@
 #include "fonts/Roboto_32.h"
 #include "fonts/Roboto_64.h"
 #include "fonts/Roboto_128.h"
+#include "fonts/Roboto_Cond_24.h"
+#include "fonts/Roboto_Cond_72.h"
 #include "config.h"
 
 // check that config file is correctly set
@@ -136,7 +138,7 @@ void delaySleep(uint seconds);
  */
 
 // Battery power thresholds
-#define BATTERY_VOLTAGE_HIGH 4.65
+#define BATTERY_VOLTAGE_HIGH 4.66
 #define BATTERY_VOLTAGE_LOW 3.55
 #define BATTERY_VOLTAGE_WARNING_SLEEP 3.52
 #define BATTERY_PERCENT_WARNING 20

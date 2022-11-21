@@ -33,6 +33,7 @@ void gotoSleepNow()
 
     // Enable wakeup from deep sleep on gpio 36 (WAKE BUTTON)
     esp_sleep_enable_ext0_wakeup(WAKE_BUTTON, LOW);
+
     // enable wake from MCP port expander
     if (TOUCHPAD_ENABLE)
         esp_sleep_enable_ext1_wakeup(TOUCHPAD_WAKE_MASK, ESP_EXT1_WAKEUP_ANY_HIGH);
