@@ -136,9 +136,9 @@ void delaySleep(uint seconds);
  */
 
 // Battery power thresholds
-#define BATTERY_VOLTAGE_HIGH 4.7
-#define BATTERY_VOLTAGE_LOW 3.6
-#define BATTERY_VOLTAGE_WARNING_SLEEP 3.55
+#define BATTERY_VOLTAGE_HIGH 4.65
+#define BATTERY_VOLTAGE_LOW 3.55
+#define BATTERY_VOLTAGE_WARNING_SLEEP 3.52
 #define BATTERY_PERCENT_WARNING 20
 
 // enable SD card (currently unused)
