@@ -23,7 +23,7 @@ void displayWiFiQR()
     displayStart();
     display.selectDisplayMode(INKPLATE_1BIT);
     display.setTextColor(BLACK, WHITE); // Set text color to black on white
-    display.setFont(&Roboto_64);
+    display.setFont(&Roboto_Condensed_72);
     display.setTextSize(1);
     display.clearDisplay();
     displayEnd();

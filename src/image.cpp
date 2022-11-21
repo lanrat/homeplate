@@ -5,7 +5,7 @@ void displayStats()
 {
     displayStart();
     display.setTextColor(C_BLACK, C_WHITE); // Set text color to black on white
-    display.setFont(&Roboto_12);
+    display.setFont(&Roboto_16);
     display.setTextSize(1);
     // display status message
     display.setCursor(1155, 820);

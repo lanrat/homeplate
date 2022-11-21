@@ -13,7 +13,7 @@ const char* getMessage()
     return message;
 }
 
-static const GFXfont *fonts[] = {&Roboto_128, &Roboto_64, &Roboto_32, &Roboto_16, &Roboto_12};
+static const GFXfont *fonts[] = {&Roboto_128, &Roboto_64, &Roboto_32, &Roboto_Condensed_24, &Roboto_16, &Roboto_12};
 
 struct FontSizing
 {
@@ -29,7 +29,7 @@ FontSizing findFontSizeFit(char *m)
     int16_t x1, y1;
     FontSizing font;
 
-    // display.setTextWrap(false);
+    // display.setTextWrap(true);
 
     for (size_t i = 0; i < sizeof(fonts) / sizeof(fonts[0]); i++)
     {
