@@ -52,7 +52,7 @@ void mqttSendWiFiStatus()
     return;
   }
 
-  const static char *topic = "homeassistant/sensor/homeplate/homeplate_wifi/state";
+  const static char *topic = "homeassistant/sensor/homeplate/wifi_signal/state";
   const int capacity = JSON_OBJECT_SIZE(1);
   StaticJsonDocument<capacity> doc;
   doc["signal"] = rssi;
@@ -160,7 +160,7 @@ void sendHAConfig()
   doc["device_class"] = "signal_strength";
   doc["state_class"] = "measurement";
   doc["name"] = "HomePlate WiFi Signal";
-  doc["state_topic"] = "homeassistant/sensor/homeplate/homeplate_wifi/state";
+  doc["state_topic"] = "homeassistant/sensor/homeplate/wifi_signal/state";
   doc["unit_of_measurement"] = "dBm";
   doc["value_template"] = "{{ value_json.signal }}";
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
