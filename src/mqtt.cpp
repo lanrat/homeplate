@@ -151,8 +151,17 @@ void sendHAConfig()
   const bool retain = true;
   const int qos = 1;
   char buff[512];
-  const int capacity = JSON_OBJECT_SIZE(10); // intentionally larger than we need.
+  const int capacity = JSON_OBJECT_SIZE(24); // intentionally larger than we need.
   StaticJsonDocument<capacity> doc;
+
+  // deviceinfo
+  const int devcapacity = JSON_OBJECT_SIZE(6);
+  StaticJsonDocument<devcapacity> deviceinfo;
+  deviceinfo.clear();
+  deviceinfo["manufacturer"] = "e-radionica";
+  deviceinfo["model"] = "Inkplate 10";
+  deviceinfo["name"] = "HomePlate";
+  deviceinfo["identifiers"][0] = "homeplate";
 
   // wifi RSSI
   doc.clear();
@@ -165,6 +174,7 @@ void sendHAConfig()
   doc["value_template"] = "{{ value_json.signal }}";
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
   doc["entity_category"] = "diagnostic";
+  doc["device"] = deviceinfo;
   serializeJson(doc, buff);
   mqttClient.publish("homeassistant/sensor/homeplate/wifi_signal/config", qos, retain, buff);
 
@@ -178,6 +188,7 @@ void sendHAConfig()
   doc["unit_of_measurement"] = "°C";
   doc["value_template"] = "{{ value_json.temperature }}";
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
+  doc["device"] = deviceinfo;
   serializeJson(doc, buff);
   mqttClient.publish("homeassistant/sensor/homeplate/temperature/config", qos, retain, buff);
 
@@ -191,6 +202,7 @@ void sendHAConfig()
   doc["unit_of_measurement"] = "V";
   doc["value_template"] = "{{ value_json.voltage }}";
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
+  doc["device"] = deviceinfo;
   serializeJson(doc, buff);
   mqttClient.publish("homeassistant/sensor/homeplate/voltage/config", qos, retain, buff);
   doc.clear();
@@ -202,6 +214,7 @@ void sendHAConfig()
   doc["unit_of_measurement"] = "%";
   doc["value_template"] = "{{ value_json.battery }}";
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
+  doc["device"] = deviceinfo;
   serializeJson(doc, buff);
   mqttClient.publish("homeassistant/sensor/homeplate/battery/config", qos, retain, buff);
 
@@ -217,6 +230,7 @@ void sendHAConfig()
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
   doc["entity_category"] = "diagnostic";
   doc["enabled_by_default"] = false;
+  doc["device"] = deviceinfo;
   serializeJson(doc, buff);
   mqttClient.publish("homeassistant/sensor/homeplate/boot/config", qos, retain, buff);
 
@@ -229,6 +243,7 @@ void sendHAConfig()
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
   doc["entity_category"] = "diagnostic";
   doc["enabled_by_default"] = false;
+  doc["device"] = deviceinfo;
   serializeJson(doc, buff);
   mqttClient.publish("homeassistant/sensor/homeplate/boot_reason/config", qos, retain, buff);
 
@@ -241,6 +256,7 @@ void sendHAConfig()
   doc["value_template"] = "{{ value_json.version }}";
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
   doc["entity_category"] = "diagnostic";
+  doc["device"] = deviceinfo;
   serializeJson(doc, buff);
   mqttClient.publish("homeassistant/sensor/homeplate/version/config", qos, retain, buff);
 
@@ -256,6 +272,7 @@ void sendHAConfig()
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
   doc["entity_category"] = "diagnostic";
   doc["enabled_by_default"] = false;
+  doc["device"] = deviceinfo;
   serializeJson(doc, buff);
   mqttClient.publish("homeassistant/sensor/homeplate/activity_count/config", qos, retain, buff);
 }
