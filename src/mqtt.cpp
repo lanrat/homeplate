@@ -24,7 +24,7 @@ static bool mqttKill;    // should the status task stop running
 
 const static char *state_topic_wifi_signal = mqtt_base_sensor("wifi_signal/state");
 const static char *state_topic_temperature = mqtt_base_sensor("temperature/state");
-const static char *state_topic_battery = mqtt_base_sensor("temperature/state");
+const static char *state_topic_battery = mqtt_base_sensor("battery/state");
 const static char *state_topic_boot = mqtt_base_sensor("boot/state");
 const static char *state_topic_version = mqtt_base_sensor("version/state");
 
