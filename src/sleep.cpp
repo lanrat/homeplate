@@ -6,10 +6,25 @@
 
 static unsigned long sleepTime;
 uint32_t sleepDuration = TIME_TO_SLEEP_SEC;
+uint32_t sleepRefresh = 0;
+
+void setSleepRefresh(uint32_t sec)
+{
+    sleepRefresh = sec;
+}
 
 void setSleepDuration(uint32_t sec)
 {
-    sleepDuration = sec;
+    if (sleepRefresh > 0)
+    {
+        Serial.printf("[SLEEP] overriding sleep %d with %d\n", sec, sleepRefresh);
+        sleepDuration = sleepRefresh;
+        sleepRefresh = 0;
+    }
+    else
+    {
+        sleepDuration = sec;
+    }
 }
 
 void gotoSleepNow()
