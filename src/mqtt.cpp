@@ -159,9 +159,9 @@ void sendHAConfig()
   StaticJsonDocument<devcapacity> deviceinfo;
   deviceinfo.clear();
   deviceinfo["manufacturer"] = "e-radionica";
-  deviceinfo["model"] = "Inkplate 10";
-  deviceinfo["name"] = "HomePlate";
-  deviceinfo["identifiers"][0] = "homeplate";
+  deviceinfo["model"] = DEVICE_MODEL;
+  deviceinfo["name"] = MQTT_DEVICE_NAME;
+  deviceinfo["identifiers"][0] = MQTT_NODE_ID;
 
   // wifi RSSI
   doc.clear();

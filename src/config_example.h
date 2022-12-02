@@ -31,6 +31,9 @@
 // Set MQTT_USER & MQTT_PASSWORD if needed
 //#define MQTT_USER "mqtt username"
 //#define MQTT_PASSWORD "mqtt password"
+// Customize node id and device name if needed
+//#define MQTT_NODE_ID "homeplate"	// defaults to HOSTNAME
+//#define MQTT_DEVICE_NAME "HomePlate"	// defaults to "HomePlate"
 
 // Disables touchpads if they are overly sensitive and result in phantom touch events
 #define TOUCHPAD_ENABLE true
