@@ -23,7 +23,7 @@ void gotoSleepNow()
     Serial.println("[SLEEP] prepping for sleep");
     if (sleepRefresh > 0)
     {
-        Serial.printf("[SLEEP] overriding sleep %d with %d\n", sec, sleepRefresh);
+        Serial.printf("[SLEEP] overriding sleep %d with %d\n", sleepDuration, sleepRefresh);
         sleepDuration = sleepRefresh;
         sleepRefresh = 0;
     }
