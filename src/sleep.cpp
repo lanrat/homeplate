@@ -15,21 +15,18 @@ void setSleepRefresh(uint32_t sec)
 
 void setSleepDuration(uint32_t sec)
 {
+    sleepDuration = sec;
+}
+
+void gotoSleepNow()
+{
+    Serial.println("[SLEEP] prepping for sleep");
     if (sleepRefresh > 0)
     {
         Serial.printf("[SLEEP] overriding sleep %d with %d\n", sec, sleepRefresh);
         sleepDuration = sleepRefresh;
         sleepRefresh = 0;
     }
-    else
-    {
-        sleepDuration = sec;
-    }
-}
-
-void gotoSleepNow()
-{
-    Serial.println("[SLEEP] prepping for sleep");
 
     i2cStart();
     // disconnect WiFi as it's no longer needed
