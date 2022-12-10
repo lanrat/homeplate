@@ -122,7 +122,7 @@ void runActivities(void *params)
                 Serial.printf("[ACTIVITY][ERROR] HomeAssistant Activity reset while waiting, aborting...\n");
                 continue;
             }
-            // get & render hass image
+            // get & render image
             delaySleep(20);
             remotePNG(getMessage());
             break;

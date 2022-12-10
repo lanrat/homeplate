@@ -5,6 +5,8 @@
 #define MQTT_TASK_PRIORITY 3
 #define MQTT_SEND_TASK_PRIORITY 5
 
+#define MAX_MQTT_REFRESH_SEC 60*60*24 // 1 day
+
 #define MQTT_ACTION_TOPIC "homeplate/activity/run"
 
 AsyncMqttClient mqttClient;
@@ -400,7 +402,7 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
     {
       int refresh = doc["refresh"].as<int>();
       Serial.printf("[MQTT][REFRESH]: %d\n", refresh);
-      if (refresh > 0 && refresh < 86400)
+      if (refresh > 0 && refresh < MAX_MQTT_REFRESH_SEC)
       {
         setSleepRefresh((uint32_t) refresh);
       }
