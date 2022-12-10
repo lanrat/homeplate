@@ -6,7 +6,7 @@ All cards use [card-mod](https://github.com/thomasloven/lovelace-card-mod) to ov
 
 ## View
 
-For the view layout itself, I use 
+For the view layout itself, I use
 [lovelace-layout-card](https://github.com/thomasloven/lovelace-layout-card) with the "Vertical (layout-card)" View type with the following config:
 
 ```yaml
@@ -153,7 +153,6 @@ card_mod:
 
 <img width="392" src="https://user-images.githubusercontent.com/164192/168655215-4e2b0ff2-d7f6-435f-9a6d-9e6d8cd7d8dc.png">
 
-
 ```yaml
 type: custom:apexcharts-card
 update_interval: 5min
@@ -277,7 +276,6 @@ card_mod:
 With [multiple-entity-row](https://github.com/benct/lovelace-multiple-entity-row).
 
 <img width="394" src="https://user-images.githubusercontent.com/164192/168655614-5cdf03e4-f171-45b3-aed4-5854fabd97bb.png">
-
 
 ```yaml
 type: entities

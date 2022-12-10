@@ -157,8 +157,8 @@ void sendHAConfig()
   StaticJsonDocument<capacity> doc;
 
   // deviceinfo
-  const int devcapacity = JSON_OBJECT_SIZE(6);
-  StaticJsonDocument<devcapacity> deviceinfo;
+  const int devCapacity = JSON_OBJECT_SIZE(6);
+  StaticJsonDocument<devCapacity> deviceinfo;
   deviceinfo.clear();
   deviceinfo["manufacturer"] = "e-radionica";
   deviceinfo["model"] = DEVICE_MODEL;
