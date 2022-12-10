@@ -6,7 +6,7 @@ For example dashboard yaml see [dashboard.md](dashboard.md).
 
 ## MQTT Commands
 
-You can change the activity running on the HomePlate by publishing the following MQTT message to the topic: `homeplate/activity/run`
+You can change the activity running on the HomePlate by publishing the following MQTT message to the topic: `homeplate/<mqtt_node_id>/activity/run` which defaults to `homeplate/homeplate/activity/run`
 
 The example below launches the QR activity:
 
@@ -59,7 +59,7 @@ cards:
           action: call-service
           service: mqtt.publish
           service_data:
-            topic: homeplate/activity/run
+            topic: homeplate/homeplate/activity/run
             qos: '1'
             payload: '{ "action": "hass" }'
             retain: true
@@ -71,7 +71,7 @@ cards:
           action: call-service
           service: mqtt.publish
           service_data:
-            topic: homeplate/activity/run
+            topic: homeplate/homeplate/activity/run
             qos: '1'
             payload: '{ "action": "qr" }'
             retain: true
@@ -83,7 +83,7 @@ cards:
           action: call-service
           service: mqtt.publish
           service_data:
-            topic: homeplate/activity/run
+            topic: homeplate/homeplate/activity/run
             qos: '1'
             payload: '{ "action": "info" }'
             retain: true
@@ -95,7 +95,7 @@ cards:
           action: call-service
           service: mqtt.publish
           service_data:
-            topic: homeplate/activity/run
+            topic: homeplate/homeplate/activity/run
             qos: '1'
             retain: true
             payload_template: >-
@@ -109,7 +109,7 @@ cards:
           action: call-service
           service: mqtt.publish
           service_data:
-            topic: homeplate/activity/run
+            topic: homeplate/homeplate/activity/run
             qos: '1'
             retain: true
             payload_template: >-

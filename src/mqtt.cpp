@@ -7,7 +7,11 @@
 
 #define MAX_MQTT_REFRESH_SEC 60*60*24 // 1 day
 
-#define MQTT_ACTION_TOPIC "homeplate/activity/run"
+#define MQTT_ACTION_TOPIC        "homeplate/" MQTT_NODE_ID "/activity/run"
+#define MQTT_DISCOVERY_TOPIC     "homeassistant"
+#define mqtt_base_sensor(topic)  MQTT_DISCOVERY_TOPIC "/sensor/" MQTT_NODE_ID "/" topic
+#define mqtt_unique_id(id)       MQTT_NODE_ID "_" id
+#define mqtt_name(name)          MQTT_DEVICE_NAME " " name
 
 AsyncMqttClient mqttClient;
 xTaskHandle mqttTaskHandle;
@@ -17,6 +21,12 @@ StaticJsonDocument<200> filter;
 static bool mqttWaiting; // is MQTT waiting for status to be sent
 static bool mqttRun;     // should another MQTT status update be sent
 static bool mqttKill;    // should the status task stop running
+
+const static char *state_topic_wifi_signal = mqtt_base_sensor("wifi_signal/state");
+const static char *state_topic_temperature = mqtt_base_sensor("temperature/state");
+const static char *state_topic_battery = mqtt_base_sensor("battery/state");
+const static char *state_topic_boot = mqtt_base_sensor("boot/state");
+const static char *state_topic_version = mqtt_base_sensor("version/state");
 
 bool getMQTTFailed()
 {
@@ -54,14 +64,13 @@ void mqttSendWiFiStatus()
     return;
   }
 
-  const static char *topic = "homeassistant/sensor/homeplate/wifi_signal/state";
   const int capacity = JSON_OBJECT_SIZE(1);
   StaticJsonDocument<capacity> doc;
   doc["signal"] = rssi;
   char buff[256];
   serializeJson(doc, buff);
-  Serial.printf("[MQTT] Sending MQTT State: [%s] %s\n", topic, buff);
-  mqttClient.publish(topic, 1, MQTT_RETAIN_SENSOR_VALUE, buff);
+  Serial.printf("[MQTT] Sending MQTT State: [%s] %s\n", state_topic_wifi_signal, buff);
+  mqttClient.publish(state_topic_wifi_signal, 1, MQTT_RETAIN_SENSOR_VALUE, buff);
 }
 
 // This can cause screen fade, use sparingly
@@ -80,14 +89,13 @@ void mqttSendTempStatus()
     return;
   }
 
-  const static char *topic = "homeassistant/sensor/homeplate/temperature/state";
   char buff[256];
   const int capacity = JSON_OBJECT_SIZE(1);
   StaticJsonDocument<capacity> doc;
   doc["temperature"] = temperature;
   serializeJson(doc, buff);
-  Serial.printf("[MQTT] Sending MQTT State: [%s] %s\n", topic, buff);
-  mqttClient.publish(topic, 1, MQTT_RETAIN_SENSOR_VALUE, buff);
+  Serial.printf("[MQTT] Sending MQTT State: [%s] %s\n", state_topic_temperature, buff);
+  mqttClient.publish(state_topic_temperature, 1, MQTT_RETAIN_SENSOR_VALUE, buff);
 }
 
 void mqttSendBatteryStatus()
@@ -107,20 +115,18 @@ void mqttSendBatteryStatus()
     return;
   }
 
-  const static char *topic = "homeassistant/sensor/homeplate/battery/state";
   char buff[256];
   const int capacity = JSON_OBJECT_SIZE(2);
   StaticJsonDocument<capacity> doc;
   doc["voltage"] = voltage;
   doc["battery"] = percent;
   serializeJson(doc, buff);
-  Serial.printf("[MQTT] Sending MQTT State: [%s] %s\n", topic, buff);
-  mqttClient.publish(topic, 1, MQTT_RETAIN_SENSOR_VALUE, buff);
+  Serial.printf("[MQTT] Sending MQTT State: [%s] %s\n", state_topic_battery, buff);
+  mqttClient.publish(state_topic_battery, 1, MQTT_RETAIN_SENSOR_VALUE, buff);
 }
 
 void mqttSendBootStatus(uint boot, uint activityCount, const char *bootReason)
 {
-  const static char *topic1 = "homeassistant/sensor/homeplate/boot/state";
   char buff[512];
   const int capacity = JSON_OBJECT_SIZE(3);
   StaticJsonDocument<capacity> doc;
@@ -128,16 +134,15 @@ void mqttSendBootStatus(uint boot, uint activityCount, const char *bootReason)
   doc["activity_count"] = activityCount;
   doc["boot_reason"] = bootReason;
   serializeJson(doc, buff);
-  Serial.printf("[MQTT] Sending MQTT State: [%s] %s\n", topic1, buff);
-  mqttClient.publish(topic1, 1, MQTT_RETAIN_SENSOR_VALUE, buff);
+  Serial.printf("[MQTT] Sending MQTT State: [%s] %s\n", state_topic_boot, buff);
+  mqttClient.publish(state_topic_boot, 1, MQTT_RETAIN_SENSOR_VALUE, buff);
 
-  const static char *topic2 = "homeassistant/sensor/homeplate/version/state";
   const int capacity2 = JSON_OBJECT_SIZE(1);
   StaticJsonDocument<capacity2> doc2;
   doc2["version"] = VERSION;
   serializeJson(doc2, buff);
-  Serial.printf("[MQTT] Sending MQTT State: [%s] %s\n", topic2, buff);
-  mqttClient.publish(topic2, 1, MQTT_RETAIN_SENSOR_VALUE, buff);
+  Serial.printf("[MQTT] Sending MQTT State: [%s] %s\n", state_topic_version, buff);
+  mqttClient.publish(state_topic_version, 1, MQTT_RETAIN_SENSOR_VALUE, buff);
 }
 
 void sendHAConfig()
@@ -167,65 +172,65 @@ void sendHAConfig()
 
   // wifi RSSI
   doc.clear();
-  doc["unique_id"] = "homeplate_wifi_signal";
+  doc["unique_id"] = mqtt_unique_id("wifi_signal");
   doc["device_class"] = "signal_strength";
   doc["state_class"] = "measurement";
-  doc["name"] = "HomePlate WiFi Signal";
-  doc["state_topic"] = "homeassistant/sensor/homeplate/wifi_signal/state";
+  doc["name"] = mqtt_name("WiFi Signal");
+  doc["state_topic"] = state_topic_wifi_signal;
   doc["unit_of_measurement"] = "dBm";
   doc["value_template"] = "{{ value_json.signal }}";
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
   doc["entity_category"] = "diagnostic";
   doc["device"] = deviceinfo;
   serializeJson(doc, buff);
-  mqttClient.publish("homeassistant/sensor/homeplate/wifi_signal/config", qos, retain, buff);
+  mqttClient.publish(mqtt_base_sensor("wifi_signal/config"), qos, retain, buff);
 
   // temp
   doc.clear();
-  doc["unique_id"] = "homeplate_temperature";
+  doc["unique_id"] = mqtt_unique_id("temperature");
   doc["device_class"] = "temperature";
   doc["state_class"] = "measurement";
-  doc["name"] = "HomePlate Temperature";
-  doc["state_topic"] = "homeassistant/sensor/homeplate/temperature/state";
+  doc["name"] = mqtt_name("Temperature");
+  doc["state_topic"] = state_topic_temperature;
   doc["unit_of_measurement"] = "°C";
   doc["value_template"] = "{{ value_json.temperature }}";
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
   doc["device"] = deviceinfo;
   serializeJson(doc, buff);
-  mqttClient.publish("homeassistant/sensor/homeplate/temperature/config", qos, retain, buff);
+  mqttClient.publish(mqtt_base_sensor("temperature/config"), qos, retain, buff);
 
   // battery
   doc.clear();
-  doc["unique_id"] = "homeplate_voltage";
+  doc["unique_id"] = mqtt_unique_id("voltage");
   doc["device_class"] = "voltage";
   doc["state_class"] = "measurement";
-  doc["name"] = "HomePlate Voltage";
-  doc["state_topic"] = "homeassistant/sensor/homeplate/battery/state";
+  doc["name"] = mqtt_name("Voltage");
+  doc["state_topic"] = state_topic_battery;
   doc["unit_of_measurement"] = "V";
   doc["value_template"] = "{{ value_json.voltage }}";
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
   doc["device"] = deviceinfo;
   serializeJson(doc, buff);
-  mqttClient.publish("homeassistant/sensor/homeplate/voltage/config", qos, retain, buff);
+  mqttClient.publish(mqtt_base_sensor("voltage/config"), qos, retain, buff);
   doc.clear();
-  doc["unique_id"] = "homeplate_battery";
+  doc["unique_id"] = mqtt_unique_id("battery");
   doc["device_class"] = "battery";
   doc["state_class"] = "measurement";
-  doc["name"] = "HomePlate Battery";
-  doc["state_topic"] = "homeassistant/sensor/homeplate/battery/state";
+  doc["name"] = mqtt_name("Battery");
+  doc["state_topic"] = state_topic_battery;
   doc["unit_of_measurement"] = "%";
   doc["value_template"] = "{{ value_json.battery }}";
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
   doc["device"] = deviceinfo;
   serializeJson(doc, buff);
-  mqttClient.publish("homeassistant/sensor/homeplate/battery/config", qos, retain, buff);
+  mqttClient.publish(mqtt_base_sensor("battery/config"), qos, retain, buff);
 
   // boot
   doc.clear();
-  doc["unique_id"] = "homeplate_boot";
+  doc["unique_id"] = mqtt_unique_id("boot");
   doc["state_class"] = "total_increasing";
-  doc["name"] = "HomePlate Boot Count";
-  doc["state_topic"] = "homeassistant/sensor/homeplate/boot/state";
+  doc["name"] = mqtt_name("Boot Count");
+  doc["state_topic"] = state_topic_boot;
   doc["unit_of_measurement"] = "boot";
   doc["icon"] = "mdi:chart-line-variant";
   doc["value_template"] = "{{ value_json.boot }}";
@@ -234,40 +239,40 @@ void sendHAConfig()
   doc["enabled_by_default"] = false;
   doc["device"] = deviceinfo;
   serializeJson(doc, buff);
-  mqttClient.publish("homeassistant/sensor/homeplate/boot/config", qos, retain, buff);
+  mqttClient.publish(mqtt_base_sensor("boot/config"), qos, retain, buff);
 
   // boot reason
   doc.clear();
-  doc["unique_id"] = "homeplate_boot_reason";
-  doc["name"] = "HomePlate Boot Reason";
-  doc["state_topic"] = "homeassistant/sensor/homeplate/boot/state";
+  doc["unique_id"] = mqtt_unique_id("boot_reason");
+  doc["name"] = mqtt_name("Boot Reason");
+  doc["state_topic"] = state_topic_boot;
   doc["value_template"] = "{{ value_json.boot_reason }}";
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
   doc["entity_category"] = "diagnostic";
   doc["enabled_by_default"] = false;
   doc["device"] = deviceinfo;
   serializeJson(doc, buff);
-  mqttClient.publish("homeassistant/sensor/homeplate/boot_reason/config", qos, retain, buff);
+  mqttClient.publish(mqtt_base_sensor("boot_reason/config"), qos, retain, buff);
 
   // version
   doc.clear();
-  doc["unique_id"] = "homeplate_version";
-  doc["name"] = "HomePlate Version";
-  doc["state_topic"] = "homeassistant/sensor/homeplate/version/state";
+  doc["unique_id"] = mqtt_unique_id("version");
+  doc["name"] = mqtt_name("Version");
+  doc["state_topic"] = state_topic_version;
   doc["icon"] = "mdi:new-box";
   doc["value_template"] = "{{ value_json.version }}";
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
   doc["entity_category"] = "diagnostic";
   doc["device"] = deviceinfo;
   serializeJson(doc, buff);
-  mqttClient.publish("homeassistant/sensor/homeplate/version/config", qos, retain, buff);
+  mqttClient.publish(mqtt_base_sensor("version/config"), qos, retain, buff);
 
   // activityCount
   doc.clear();
-  doc["unique_id"] = "homeplate_activity_count";
+  doc["unique_id"] = mqtt_unique_id("activity_count");
   doc["state_class"] = "total_increasing";
-  doc["name"] = "HomePlate Activity Count";
-  doc["state_topic"] = "homeassistant/sensor/homeplate/boot/state";
+  doc["name"] = mqtt_name("Activity Count");
+  doc["state_topic"] = state_topic_boot;
   doc["unit_of_measurement"] = "activities";
   doc["icon"] = "mdi:chart-line-variant";
   doc["value_template"] = "{{ value_json.activity_count }}";
@@ -276,7 +281,7 @@ void sendHAConfig()
   doc["enabled_by_default"] = false;
   doc["device"] = deviceinfo;
   serializeJson(doc, buff);
-  mqttClient.publish("homeassistant/sensor/homeplate/activity_count/config", qos, retain, buff);
+  mqttClient.publish(mqtt_base_sensor("activity_count/config"), qos, retain, buff);
 }
 
 void connectToMqtt(void *params)
