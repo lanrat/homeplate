@@ -76,6 +76,7 @@ void runActivities(void *params)
             continue;
         }
         lastActivityTime = millis();
+        activityCurrent = activityNext;
         activityCount++;
 
         Serial.printf("[ACTIVITY] starting activity: %d\n", activityNext);
@@ -129,7 +130,6 @@ void runActivities(void *params)
         default:
             Serial.printf("[ACTIVITY][ERROR] runActivities() unhandled Activity: %d\n", activityNext);
         }
-        activityCurrent = activityNext;
         // check and display a low battery warning if needed
         displayBatteryWarning();
 
