@@ -14,8 +14,8 @@ xTaskHandle mqttTaskHandle;
 bool mqttFailed = false;
 StaticJsonDocument<200> filter;
 
-static bool mqttWaiting; // are we waiting for a MQTT status to be sent
-static bool mqttRun;     // should se send another MQTT status update
+static bool mqttWaiting; // is MQTT waiting for status to be sent
+static bool mqttRun;     // should another MQTT status update be sent
 static bool mqttKill;    // should the status task stop running
 
 bool getMQTTFailed()
@@ -153,7 +153,7 @@ void sendHAConfig()
   const bool retain = true;
   const int qos = 1;
   char buff[512];
-  const int capacity = JSON_OBJECT_SIZE(24); // intentionally larger than we need.
+  const int capacity = JSON_OBJECT_SIZE(24); // intentionally larger than needed.
   StaticJsonDocument<capacity> doc;
 
   // deviceinfo
@@ -378,7 +378,7 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
     return;
   }
 
-  // only clear if there is a payload, otherwise we will end up clearing our clear message...
+  // only clear if there is a payload, otherwise the MQTT messages are cleared
   if (len > 0)
   {
     // send blank response to clear/ack the MQTT command

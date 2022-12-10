@@ -70,7 +70,7 @@ void keepWiFiAlive(void *parameter)
             vTaskDelay(100 / portTICK_PERIOD_MS);
         }
 
-        // When we couldn't make a WiFi connection (or the timeout expired)
+        // check for WiFi connection failed (or the timeout expired)
         // sleep for a while and then retry.
         if (WiFi.status() != WL_CONNECTED)
         {
