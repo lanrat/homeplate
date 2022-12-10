@@ -25,6 +25,45 @@ You can add additional data to the action as well. To display a text message:
 }
 ```
 
+If you want to override the sleep time for the next action, for example to just display the QR code for 1 minute:
+```json
+{
+    "action": "qr",
+    "refresh": "60"
+}
+```
+
+This comes in handy with a commute automation for example, so in the morning, the display get's refreshed more often.
+The following automation runs every 5 minutes between 7:30 and 10:30, updates the commute sensor and sends an activity trigger
+with a 5 minute refresh timer for the next boot:
+```yaml
+- alias: "commute example"
+  trigger:
+    - platform: time_pattern
+      minutes: "/5"
+  condition:
+    - condition: time
+      after: "07:30:00"
+      before: "10:30:00"
+    - condition: time
+      weekday:
+        - mon
+        - tue
+        - wed
+        - thu
+        - fri
+  action:
+    - service: homeassistant.update_entity
+      target:
+        entity_id: sensor.commute_example
+    - service: mqtt.publish
+      data:
+        topic: homeplate/activity/run
+        qos: '1'
+        payload: '{ "action": "hass", "refresh": "300" }'
+        retain: true
+```
+
 ## Home Plate Card Example
 
 ![Home Assistant card](https://user-images.githubusercontent.com/164192/151242986-a8ed6948-3462-4d02-80f4-9a08062d237b.png)
