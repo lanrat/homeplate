@@ -396,6 +396,20 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
     Serial.printf("\n");
     const char *action = doc["action"];
 
+    if (doc.containsKey("refresh"))
+    {
+      int refresh = doc["refresh"].as<int>();
+      Serial.printf("[MQTT][REFRESH]: %d\n", refresh);
+      if (refresh > 0 && refresh < 86400)
+      {
+        setSleepRefresh((uint32_t) refresh);
+      }
+      else
+      {
+        Serial.printf("[MQTT][ERROR] refresh value is out of range\n");
+      }
+    }
+
     if (strncmp("qr", action, 3) == 0)
     {
       startActivity(GuestWifi);
@@ -463,6 +477,7 @@ void startMQTTTask()
   // set deserialization filter
   filter["action"] = true;
   filter["message"] = true;
+  filter["refresh"] = true;
 
   mqttClient.setClientId(HOSTNAME);
   mqttClient.setServer(MQTT_HOST, MQTT_PORT);

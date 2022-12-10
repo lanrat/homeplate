@@ -6,6 +6,12 @@
 
 static unsigned long sleepTime;
 uint32_t sleepDuration = TIME_TO_SLEEP_SEC;
+uint32_t sleepRefresh = 0;
+
+void setSleepRefresh(uint32_t sec)
+{
+    sleepRefresh = sec;
+}
 
 void setSleepDuration(uint32_t sec)
 {
@@ -15,6 +21,12 @@ void setSleepDuration(uint32_t sec)
 void gotoSleepNow()
 {
     Serial.println("[SLEEP] prepping for sleep");
+    if (sleepRefresh > 0)
+    {
+        Serial.printf("[SLEEP] overriding sleep %d with %d\n", sleepDuration, sleepRefresh);
+        sleepDuration = sleepRefresh;
+        sleepRefresh = 0;
+    }
 
     i2cStart();
     // disconnect WiFi as it's no longer needed
