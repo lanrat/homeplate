@@ -26,7 +26,6 @@ const static char *state_topic_wifi_signal = mqtt_base_sensor("wifi_signal/state
 const static char *state_topic_temperature = mqtt_base_sensor("temperature/state");
 const static char *state_topic_battery = mqtt_base_sensor("battery/state");
 const static char *state_topic_boot = mqtt_base_sensor("boot/state");
-const static char *state_topic_version = mqtt_base_sensor("version/state");
 
 bool getMQTTFailed()
 {
@@ -136,13 +135,6 @@ void mqttSendBootStatus(uint boot, uint activityCount, const char *bootReason)
   serializeJson(doc, buff);
   Serial.printf("[MQTT] Sending MQTT State: [%s] %s\n", state_topic_boot, buff);
   mqttClient.publish(state_topic_boot, 1, MQTT_RETAIN_SENSOR_VALUE, buff);
-
-  const int capacity2 = JSON_OBJECT_SIZE(1);
-  StaticJsonDocument<capacity2> doc2;
-  doc2["version"] = VERSION;
-  serializeJson(doc2, buff);
-  Serial.printf("[MQTT] Sending MQTT State: [%s] %s\n", state_topic_version, buff);
-  mqttClient.publish(state_topic_version, 1, MQTT_RETAIN_SENSOR_VALUE, buff);
 }
 
 void sendHAConfig()
@@ -150,8 +142,6 @@ void sendHAConfig()
   // sends MQTT info for auto discovery
   // https://www.home-assistant.io/docs/mqtt/discovery/
   // https://www.home-assistant.io/integrations/sensor.mqtt/
-  // NOTE: 'unique_id' needs to be globally unique. If using multiple homeplates, this needs to be changed.
-  // 'state_topic' should also be unique for each device
 
   Serial.println("[MQTT] Sending MQTT Config");
   // retain must be true for config
@@ -162,13 +152,15 @@ void sendHAConfig()
   StaticJsonDocument<capacity> doc;
 
   // deviceinfo
-  const int devCapacity = JSON_OBJECT_SIZE(6);
-  StaticJsonDocument<devCapacity> deviceinfo;
-  deviceinfo.clear();
-  deviceinfo["manufacturer"] = "e-radionica";
-  deviceinfo["model"] = DEVICE_MODEL;
-  deviceinfo["name"] = MQTT_DEVICE_NAME;
-  deviceinfo["identifiers"][0] = MQTT_NODE_ID;
+  const int devCapacity = JSON_OBJECT_SIZE(7);
+  StaticJsonDocument<devCapacity> deviceInfo;
+  deviceInfo.clear();
+  deviceInfo["manufacturer"] = "e-radionica";
+  deviceInfo["model"] = DEVICE_MODEL;
+  deviceInfo["name"] = MQTT_DEVICE_NAME;
+  deviceInfo["sw_version"] = VERSION;
+  deviceInfo["identifiers"][0] = MQTT_NODE_ID;
+  deviceInfo["identifiers"][1] = WiFi.macAddress().c_str();
 
   // wifi RSSI
   doc.clear();
@@ -181,7 +173,7 @@ void sendHAConfig()
   doc["value_template"] = "{{ value_json.signal }}";
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
   doc["entity_category"] = "diagnostic";
-  doc["device"] = deviceinfo;
+  doc["device"] = deviceInfo;
   serializeJson(doc, buff);
   mqttClient.publish(mqtt_base_sensor("wifi_signal/config"), qos, retain, buff);
 
@@ -195,7 +187,7 @@ void sendHAConfig()
   doc["unit_of_measurement"] = "°C";
   doc["value_template"] = "{{ value_json.temperature }}";
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
-  doc["device"] = deviceinfo;
+  doc["device"] = deviceInfo;
   serializeJson(doc, buff);
   mqttClient.publish(mqtt_base_sensor("temperature/config"), qos, retain, buff);
 
@@ -209,7 +201,7 @@ void sendHAConfig()
   doc["unit_of_measurement"] = "V";
   doc["value_template"] = "{{ value_json.voltage }}";
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
-  doc["device"] = deviceinfo;
+  doc["device"] = deviceInfo;
   serializeJson(doc, buff);
   mqttClient.publish(mqtt_base_sensor("voltage/config"), qos, retain, buff);
   doc.clear();
@@ -221,7 +213,7 @@ void sendHAConfig()
   doc["unit_of_measurement"] = "%";
   doc["value_template"] = "{{ value_json.battery }}";
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
-  doc["device"] = deviceinfo;
+  doc["device"] = deviceInfo;
   serializeJson(doc, buff);
   mqttClient.publish(mqtt_base_sensor("battery/config"), qos, retain, buff);
 
@@ -237,7 +229,7 @@ void sendHAConfig()
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
   doc["entity_category"] = "diagnostic";
   doc["enabled_by_default"] = false;
-  doc["device"] = deviceinfo;
+  doc["device"] = deviceInfo;
   serializeJson(doc, buff);
   mqttClient.publish(mqtt_base_sensor("boot/config"), qos, retain, buff);
 
@@ -250,22 +242,9 @@ void sendHAConfig()
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
   doc["entity_category"] = "diagnostic";
   doc["enabled_by_default"] = false;
-  doc["device"] = deviceinfo;
+  doc["device"] = deviceInfo;
   serializeJson(doc, buff);
   mqttClient.publish(mqtt_base_sensor("boot_reason/config"), qos, retain, buff);
-
-  // version
-  doc.clear();
-  doc["unique_id"] = mqtt_unique_id("version");
-  doc["name"] = mqtt_name("Version");
-  doc["state_topic"] = state_topic_version;
-  doc["icon"] = "mdi:new-box";
-  doc["value_template"] = "{{ value_json.version }}";
-  doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
-  doc["entity_category"] = "diagnostic";
-  doc["device"] = deviceinfo;
-  serializeJson(doc, buff);
-  mqttClient.publish(mqtt_base_sensor("version/config"), qos, retain, buff);
 
   // activityCount
   doc.clear();
@@ -279,7 +258,7 @@ void sendHAConfig()
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
   doc["entity_category"] = "diagnostic";
   doc["enabled_by_default"] = false;
-  doc["device"] = deviceinfo;
+  doc["device"] = deviceInfo;
   serializeJson(doc, buff);
   mqttClient.publish(mqtt_base_sensor("activity_count/config"), qos, retain, buff);
 }
