@@ -58,7 +58,7 @@ with a 5 minute refresh timer for the next boot:
         entity_id: sensor.commute_example
     - service: mqtt.publish
       data:
-        topic: homeplate/activity/run
+        topic: homeplate/homeplate/activity/run
         qos: '1'
         payload: '{ "action": "hass", "refresh": "300" }'
         retain: true
