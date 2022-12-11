@@ -147,12 +147,17 @@ void sendHAConfig()
   // retain must be true for config
   const bool retain = true;
   const int qos = 1;
-  char buff[512];
+  char buff[768];
   const int capacity = JSON_OBJECT_SIZE(24); // intentionally larger than needed.
   StaticJsonDocument<capacity> doc;
 
+  // macaddr
+  // need to copy macaddr because doc.clear() erases macaddr-pointer
+  char macaddr[18];
+  strncpy(macaddr, WiFi.macAddress().c_str(), 18);
+
   // deviceinfo
-  const int devCapacity = JSON_OBJECT_SIZE(6);
+  const int devCapacity = JSON_OBJECT_SIZE(7) + 32; // + sizeof(macaddr) + extra space matching obj size stepping
   StaticJsonDocument<devCapacity> deviceInfo;
   deviceInfo.clear();
   deviceInfo["manufacturer"] = "e-radionica";
@@ -160,6 +165,7 @@ void sendHAConfig()
   deviceInfo["name"] = MQTT_DEVICE_NAME;
   deviceInfo["sw_version"] = VERSION;
   deviceInfo["identifiers"][0] = MQTT_NODE_ID;
+  deviceInfo["identifiers"][1] = macaddr;
 
   // wifi RSSI
   doc.clear();
