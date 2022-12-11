@@ -100,12 +100,8 @@ void runActivities(void *params)
             // delaySleep(10);
             break;
         case GuestWifi:
-            // only change activities if necessary
-            if (activityCurrent != GuestWifi)
-            {
-                setSleepDuration(TIME_TO_QUICK_SLEEP_SEC);
-                displayWiFiQR();
-            }
+            setSleepDuration(TIME_TO_QUICK_SLEEP_SEC);
+            displayWiFiQR();
             break;
         case Info:
             setSleepDuration(TIME_TO_QUICK_SLEEP_SEC);
