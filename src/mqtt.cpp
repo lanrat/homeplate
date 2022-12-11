@@ -152,7 +152,7 @@ void sendHAConfig()
   StaticJsonDocument<capacity> doc;
 
   // deviceinfo
-  const int devCapacity = JSON_OBJECT_SIZE(7);
+  const int devCapacity = JSON_OBJECT_SIZE(6);
   StaticJsonDocument<devCapacity> deviceInfo;
   deviceInfo.clear();
   deviceInfo["manufacturer"] = "e-radionica";
@@ -160,7 +160,6 @@ void sendHAConfig()
   deviceInfo["name"] = MQTT_DEVICE_NAME;
   deviceInfo["sw_version"] = VERSION;
   deviceInfo["identifiers"][0] = MQTT_NODE_ID;
-  deviceInfo["identifiers"][1] = WiFi.macAddress().c_str();
 
   // wifi RSSI
   doc.clear();
