@@ -14,6 +14,8 @@
 // #define STATIC_IP "192.168.1.10"
 // #define STATIC_SUBNET "255.255.255.0"
 // #define STATIC_GATEWAY "192.168.1.1"
+// #define STATIC_DNS "192.168.1.1"
+
 
 // NTP Time server to set RTC
 #define NTP_SERVER "NTP Server IP"
