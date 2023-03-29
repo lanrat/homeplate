@@ -74,6 +74,16 @@ pio run --target clean
 
 ### Debugging
 
+#### Touchpad Sensitivity
+
+On some devices, the touchpads can be overly sensitive. This can cause lots of phantom touch events preventing the Homeplate from going into sleep and using up a lot of power.
+
+The touchpad sensitivity is set in hardware by resistors, but the touch sensors are calibrated on bootup when the Device first gets power. I have found that USB power can mess with this calibration. If you are using battery power, restarting the Homeplate (by using the power switch on the side of the PCB) without USB power attached is enough to fix the sensitivity.
+
+Alternatively, the touchpads can be completely disabled by setting `#define TOUCHPAD_ENABLE false` in `config.h`.
+
+#### Waveform
+
 If you get the following error while booting your inkplate, run the [Inkplate_Wavefrom_EEPROM_Programming](https://github.com/e-radionicacom/Inkplate-Arduino-library/tree/master/examples/Inkplate10/Others/Inkplate_Wavefrom_EEPROM_Programming) example to update your Inkplate's waveform.
 
 ```text
