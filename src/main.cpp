@@ -51,9 +51,9 @@ void setup()
     display.begin();             // Init Inkplate library (you should call this function ONLY ONCE)
     display.rtcClearAlarmFlag(); // Clear alarm flag from any previous alarm
     // set which pads can allow wakeup
-    display.setIntPinInternal(MCP23017_INT_ADDR, display.mcpRegsInt, PAD1, RISING);
-    display.setIntPinInternal(MCP23017_INT_ADDR, display.mcpRegsInt, PAD2, RISING);
-    display.setIntPinInternal(MCP23017_INT_ADDR, display.mcpRegsInt, PAD3, RISING);
+    display.setIntPinInternal(MCP23017_INTFA, display.ioRegsInt, PAD1, RISING);
+    display.setIntPinInternal(MCP23017_INTFA, display.ioRegsInt, PAD2, RISING);
+    display.setIntPinInternal(MCP23017_INTFA, display.ioRegsInt, PAD3, RISING);
     pinMode(WAKE_BUTTON, INPUT_PULLUP);
 
     // setup display
