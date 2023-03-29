@@ -37,9 +37,12 @@ void ntpSync(void *parameter)
         display.rtcSetTime(hour(et), minute(et), second(et));
         display.rtcSetDate(weekday(et), day(et), month(et), year(et));
         setTime(display.rtcGetEpoch());
+        display.rtcGetRtcData();
+        uint32_t rtcT = display.rtcGetEpoch();
         i2cEnd();
         ntpSynced = true;
-        Serial.printf("[TIME] RTC local time (%ld) %s\n", et, fullDateString());
+        Serial.printf("[TIME] NTP local UNIX time (%u) \n", et);
+        Serial.printf("[TIME] RTC local time (%u) %s\n", rtcT, fullDateString());
         break;
     }
     printDebugStackSpace();
@@ -49,22 +52,26 @@ void ntpSync(void *parameter)
 void setupTimeAndSyncTask()
 {
     i2cStart();
+    display.rtcGetRtcData();
     uint32_t t = display.rtcGetEpoch();
     setTime(t);
     bool rtcSet = display.rtcIsSet();
     i2cEnd();
     Serial.printf("[TIME] RTC local time (%u) %s\n", t, fullDateString());
-    // Sync RTC if unset or fresh boot
-    if (!rtcSet || !sleepBoot)
-    {
-        xTaskCreate(
-            ntpSync,           /* Task function. */
-            "NTP_TASK",        /* String with name of task. */
-            2048,              /* Stack size */
-            NULL,              /* Parameter passed as input of the task */
-            NTP_TASK_PRIORITY, /* Priority of the task. */
-            NULL);             /* Task handle. */
-    }
+
+    #ifdef NTP_SERVER
+        // Sync RTC if unset or fresh boot
+        if (!rtcSet || !sleepBoot)
+        {
+            xTaskCreate(
+                ntpSync,           /* Task function. */
+                "NTP_TASK",        /* String with name of task. */
+                2048,              /* Stack size */
+                NULL,              /* Parameter passed as input of the task */
+                NTP_TASK_PRIORITY, /* Priority of the task. */
+                NULL);             /* Task handle. */
+        }
+    #endif
 }
 
 char dateStringBuf[17]; // 1990-12-27 13:37
