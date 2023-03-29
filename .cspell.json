@@ -24,12 +24,14 @@
         "INTCAP",
         "lockfiles",
         "millis",
+        "PROGMEM",
         "RSSI",
         "SSID",
         "templow",
         "touchpad",
         "touchpads",
         "xaxis",
+        "Xglyph",
         "yaxis"
     ],
     // flagWords - list of words to be always considered incorrect
