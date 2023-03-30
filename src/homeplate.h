@@ -82,8 +82,8 @@ void gotoSleepNow();
 // time
 void setupTimeAndSyncTask();
 bool getNTPSynced();
-char *timeString();
-char *fullDateString();
+String timeString();
+String fullDateString();
 
 // MQTT
 void startMQTTTask();

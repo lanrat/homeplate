@@ -1,12 +1,21 @@
 #include <NTPClient.h>
-#include <TimeLib.h>
 #include <Timezone.h>
+#include <ESP32Time.h>
 
 #include "homeplate.h"
 #include "timezone_config.h"
 #define NTP_TASK_PRIORITY 3
 
 bool ntpSynced = false;
+
+ESP32Time rtc;
+
+time_t tzOffset() {
+    time_t epoch = 0;
+    TimeChangeRule *tcr; // pointer to the time change rule, use to get TZ abbrev
+    time_t local = tz.toLocal(epoch, &tcr);
+    return local;
+}
 
 bool getNTPSynced()
 {
@@ -15,6 +24,10 @@ bool getNTPSynced()
 
 void ntpSync(void *parameter)
 {
+
+    rtc.offset = tzOffset();
+    Serial.printf("[TIME] Timezone offset: %lu\n", rtc.offset);
+
     WiFiUDP ntpUDP;
     NTPClient timeClient(ntpUDP, NTP_SERVER);
     while (true)
@@ -36,13 +49,19 @@ void ntpSync(void *parameter)
         time_t et = timeClient.getEpochTime();
         display.rtcSetTime(hour(et), minute(et), second(et));
         display.rtcSetDate(weekday(et), day(et), month(et), year(et));
-        setTime(display.rtcGetEpoch());
-        display.rtcGetRtcData();
-        uint32_t rtcT = display.rtcGetEpoch();
+        rtc.setTime(et);
         i2cEnd();
         ntpSynced = true;
-        Serial.printf("[TIME] NTP local UNIX time (%u) \n", et);
-        Serial.printf("[TIME] RTC local time (%u) %s\n", rtcT, fullDateString());
+        Serial.printf("[TIME] NTP sync local UNIX time (%u) %s \n", et, fullDateString().c_str());
+
+
+        i2cStart();
+        bool rtcSet = display.rtcIsSet();
+        i2cEnd();
+        if (!rtcSet) {
+            Serial.printf("[TIME] ERROR: Failed to set RTC!\n");
+        }
+
         break;
     }
     printDebugStackSpace();
@@ -52,12 +71,10 @@ void ntpSync(void *parameter)
 void setupTimeAndSyncTask()
 {
     i2cStart();
-    display.rtcGetRtcData();
-    uint32_t t = display.rtcGetEpoch();
-    setTime(t);
+    unsigned long t = rtc.getEpoch();
     bool rtcSet = display.rtcIsSet();
     i2cEnd();
-    Serial.printf("[TIME] RTC local time (%u) %s\n", t, fullDateString());
+    Serial.printf("[TIME] RTC local time (%lu) %s\n", t, fullDateString().c_str());
 
     #ifdef NTP_SERVER
         // Sync RTC if unset or fresh boot
@@ -74,24 +91,11 @@ void setupTimeAndSyncTask()
     #endif
 }
 
-char dateStringBuf[17]; // 1990-12-27 13:37
-char *fullDateString()
-{
-    TimeChangeRule *tcr; // pointer to the time change rule, use to get TZ abbrev
-    time_t utc = now();
-    time_t local = tz.toLocal(utc, &tcr);
-
-    snprintf(dateStringBuf, 17, "%d-%02d-%02d %02d:%02d", year(local), month(local), day(local), hour(local), minute(local));
-    return dateStringBuf;
+String fullDateString() {
+    return rtc.getTimeDate(true);
 }
 
-char timeStringBuf[6]; // 13:37
-char *timeString()
-{
-    TimeChangeRule *tcr; // pointer to the time change rule, use to get TZ abbrev
-    time_t utc = now();
-    time_t local = tz.toLocal(utc, &tcr);
-
-    snprintf(timeStringBuf, 6, "%02d:%02d", hour(local), minute(local));
-    return timeStringBuf;
+String timeString() {
+    return rtc.getTime("%H:%M");
 }
+

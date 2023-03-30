@@ -65,68 +65,68 @@ void displayInfoScreen()
   // HW
   y = 250;
   display.setCursor(COL1_NAME_X, y);
-  display.printf("Hardware:");
+  display.print("Hardware:");
   display.setCursor(COL1_DATA_X, y);
-  display.printf(CONFIG_IDF_TARGET);
+  display.print(CONFIG_IDF_TARGET);
   // CPU
   y += lineHeight;
   display.setCursor(COL1_NAME_X, y);
-  display.printf("CPU:");
+  display.print("CPU:");
   display.setCursor(COL1_DATA_X, y);
   display.printf("%u core(s)", chip_info.cores);
   // frequency
   y += lineHeight;
   display.setCursor(COL1_NAME_X, y);
-  display.printf("Frequency:");
+  display.print("Frequency:");
   display.setCursor(COL1_DATA_X, y);
   display.printf("%u Mhz", getCpuFrequencyMhz());
   // Features
   y += lineHeight;
   display.setCursor(COL1_NAME_X, y);
-  display.printf("Features:");
+  display.print("Features:");
   display.setCursor(COL1_DATA_X, y);
   display.printf("%s%s%s", (chip_info.features & CHIP_FEATURE_WIFI_BGN) ? "WiFi" : "", (chip_info.features & CHIP_FEATURE_BT) ? "/BT" : "", (chip_info.features & CHIP_FEATURE_BLE) ? "/BLE" : "");
   // Flash
   y += lineHeight;
   display.setCursor(COL1_NAME_X, y);
-  display.printf("Flash:");
+  display.print("Flash:");
   display.setCursor(COL1_DATA_X, y);
   display.printf("%dMB %s", spi_flash_get_chip_size() / (1024 * 1024), (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
   // Heap
   y += lineHeight;
   display.setCursor(COL1_NAME_X, y);
-  display.printf("Min Heap Free:");
+  display.print("Min Heap Free:");
   display.setCursor(COL1_DATA_X, y);
   display.printf("%.2fMB", (esp_get_minimum_free_heap_size()) / (1024.0F * 1024.0F));
   // Tasks
   y += lineHeight;
   display.setCursor(COL1_NAME_X, y);
-  display.printf("Tasks:");
+  display.print("Tasks:");
   display.setCursor(COL1_DATA_X, y);
   display.printf("%d", uxTaskGetNumberOfTasks());
   // Display
   y += lineHeight;
   display.setCursor(COL1_NAME_X, y);
-  display.printf("Display:");
+  display.print("Display:");
   display.setCursor(COL1_DATA_X, y);
   display.printf("%dx%d", E_INK_WIDTH, E_INK_HEIGHT);
 
   // bootCount
   y += lineHeight * 2;
   display.setCursor(COL1_NAME_X, y);
-  display.printf("Boot #:");
+  display.print("Boot #:");
   display.setCursor(COL1_DATA_X, y);
   display.printf("%u", bootCount);
   // loopCount
   y += lineHeight;
   display.setCursor(COL1_NAME_X, y);
-  display.printf("Activity #:");
+  display.print("Activity #:");
   display.setCursor(COL1_DATA_X, y);
   display.printf("%u", activityCount);
   // wake reason
   y += lineHeight;
   display.setCursor(COL1_NAME_X, y);
-  display.printf("Wake Reason:");
+  display.print("Wake Reason:");
   display.setCursor(COL1_DATA_X, y);
   display.printf("%s", bootReason());
   // battery
@@ -134,7 +134,7 @@ void displayInfoScreen()
   double voltage = display.readBattery();
   int percent = getBatteryPercent(voltage);
   display.setCursor(COL1_NAME_X, y);
-  display.printf("Battery:");
+  display.print("Battery:");
   display.setCursor(COL1_DATA_X, y);
   display.printf("%d%% (%.2fv)", percent, voltage);
   // temp
@@ -142,7 +142,7 @@ void displayInfoScreen()
   int temp = display.readTemperature();
   int tempF = (temp * 9 / 5) + 32;
   display.setCursor(COL1_NAME_X, y);
-  display.printf("Temperature:");
+  display.print("Temperature:");
   display.setCursor(COL1_DATA_X, y);
   display.printf("%dC (%dF)", temp, tempF);
 
@@ -150,65 +150,66 @@ void displayInfoScreen()
   y = 250;
   // network
   display.setCursor(COL2_NAME_X, y);
-  display.printf("Hostname:");
+  display.print("Hostname:");
   display.setCursor(COL2_DATA_X, y);
-  display.printf(WiFi.getHostname());
+  display.print(WiFi.getHostname());
   // ip
   y += lineHeight;
   display.setCursor(COL2_NAME_X, y);
-  display.printf("IP Address:");
+  display.print("IP Address:");
   display.setCursor(COL2_DATA_X, y);
-  display.printf(WiFi.localIP().toString().c_str());
+  display.print(WiFi.localIP().toString().c_str());
   // netmask
   y += lineHeight;
   display.setCursor(COL2_NAME_X, y);
-  display.printf("Subnet Mask:");
+  display.print("Subnet Mask:");
   display.setCursor(COL2_DATA_X, y);
-  display.printf(WiFi.subnetMask().toString().c_str());
+  display.print(WiFi.subnetMask().toString().c_str());
   // gateway
   y += lineHeight;
   display.setCursor(COL2_NAME_X, y);
-  display.printf("Gateway:");
+  display.print("Gateway:");
   display.setCursor(COL2_DATA_X, y);
-  display.printf(WiFi.gatewayIP().toString().c_str());
+  display.print(WiFi.gatewayIP().toString().c_str());
   // dns
   y += lineHeight;
   display.setCursor(COL2_NAME_X, y);
-  display.printf("DNS:");
+  display.print("DNS:");
   display.setCursor(COL2_DATA_X, y);
-  display.printf(WiFi.dnsIP(0).toString().c_str());
+  display.print(WiFi.dnsIP(0).toString().c_str());
   // mac
   y += lineHeight;
   display.setCursor(COL2_NAME_X, y);
-  display.printf("MAC Address:");
+  display.print("MAC Address:");
   display.setCursor(COL2_DATA_X, y);
-  display.printf(WiFi.macAddress().c_str());
+  display.print(WiFi.macAddress().c_str());
 
   // ssid
   y += lineHeight * 2;
   display.setCursor(COL2_NAME_X, y);
-  display.printf("SSID:");
+  display.print("SSID:");
   display.setCursor(COL2_DATA_X, y);
-  display.printf(WiFi.SSID().c_str());
+  display.print(WiFi.SSID().c_str());
   // bssid
   y += lineHeight;
   display.setCursor(COL2_NAME_X, y);
-  display.printf("BSSID:");
+  display.print("BSSID:");
   display.setCursor(COL2_DATA_X, y);
-  display.printf(WiFi.BSSIDstr().c_str());
+  display.print(WiFi.BSSIDstr().c_str());
   // signal
   y += lineHeight;
   display.setCursor(COL2_NAME_X, y);
-  display.printf("Signal:");
+  display.print("Signal:");
   display.setCursor(COL2_DATA_X, y);
   display.printf("%d dBm", WiFi.RSSI());
   // wifi status
   y += lineHeight;
   display.setCursor(COL2_NAME_X, y);
-  display.printf("WiFi Status:");
+  display.print("WiFi Status:");
   display.setCursor(COL2_DATA_X, y);
-  display.printf(wl_status_to_string(WiFi.status()));
+  display.print(wl_status_to_string(WiFi.status()));
 
+  #ifdef MQTT_HOST
   // MQTT server
   y += lineHeight * 2;
   display.setCursor(COL2_NAME_X, y);
@@ -221,31 +222,35 @@ void displayInfoScreen()
   display.printf("MQTT Status:");
   display.setCursor(COL2_DATA_X, y);
   display.printf(mqttConnected() ? "OK" : "Error");
+  #endif
 
+  #ifdef NTP_SERVER
   // time
   y += lineHeight * 2;
   display.setCursor(COL2_NAME_X, y);
-  display.printf("Time:");
+  display.print("Time:");
   display.setCursor(COL2_DATA_X, y);
-  display.printf(fullDateString());
+  display.print(fullDateString());
   // NTP
   y += lineHeight;
   display.setCursor(COL2_NAME_X, y);
-  display.printf("NTP Server:");
+  display.print("NTP Server:");
   display.setCursor(COL2_DATA_X, y);
-  display.printf(NTP_SERVER);
+  display.print(NTP_SERVER);
   // NTP status
   y += lineHeight;
   display.setCursor(COL2_NAME_X, y);
-  display.printf("NTP Status:");
+  display.print("NTP Status:");
   display.setCursor(COL2_DATA_X, y);
-  display.printf(getNTPSynced() ? "OK" : "False");
+  display.print(getNTPSynced() ? "OK" : "False");
+
   // RTC
   y += lineHeight;
   display.setCursor(COL2_NAME_X, y);
   display.printf("RTC:");
   display.setCursor(COL2_DATA_X, y);
   display.printf(display.rtcIsSet() ? "OK" : "Error");
+  #endif
 
   displayBoundaryBox();
   display.display();
