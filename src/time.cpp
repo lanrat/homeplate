@@ -24,8 +24,6 @@ bool getNTPSynced()
 
 void ntpSync(void *parameter)
 {
-
-    rtc.offset = tzOffset();
     Serial.printf("[TIME] Timezone offset: %lu\n", rtc.offset);
 
     WiFiUDP ntpUDP;
@@ -70,6 +68,7 @@ void ntpSync(void *parameter)
 
 void setupTimeAndSyncTask()
 {
+    rtc.offset = tzOffset();
     i2cStart();
     unsigned long t = rtc.getEpoch();
     bool rtcSet = display.rtcIsSet();
@@ -98,4 +97,3 @@ String fullDateString() {
 String timeString() {
     return rtc.getTime("%H:%M");
 }
-
