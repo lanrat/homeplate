@@ -35,7 +35,7 @@ void gotoSleepNow()
 
     // set MCP interrupts
     if (TOUCHPAD_ENABLE)
-        display.setIntOutputInternal(MCP23017_INT_ADDR, display.mcpRegsInt, 1, false, false, HIGH);
+        display.setIntOutput(1, false, false, HIGH, IO_INT_ADDR);
     i2cEnd();
 
     // Go to sleep for TIME_TO_SLEEP seconds

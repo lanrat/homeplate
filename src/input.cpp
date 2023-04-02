@@ -9,10 +9,10 @@
 // read a byte from the expander
 unsigned int readMCPRegister(const byte reg)
 {
-    Wire.beginTransmission(MCP23017_INT_ADDR);
+    Wire.beginTransmission(IO_INT_ADDR);
     Wire.write(reg);
     Wire.endTransmission();
-    Wire.requestFrom(MCP23017_INT_ADDR, 1);
+    Wire.requestFrom(IO_INT_ADDR, 1);
     return Wire.read();
 }
 
@@ -78,7 +78,7 @@ void checkButtons(void *params)
         if (button)
         {
             // clear the interrupt on the MCP
-            readMCPRegister(MCP23017_INTCAPB);
+            display.getINTstate(IO_INT_ADDR);
             lastDebounceTime = millis();
             button = false;
             delaySleep(10);
