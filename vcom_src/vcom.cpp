@@ -16,9 +16,6 @@ Inkplate display(INKPLATE_1BIT);
 double vcomVoltage;
 int EEPROMaddress = 0;
 
-// Internal registers of MCP
-uint8_t mcpRegsInt[22];
-
 
 void writeVCOMToEEPROM(double v);
 void eraseEEPROM();
@@ -54,7 +51,7 @@ void programEEPROM()
     if (EEPROM.read(EEPROMaddress) != 170)
     {
         Serial.println("Vcom being set...");
-        display.pinModeInternal(MCP23017_INTFA, mcpRegsInt, 6, INPUT_PULLUP);
+        display.pinModeInternal(IO_INT_ADDR, display.ioRegsInt, 6, INPUT_PULLUP);
         writeVCOMToEEPROM(vcomVoltage);
         EEPROM.write(EEPROMaddress, 170);
         EEPROM.commit();
@@ -92,10 +89,10 @@ void writeVCOMToEEPROM(double v)
     int vcomL = vcom & 0xFF;
     // First, we have to power up TPS65186
     // Pull TPS65186 WAKEUP pin to High
-    display.digitalWriteInternal(MCP23017_INTFA, mcpRegsInt, 3, HIGH);
+    display.digitalWriteInternal(IO_INT_ADDR, display.ioRegsInt, 3, HIGH);
 
     // Pull TPS65186 PWR pin to High
-    display.digitalWriteInternal(MCP23017_INTFA, mcpRegsInt, 4, HIGH);
+    display.digitalWriteInternal(IO_INT_ADDR, display.ioRegsInt, 4, HIGH);
     delay(10);
 
     // Send to TPS65186 first 8 bits of VCOM
@@ -113,23 +110,23 @@ void writeVCOMToEEPROM(double v)
     do
     {
         delay(1);
-    } while (display.digitalReadInternal(MCP23017_INTFA, mcpRegsInt, 6));
+    } while (display.digitalReadInternal(IO_INT_ADDR, display.ioRegsInt, 6));
 
     // Clear Interrupt flag by reading INT1 register
     readReg(0x07);
 
     // Now, power off whole TPS
     // Pull TPS65186 WAKEUP pin to Low
-    display.digitalWriteInternal(MCP23017_INTFA, mcpRegsInt, 3, LOW);
+    display.digitalWriteInternal(IO_INT_ADDR, display.ioRegsInt, 3, LOW);
 
     // Pull TPS65186 PWR pin to Low
-    display.digitalWriteInternal(MCP23017_INTFA, mcpRegsInt, 4, LOW);
+    display.digitalWriteInternal(IO_INT_ADDR, display.ioRegsInt, 4, LOW);
 
     // Wait a little bit...
     delay(1000);
 
     // Power up TPS again
-    display.digitalWriteInternal(MCP23017_INTFA, mcpRegsInt, 3, HIGH);
+    display.digitalWriteInternal(IO_INT_ADDR, display.ioRegsInt, 3, HIGH);
 
     delay(10);
 
