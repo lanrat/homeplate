@@ -9,10 +9,10 @@
 // read a byte from the expander
 unsigned int readMCPRegister(const byte reg)
 {
-    Wire.beginTransmission(MCP23017_INTFA);
+    Wire.beginTransmission(IO_INT_ADDR);
     Wire.write(reg);
     Wire.endTransmission();
-    Wire.requestFrom(MCP23017_INTFA, 1);
+    Wire.requestFrom(IO_INT_ADDR, 1);
     return Wire.read();
 }
 
