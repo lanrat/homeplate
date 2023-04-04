@@ -10,8 +10,7 @@ bool ntpSynced = false;
 
 ESP32Time rtc;
 
-time_t tzOffset() {
-    time_t epoch = 0;
+time_t tzOffset(time_t epoch) {
     TimeChangeRule *tcr; // pointer to the time change rule, use to get TZ abbrev
     time_t local = tz.toLocal(epoch, &tcr);
     return local;
@@ -68,7 +67,8 @@ void ntpSync(void *parameter)
 
 void setupTimeAndSyncTask()
 {
-    rtc.offset = tzOffset();
+    // TODO use time from current date to get DST working
+    rtc.offset = tzOffset(0);
     i2cStart();
     unsigned long t = rtc.getEpoch();
     bool rtcSet = display.rtcIsSet();
