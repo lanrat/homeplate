@@ -11,7 +11,7 @@ void displayStats()
     display.setCursor(1155, 820);
 
     // text to print over box
-    display.printf("[%s]", timeString());
+    display.printf("[%s]", timeString().c_str());
     displayEnd();
 }
 
