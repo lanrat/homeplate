@@ -10,10 +10,10 @@ bool ntpSynced = false;
 
 ESP32Time rtc;
 
-time_t tzOffset(time_t epoch) {
+long tzOffset(time_t epoch) {
     TimeChangeRule *tcr; // pointer to the time change rule, use to get TZ abbrev
     time_t local = tz.toLocal(epoch, &tcr);
-    return local;
+    return local - epoch;
 }
 
 bool getNTPSynced()
@@ -23,8 +23,6 @@ bool getNTPSynced()
 
 void ntpSync(void *parameter)
 {
-    Serial.printf("[TIME] Timezone offset: %lu\n", rtc.offset);
-
     WiFiUDP ntpUDP;
     NTPClient timeClient(ntpUDP, NTP_SERVER);
     while (true)
@@ -44,13 +42,18 @@ void ntpSync(void *parameter)
         /* RTC */
         i2cStart();
         time_t et = timeClient.getEpochTime();
-        display.rtcSetTime(hour(et), minute(et), second(et));
-        display.rtcSetDate(weekday(et), day(et), month(et), year(et));
+        display.rtcSetEpoch(et);
         rtc.setTime(et);
         i2cEnd();
-        ntpSynced = true;
-        Serial.printf("[TIME] NTP sync local UNIX time (%u) %s \n", et, fullDateString().c_str());
 
+        ntpSynced = true;
+        // rtc.offset is unsigned, but it is used as a signed long for negative offsets
+        long offset = tzOffset(et);
+        rtc.offset = offset;
+        unsigned long localTime = rtc.getEpoch();
+        Serial.printf("[TIME] NTP UNIX time Epoch(%u)\n", et);
+        Serial.printf("[TIME] Timezone offset: (%ld) %ld hours\n", offset, (offset/60/60));
+        Serial.printf("[TIME] synced local UNIX time Epoch(%u) %s \n", localTime, fullDateString().c_str());
 
         i2cStart();
         bool rtcSet = display.rtcIsSet();
@@ -67,13 +70,19 @@ void ntpSync(void *parameter)
 
 void setupTimeAndSyncTask()
 {
-    // TODO use time from current date to get DST working
-    rtc.offset = tzOffset(0);
     i2cStart();
-    unsigned long t = rtc.getEpoch();
     bool rtcSet = display.rtcIsSet();
+    if (rtcSet) {
+        uint32_t rtcEpoch = display.rtcGetEpoch();
+        rtc.offset = tzOffset(rtcEpoch);
+    }
+    unsigned long t = rtc.getLocalEpoch();
     i2cEnd();
-    Serial.printf("[TIME] RTC local time (%lu) %s\n", t, fullDateString().c_str());
+    Serial.printf("[TIME] local time (%lu) %s\n", t, fullDateString().c_str());
+
+    if (rtcSet && t < 1577885820) {
+        Serial.printf("[TIME] ERROR: RTC time is too far in past. RTC likely has wrong value!\n");
+    }
 
     #ifdef NTP_SERVER
         // Sync RTC if unset or fresh boot
