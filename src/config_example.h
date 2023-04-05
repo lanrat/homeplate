@@ -20,6 +20,9 @@
 // NTP Time server to set RTC
 #define NTP_SERVER "NTP Server IP"
 
+// How often to re-sync the clock to NTP
+#define NTP_SYNC_INTERVAL 72 // ~ once a day when updating every 20 minutes
+
 // URL of PNG image to display
 #define IMAGE_URL "HTTP URL of dashboard screenshot to display"
 

@@ -6,6 +6,8 @@
 #include "timezone_config.h"
 #define NTP_TASK_PRIORITY 3
 
+#define JAN_1_2000 946684800
+
 bool ntpSynced = false;
 
 ESP32Time rtc;
@@ -39,21 +41,30 @@ void ntpSync(void *parameter)
         }
         timeClient.end();
 
+        // get current times for comparison after sync
+        unsigned long localTime = rtc.getLocalEpoch();
+
         /* RTC */
         i2cStart();
-        time_t et = timeClient.getEpochTime();
-        display.rtcSetEpoch(et);
-        rtc.setTime(et);
+        uint32_t rtcEpoch = display.rtcGetEpoch();
+        time_t ntp_et = timeClient.getEpochTime();
+        display.rtcSetEpoch(ntp_et);
+        rtc.setTime(ntp_et);
         i2cEnd();
+
+        // print how far the clocks are off
+        long delta_s = (ntp_et - localTime);
+        Serial.printf("[TIME] Internal clock was adjusted by %ld seconds\n", delta_s);
+        Serial.printf("[TIME] Internal RTC was adjusted by %ld seconds\n", (ntp_et - rtcEpoch));
 
         ntpSynced = true;
         // rtc.offset is unsigned, but it is used as a signed long for negative offsets
-        long offset = tzOffset(et);
+        long offset = tzOffset(ntp_et);
         rtc.offset = offset;
-        unsigned long localTime = rtc.getEpoch();
-        Serial.printf("[TIME] NTP UNIX time Epoch(%u)\n", et);
+        localTime = rtc.getLocalEpoch();
+        Serial.printf("[TIME] NTP UNIX time Epoch(%ld)\n", ntp_et);
         Serial.printf("[TIME] Timezone offset: (%ld) %ld hours\n", offset, (offset/60/60));
-        Serial.printf("[TIME] synced local UNIX time Epoch(%u) %s \n", localTime, fullDateString().c_str());
+        Serial.printf("[TIME] synced local UNIX time Epoch(%ld) %s \n", localTime, fullDateString().c_str());
 
         i2cStart();
         bool rtcSet = display.rtcIsSet();
@@ -70,23 +81,27 @@ void ntpSync(void *parameter)
 
 void setupTimeAndSyncTask()
 {
+    unsigned long localTime = rtc.getLocalEpoch();
     i2cStart();
     bool rtcSet = display.rtcIsSet();
     if (rtcSet) {
         uint32_t rtcEpoch = display.rtcGetEpoch();
         rtc.offset = tzOffset(rtcEpoch);
+        Serial.printf("[TIME] Internal Clock and RTC differ by %ld seconds. local(%ld) RTC(%ld)\n", (localTime - rtcEpoch), localTime, rtcEpoch);
     }
-    unsigned long t = rtc.getLocalEpoch();
     i2cEnd();
-    Serial.printf("[TIME] local time (%lu) %s\n", t, fullDateString().c_str());
+    Serial.printf("[TIME] local time (%lu) %s\n", localTime, fullDateString().c_str());
 
-    if (rtcSet && t < 1577885820) {
+    if (rtcSet && localTime < JAN_1_2000) {
         Serial.printf("[TIME] ERROR: RTC time is too far in past. RTC likely has wrong value!\n");
+        rtcSet = false;
     }
 
     #ifdef NTP_SERVER
         // Sync RTC if unset or fresh boot
-        if (!rtcSet || !sleepBoot)
+        bool resync = (bootCount % NTP_SYNC_INTERVAL) == 0;
+        if (resync) Serial.printf("[TIME] re-syncing NTP: on boot %d\n", bootCount);
+        if (!rtcSet || !sleepBoot || resync)
         {
             xTaskCreate(
                 ntpSync,           /* Task function. */
