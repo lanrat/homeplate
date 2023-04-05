@@ -99,8 +99,8 @@ void setupTimeAndSyncTask()
 
     #ifdef NTP_SERVER
         // Sync RTC if unset or fresh boot
-        bool resync = (bootCount % NTP_SYNC_INTERVAL) == 0;
-        if (resync) Serial.printf("[TIME] re-syncing NTP: on boot %d\n", bootCount);
+        bool resync = ((bootCount % (NTP_SYNC_INTERVAL)) == 0);
+        if (resync) Serial.printf("[TIME] re-syncing NTP: on boot %d, ever %d\n", bootCount, NTP_SYNC_INTERVAL);
         if (!rtcSet || !sleepBoot || resync)
         {
             xTaskCreate(

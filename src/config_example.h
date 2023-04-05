@@ -9,6 +9,9 @@
 // NOTE: if using multiple homeplate devices, you MUST make the hostname unique
 #define HOSTNAME "homeplate"
 
+// How long to sleep between image refreshes
+#define TIME_TO_SLEEP_MIN 20
+
 // Static IP information
 // If unset uses DHCP, but updates may be slower, set to use a Static IP
 // #define STATIC_IP "192.168.1.10"
@@ -16,12 +19,11 @@
 // #define STATIC_GATEWAY "192.168.1.1"
 // #define STATIC_DNS "192.168.1.1"
 
-
 // NTP Time server to set RTC
 #define NTP_SERVER "NTP Server IP"
 
 // How often to re-sync the clock to NTP
-#define NTP_SYNC_INTERVAL 72 // ~ once a day when updating every 20 minutes
+#define NTP_SYNC_INTERVAL (24*60)/TIME_TO_SLEEP_MIN // ~ once a day when updating every TIME_TO_SLEEP_MIN minutes
 
 // URL of PNG image to display
 #define IMAGE_URL "HTTP URL of dashboard screenshot to display"
@@ -42,9 +44,6 @@
 
 // Disables touchpads if they are overly sensitive and result in phantom touch events
 #define TOUCHPAD_ENABLE true
-
-// How long to sleep between image refreshes
-#define TIME_TO_SLEEP_MIN 20
 
 // Timezone
 // see timezone_config.h for options
