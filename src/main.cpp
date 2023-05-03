@@ -1,6 +1,10 @@
 // Next 3 lines are a precaution, you can ignore those, and the example would also work without them
-#ifndef ARDUINO_INKPLATE10
+#if !defined(ARDUINO_INKPLATE10) && !defined(ARDUINO_INKPLATE10V2)
 #error "Wrong board selection for this example, please select Inkplate 10 in the boards menu."
+#endif
+
+#if defined(ARDUINO_INKPLATE10) && defined(ARDUINO_INKPLATE10V2)
+#error "You can only define ARDUINO_INKPLATE10 or ARDUINO_INKPLATE10V2, not both"
 #endif
 
 #include <driver/rtc_io.h> //ESP32 library used for deep sleep and RTC wake up pins
@@ -50,11 +54,7 @@ void setup()
     i2cStart();
     display.begin();             // Init Inkplate library (you should call this function ONLY ONCE)
     display.rtcClearAlarmFlag(); // Clear alarm flag from any previous alarm
-    // set which pads can allow wakeup
-    display.setIntPin(PAD1, RISING, IO_INT_ADDR);
-    display.setIntPin(PAD2, RISING, IO_INT_ADDR);
-    display.setIntPin(PAD3, RISING, IO_INT_ADDR);
-    pinMode(WAKE_BUTTON, INPUT_PULLUP);
+    setupWakePins();
 
     // setup display
     if (sleepBoot)

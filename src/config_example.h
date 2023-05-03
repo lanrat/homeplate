@@ -43,6 +43,7 @@
 //#define MQTT_DEVICE_NAME "HomePlate"	// defaults to "HomePlate"
 
 // Disables touchpads if they are overly sensitive and result in phantom touch events
+// Touchpads are not supported on the Inkplate10v2. This must be false if ARDUINO_INKPLATE10V2 is set
 #define TOUCHPAD_ENABLE true
 
 // Timezone

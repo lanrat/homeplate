@@ -1,6 +1,13 @@
 #include "homeplate.h"
 
+#if defined(ARDUINO_INKPLATE10V2) && TOUCHPAD_ENABLE
+#error "TOUCHPAD_ENABLE is not supported with ARDUINO_INKPLATE10V2"
+#endif
+
 #define INPUT_TASK_PRIORITY 10
+
+// only supported on the Inkplate10 (not v2)
+#if defined(ARDUINO_INKPLATE10)
 
 #define INT_PAD1 (1 << (PAD1 - 8)) // 0x04
 #define INT_PAD2 (1 << (PAD2 - 8)) // 0x08
@@ -89,63 +96,83 @@ void checkButtons(void *params)
     }
 }
 
+#endif // defined(ARDUINO_INKPLATE10)
+
 void startMonitoringButtonsTask()
 {
-    // inkplate code needs to be on arduino core or may get i2c errors
-    // use mutex for all inkplate code
-    xTaskCreatePinnedToCore(
-        checkButtons,        /* Task function. */
-        "INPUT_BUTTON_TASK", /* String with name of task. */
-        4096,                /* Stack size */
-        NULL,                /* Parameter passed as input of the task */
-        INPUT_TASK_PRIORITY, /* Priority of the task. */
-        NULL,
-        CONFIG_ARDUINO_RUNNING_CORE);
+    #if defined(ARDUINO_INKPLATE10)
+        // inkplate code needs to be on arduino core or may get i2c errors
+        // use mutex for all inkplate code
+        xTaskCreatePinnedToCore(
+            checkButtons,        /* Task function. */
+            "INPUT_BUTTON_TASK", /* String with name of task. */
+            4096,                /* Stack size */
+            NULL,                /* Parameter passed as input of the task */
+            INPUT_TASK_PRIORITY, /* Priority of the task. */
+            NULL,
+            CONFIG_ARDUINO_RUNNING_CORE);
+    #else
+        Serial.println("[INPUT] Input monitoring not supported by this platform");
+    #endif
 }
 
 void checkBootPads()
 {
-    unsigned int key = 0;
-    i2cStart();
-    key = readMCPRegister(MCP23017_INTFB);
-    i2cEnd();
-    if (key) // which pin caused interrupt
-    {
-        // Serial.printf("INTFB: %#x\n", keyInt);
-        //  value of pin at time of interrupt
-        if (key & INT_PAD1)
-        {
-            Serial.println("[INPUT] boot: PAD1");
-            startActivity(HomeAssistant);
-        }
-        else if (key & INT_PAD2)
-        {
-            Serial.println("[INPUT] boot: PAD2");
-            startActivity(GuestWifi);
-        }
-        else if (key & INT_PAD3)
-        {
-            Serial.println("[INPUT] boot: PAD3");
-            startActivity(Info);
-        }
-        Serial.println();
-
+    #if defined(ARDUINO_INKPLATE10)
+        unsigned int key = 0;
         i2cStart();
-        key = readMCPRegister(MCP23017_INTCAPB); // this clears the interrupt
+        key = readMCPRegister(MCP23017_INTFB);
         i2cEnd();
-        // Serial.printf("INTCAP: %#x\n", keyValue);
-        //  if (keyValue & INT_PAD1)
-        //  {
-        //      Serial.print("PAD1 ");
-        //  }
-        //  if (keyValue & INT_PAD2)
-        //  {
-        //      Serial.print("PAD2 ");
-        //  }
-        //  if (keyValue & INT_PAD3)
-        //  {
-        //      Serial.print("PAD3 ");
-        //  }
-        //  Serial.println();
-    }
+        if (key) // which pin caused interrupt
+        {
+            // Serial.printf("INTFB: %#x\n", keyInt);
+            //  value of pin at time of interrupt
+            if (key & INT_PAD1)
+            {
+                Serial.println("[INPUT] boot: PAD1");
+                startActivity(HomeAssistant);
+            }
+            else if (key & INT_PAD2)
+            {
+                Serial.println("[INPUT] boot: PAD2");
+                startActivity(GuestWifi);
+            }
+            else if (key & INT_PAD3)
+            {
+                Serial.println("[INPUT] boot: PAD3");
+                startActivity(Info);
+            }
+            Serial.println();
+
+            i2cStart();
+            key = readMCPRegister(MCP23017_INTCAPB); // this clears the interrupt
+            i2cEnd();
+            // Serial.printf("INTCAP: %#x\n", keyValue);
+            //  if (keyValue & INT_PAD1)
+            //  {
+            //      Serial.print("PAD1 ");
+            //  }
+            //  if (keyValue & INT_PAD2)
+            //  {
+            //      Serial.print("PAD2 ");
+            //  }
+            //  if (keyValue & INT_PAD3)
+            //  {
+            //      Serial.print("PAD3 ");
+            //  }
+            //  Serial.println();
+        }
+    #endif
+}
+
+void setupWakePins()
+{
+    #if defined(ARDUINO_INKPLATE10)
+        // set which pads can allow wakeup
+        display.setIntPin(PAD1, RISING, IO_INT_ADDR);
+        display.setIntPin(PAD2, RISING, IO_INT_ADDR);
+        display.setIntPin(PAD3, RISING, IO_INT_ADDR);
+    #endif
+    pinMode(WAKE_BUTTON, INPUT_PULLUP);
+
 }

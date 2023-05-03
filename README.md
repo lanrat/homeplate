@@ -51,6 +51,12 @@ Build & run with:
 pio run
 ```
 
+If you have the Inkplate10v2 (without the additional MCP expander and touchpads), use the `inkplate10v2` environment:
+
+```shell
+pio run -e inkplate10v2
+```
+
 The first flash/installation needs to be done over USB. Future updates can be done over USB or WiFi with:
 
 ```shell

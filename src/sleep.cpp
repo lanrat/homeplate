@@ -33,10 +33,13 @@ void gotoSleepNow()
     mqttStopTask(); // prevent i2c lock in main thread
     wifiStopTask(); // prevent i2c lock in main thread
 
-    // set MCP interrupts
-    if (TOUCHPAD_ENABLE)
-        display.setIntOutput(1, false, false, HIGH, IO_INT_ADDR);
+    #if defined(ARDUINO_INKPLATE10)
+        // set MCP interrupts
+        if (TOUCHPAD_ENABLE)
+            display.setIntOutput(1, false, false, HIGH, IO_INT_ADDR);
+        #endif
     i2cEnd();
+
 
     // Go to sleep for TIME_TO_SLEEP seconds
     if (esp_sleep_enable_timer_wakeup(sleepDuration * uS_TO_S_FACTOR) != ESP_OK) {
@@ -45,9 +48,11 @@ void gotoSleepNow()
 
     // Enable wakeup from deep sleep on gpio 36 (WAKE BUTTON)
     esp_sleep_enable_ext0_wakeup(WAKE_BUTTON, LOW);
-    // enable wake from MCP port expander
-    if (TOUCHPAD_ENABLE)
-        esp_sleep_enable_ext1_wakeup(TOUCHPAD_WAKE_MASK, ESP_EXT1_WAKEUP_ANY_HIGH);
+    #if defined(ARDUINO_INKPLATE10)
+        // enable wake from MCP port expander
+        if (TOUCHPAD_ENABLE)
+            esp_sleep_enable_ext1_wakeup(TOUCHPAD_WAKE_MASK, ESP_EXT1_WAKEUP_ANY_HIGH);
+    #endif
     Serial.printf("[SLEEP] entering sleep for %u seconds (%u min)\n\n\n", sleepDuration, sleepDuration / 60);
     vTaskDelay(50 / portTICK_PERIOD_MS);
     esp_deep_sleep_start(); // Put ESP32 into deep sleep. Program stops here.

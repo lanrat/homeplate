@@ -70,6 +70,7 @@ void splashScreen();
 // Input
 void startMonitoringButtonsTask();
 void checkBootPads();
+void setupWakePins();
 
 // Sleep
 #define TIME_TO_SLEEP_SEC (TIME_TO_SLEEP_MIN * 60)    // How long ESP32 will be in deep sleep (in seconds)
@@ -182,14 +183,22 @@ void delaySleep(uint seconds);
 // Device Models (from Inkplate-Arduino-library/src/include/defines.h)
 #ifdef ARDUINO_ESP32_DEV
 #define DEVICE_MODEL "Inkplate 6"
+#elif ARDUINO_INKPLATE6V2
+#define DEVICE_MODEL "Inkplate 6v2"
 #elif ARDUINO_INKPLATE5
 #define DEVICE_MODEL "Inkplate 5"
 #elif ARDUINO_INKPLATE10
 #define DEVICE_MODEL "Inkplate 10"
+#elif ARDUINO_INKPLATE10V2
+#define DEVICE_MODEL "Inkplate 10v2"
 #elif ARDUINO_INKPLATE6PLUS
-#define DEVICE_MODEL "Inkplate 6PLUS"
+#define DEVICE_MODEL "Inkplate 6 PLUS"
+#elif ARDUINO_INKPLATE6PLUSV2
+#define DEVICE_MODEL "Inkplate 6 PLUSv2"
 #elif ARDUINO_INKPLATECOLOR
 #define DEVICE_MODEL "Inkplate 6COLOR"
+#elif ARDUINO_INKPLATE4
+#define DEVICE_MODEL "Inkplate 4"
 #elif ARDUINO_INKPLATE2
 #define DEVICE_MODEL "Inkplate 2"
 #else
