@@ -2,6 +2,9 @@
 
 uint getBatteryPercent(double voltage)
 {
+    if (voltage < BATTERY_VOLTAGE_LOW)
+        return 0;
+
     uint percentage = ((voltage - BATTERY_VOLTAGE_LOW) * 100.0) / (BATTERY_VOLTAGE_HIGH - BATTERY_VOLTAGE_LOW);
     if (percentage > 100)
         percentage = 100;
