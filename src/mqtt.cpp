@@ -475,7 +475,9 @@ void startMQTTTask()
   filter["refresh"] = true;
 
   mqttClient.setClientId(HOSTNAME);
+#ifdef MQTT_HOST
   mqttClient.setServer(MQTT_HOST, MQTT_PORT);
+#endif
 #ifdef MQTT_USER
   mqttClient.setCredentials(MQTT_USER, MQTT_PASSWORD);
 #endif
