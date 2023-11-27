@@ -23,6 +23,7 @@ bool getNTPSynced()
     return ntpSynced;
 }
 
+#ifdef NTP_SERVER
 void ntpSync(void *parameter)
 {
     WiFiUDP ntpUDP;
@@ -78,6 +79,7 @@ void ntpSync(void *parameter)
     printDebugStackSpace();
     vTaskDelete(NULL); // end self task
 }
+#endif
 
 void setupTimeAndSyncTask()
 {
