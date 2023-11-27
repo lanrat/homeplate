@@ -1,6 +1,6 @@
 #include "homeplate.h"
 
-#define uS_TO_S_FACTOR 1000000 // Conversion factor for micro seconds to seconds
+#define uS_TO_S_FACTOR 1000000ULL // Conversion factor for micro seconds to seconds
 #define SLEEP_TASK_PRIORITY 1
 #define TOUCHPAD_WAKE_MASK (int64_t(1) << GPIO_NUM_34)
 
