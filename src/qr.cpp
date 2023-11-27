@@ -4,12 +4,9 @@
 void serialPrintQR(QRCode qrcode);
 void renderQR(QRCode qrcode, uint32_t x, uint32_t y, uint32_t size);
 
+#ifdef QR_WIFI_NAME
 void displayWiFiQR()
 {
-    #ifndef QR_WIFI_NAME
-        // if not defined, exit early
-        return;
-    #endif
     Serial.printf("Rendering wifi QR Code\n");
     char buf[1024];
     snprintf(buf, 1024, "WIFI:S:%s;T:WPA;P:%s;;", QR_WIFI_NAME, QR_WIFI_PASSWORD);
@@ -47,6 +44,10 @@ void displayWiFiQR()
     displayEnd();
     i2cEnd();
 }
+#else
+// not used, just return
+void displayWiFiQR() { return; }
+#endif
 
 void renderQR(QRCode qrcode, uint32_t x, uint32_t y, uint32_t size)
 {
