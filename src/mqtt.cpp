@@ -11,7 +11,6 @@
 #define MQTT_DISCOVERY_TOPIC     "homeassistant"
 #define mqtt_base_sensor(topic)  MQTT_DISCOVERY_TOPIC "/sensor/" MQTT_NODE_ID "/" topic
 #define mqtt_unique_id(id)       MQTT_NODE_ID "_" id
-#define mqtt_name(name)          MQTT_DEVICE_NAME " " name
 
 AsyncMqttClient mqttClient;
 xTaskHandle mqttTaskHandle;
@@ -172,7 +171,7 @@ void sendHAConfig()
   doc["unique_id"] = mqtt_unique_id("wifi_signal");
   doc["device_class"] = "signal_strength";
   doc["state_class"] = "measurement";
-  doc["name"] = mqtt_name("WiFi Signal");
+  doc["name"] = "WiFi Signal";
   doc["state_topic"] = state_topic_wifi_signal;
   doc["unit_of_measurement"] = "dBm";
   doc["value_template"] = "{{ value_json.signal }}";
@@ -187,7 +186,7 @@ void sendHAConfig()
   doc["unique_id"] = mqtt_unique_id("temperature");
   doc["device_class"] = "temperature";
   doc["state_class"] = "measurement";
-  doc["name"] = mqtt_name("Temperature");
+  doc["name"] = "Temperature";
   doc["state_topic"] = state_topic_temperature;
   doc["unit_of_measurement"] = "°C";
   doc["value_template"] = "{{ value_json.temperature }}";
@@ -201,7 +200,7 @@ void sendHAConfig()
   doc["unique_id"] = mqtt_unique_id("voltage");
   doc["device_class"] = "voltage";
   doc["state_class"] = "measurement";
-  doc["name"] = mqtt_name("Voltage");
+  doc["name"] = "Voltage";
   doc["state_topic"] = state_topic_battery;
   doc["unit_of_measurement"] = "V";
   doc["value_template"] = "{{ value_json.voltage }}";
@@ -213,7 +212,7 @@ void sendHAConfig()
   doc["unique_id"] = mqtt_unique_id("battery");
   doc["device_class"] = "battery";
   doc["state_class"] = "measurement";
-  doc["name"] = mqtt_name("Battery");
+  doc["name"] = "Battery";
   doc["state_topic"] = state_topic_battery;
   doc["unit_of_measurement"] = "%";
   doc["value_template"] = "{{ value_json.battery }}";
@@ -226,7 +225,7 @@ void sendHAConfig()
   doc.clear();
   doc["unique_id"] = mqtt_unique_id("boot");
   doc["state_class"] = "total_increasing";
-  doc["name"] = mqtt_name("Boot Count");
+  doc["name"] = "Boot Count";
   doc["state_topic"] = state_topic_boot;
   doc["unit_of_measurement"] = "boot";
   doc["icon"] = "mdi:chart-line-variant";
@@ -241,7 +240,7 @@ void sendHAConfig()
   // boot reason
   doc.clear();
   doc["unique_id"] = mqtt_unique_id("boot_reason");
-  doc["name"] = mqtt_name("Boot Reason");
+  doc["name"] = "Boot Reason";
   doc["state_topic"] = state_topic_boot;
   doc["value_template"] = "{{ value_json.boot_reason }}";
   doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
@@ -255,7 +254,7 @@ void sendHAConfig()
   doc.clear();
   doc["unique_id"] = mqtt_unique_id("activity_count");
   doc["state_class"] = "total_increasing";
-  doc["name"] = mqtt_name("Activity Count");
+  doc["name"] = "Activity Count";
   doc["state_topic"] = state_topic_boot;
   doc["unit_of_measurement"] = "activities";
   doc["icon"] = "mdi:chart-line-variant";
