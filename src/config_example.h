@@ -57,5 +57,8 @@
 // chip soldered, you don't have to uncomment line and use external MCP I/O expander
 //#define ONE_MCP_MODE
 
+// Displays the time from the RTC whenever a new image is loaded
+#define DISPLAY_LAST_UPDATE_TIME true
+
 // keep this to signal the program has a valid config file
 #define CONFIG_H

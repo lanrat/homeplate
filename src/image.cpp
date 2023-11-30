@@ -54,7 +54,9 @@ bool remotePNG(const char *url)
     if (drawPngFromBuffer(buff, defaultLen, 0, 0))
     {
         Serial.println("[IMAGE] Image render ready");
-        displayStats();
+        if (DISPLAY_LAST_UPDATE_TIME) {
+            displayStats();
+        }
     }
     else
     {
