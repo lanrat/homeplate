@@ -54,11 +54,11 @@ void keepWiFiAlive(void *parameter)
         }
 
         Serial.println("[WIFI] Connecting...");
+        WiFi.setHostname(HOSTNAME); // only works with DHCP....
         WiFi.mode(WIFI_STA);
 #ifdef STATIC_IP
         WiFi.config(ip, gateway, subnet, dns);
 #endif
-        WiFi.setHostname(HOSTNAME); // only works with DHCP....
         WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
         unsigned long startAttemptTime = millis();
