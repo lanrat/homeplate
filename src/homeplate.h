@@ -74,7 +74,9 @@ void setupWakePins();
 
 // Sleep
 #define TIME_TO_SLEEP_SEC (TIME_TO_SLEEP_MIN * 60)    // How long ESP32 will be in deep sleep (in seconds)
+#ifndef TIME_TO_QUICK_SLEEP_SEC
 #define TIME_TO_QUICK_SLEEP_SEC 5 * 60 // 5 minutes. How long ESP32 will be in deep sleep (in seconds) for short activities
+#endif
 void startSleep();
 void setSleepRefresh(uint32_t sec);
 void setSleepDuration(uint32_t sec);
