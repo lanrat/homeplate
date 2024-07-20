@@ -123,3 +123,15 @@ String fullDateString() {
 String timeString() {
     return rtc.getTime("%H:%M");
 }
+
+uint getDayOfWeek(bool weekStartsOnMonday) {
+    return rtc.getDayofWeek() + (weekStartsOnMonday ? 1 : 0);
+}
+
+uint getHour() {
+    return rtc.getHour(true);
+}
+
+uint getMinute() {
+    return rtc.getMinute();
+}

@@ -1,4 +1,5 @@
 #pragma once
+#ifndef CONFIG_H
 
 // WiFi SSID
 #define WIFI_SSID "WiFi Network Name" 
@@ -11,6 +12,12 @@
 
 // How long to sleep between image refreshes
 #define TIME_TO_SLEEP_MIN 20
+
+// Configure sleep times for different time blocks
+// NOTE: configure the actual sleepTimeBlocks in config.cpp, see config_example.cpp
+//#include "sleep_duration.h"
+//extern SleepTimeBlock sleepTimeBlocks[];
+//extern const size_t sleepTimeBlockCount;
 
 // Static IP information
 // If unset uses DHCP, but updates may be slower, set to use a Static IP
@@ -62,3 +69,4 @@
 
 // keep this to signal the program has a valid config file
 #define CONFIG_H
+#endif

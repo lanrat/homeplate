@@ -80,13 +80,25 @@ void runActivities(void *params)
         activityCount++;
 
         Serial.printf("[ACTIVITY] starting activity: %d\n", activityNext);
+        bool doQuickSleep = activityNext == GuestWifi || activityNext == Info;
+        TimeInfo time = {
+            .dow = getDayOfWeek(true),
+            .hour = getHour(),
+            .minute = getMinute(),
+        };
+        SleepDefaults defaults = {
+            .normalSleep = TIME_TO_SLEEP_SEC,
+            .quickSleep = TIME_TO_QUICK_SLEEP_SEC,
+        };
+        uint timeToSleep = getSleepDuration(sleepTimeBlocks, sleepTimeBlockCount, time, defaults, doQuickSleep);
+
         switch (activityNext)
         {
         case NONE:
             break;
         case HomeAssistant:
             delaySleep(15);
-            setSleepDuration(TIME_TO_SLEEP_SEC);
+            setSleepDuration(timeToSleep);
             // wait for wifi or reset activity
             waitForWiFiOrActivityChange();
             if (resetActivity)
@@ -100,19 +112,19 @@ void runActivities(void *params)
             // delaySleep(10);
             break;
         case GuestWifi:
-            setSleepDuration(TIME_TO_QUICK_SLEEP_SEC);
+            setSleepDuration(timeToSleep);
             displayWiFiQR();
             break;
         case Info:
-            setSleepDuration(TIME_TO_QUICK_SLEEP_SEC);
+            setSleepDuration(timeToSleep);
             displayInfoScreen();
             break;
         case Message:
-            setSleepDuration(TIME_TO_SLEEP_SEC);
+            setSleepDuration(timeToSleep);
             displayMessage();
             break;
         case IMG:
-            setSleepDuration(TIME_TO_SLEEP_SEC);
+            setSleepDuration(timeToSleep);
             waitForWiFiOrActivityChange();
             if (resetActivity)
             {

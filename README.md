@@ -99,3 +99,16 @@ Waveform load failed! Upload new waveform in EEPROM. Using default waveform.
 ```
 
 Older Inkplates don't appear to ship with an updated waveform. I found waveform 3 looks the best for mine.
+
+### Tests
+
+The available unit tests use the 'native' environment and can be run by either:
+
+- running them manually
+
+```shell
+pio test -v
+```
+
+- in VSCode use Testing -> native -> Run Test
+- in VSCode use PlatformIO -> Project Tasks -> native -> Advanced -> Test
