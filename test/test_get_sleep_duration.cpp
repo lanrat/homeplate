@@ -132,6 +132,17 @@ void test_unconfigured_block(void) {
     TEST_ASSERT_EQUAL(50, sleep);
 }
 
+void test_unset_rtc(void) {
+    TimeInfo time = {
+        .dow = -1,
+        .hour = -1,
+        .minute = -1
+    };
+
+    uint sleep = getSleepDuration(testBlocks, testBlocksSize, time, defaults, false);
+    TEST_ASSERT_EQUAL(50, sleep);
+}
+
 int main( int argc, char **argv) {
     UNITY_BEGIN();
 
@@ -142,6 +153,7 @@ int main( int argc, char **argv) {
     RUN_TEST(test_saturday_morning_quick);
     RUN_TEST(test_saturday_night);
     RUN_TEST(test_unconfigured_block);
+    RUN_TEST(test_unset_rtc);
 
     UNITY_END();
 }

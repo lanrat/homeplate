@@ -87,9 +87,9 @@ void setupTimeAndSyncTask();
 bool getNTPSynced();
 String timeString();
 String fullDateString();
-uint getDayOfWeek(bool weekStartsOnMonday = false);
-uint getHour();
-uint getMinute();
+int getDayOfWeek(bool weekStartsOnMonday = false);
+int getHour();
+int getMinute();
 
 // MQTT
 void startMQTTTask();

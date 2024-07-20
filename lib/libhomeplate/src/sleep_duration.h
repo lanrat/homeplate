@@ -13,9 +13,9 @@ struct SleepTimeBlock {
 };
 
 struct TimeInfo {
-    uint dow;
-    uint hour;
-    uint minute;
+    int dow;
+    int hour;
+    int minute;
 };
 
 struct SleepDefaults {
