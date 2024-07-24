@@ -72,7 +72,4 @@
 
 // keep this to signal the program has a valid config file
 #define CONFIG_H
-<<<<<<< HEAD
 #endif
-=======
->>>>>>> main
