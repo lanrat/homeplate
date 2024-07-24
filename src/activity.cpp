@@ -81,6 +81,7 @@ void runActivities(void *params)
 
         Serial.printf("[ACTIVITY] starting activity: %d\n", activityNext);
         bool doQuickSleep = activityNext == GuestWifi || activityNext == Info;
+#ifdef sleepTimeBlocks
         TimeInfo time = {
             .dow = getDayOfWeek(true),
             .hour = getHour(),
@@ -91,6 +92,9 @@ void runActivities(void *params)
             .quickSleep = TIME_TO_QUICK_SLEEP_SEC,
         };
         uint timeToSleep = getSleepDuration(sleepTimeBlocks, sleepTimeBlockCount, time, defaults, doQuickSleep);
+#else
+        uint timeToSleep = doQuickSleep ? TIME_TO_QUICK_SLEEP_SEC : TIME_TO_SLEEP_SEC;
+#endif
 
         switch (activityNext)
         {
