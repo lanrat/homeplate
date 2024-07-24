@@ -12,6 +12,9 @@
 // How long to sleep between image refreshes
 #define TIME_TO_SLEEP_MIN 20
 
+// How long to sleep for quick activities like e.g. showing info and qr code (default 300 / 5 min)
+//#define TIME_TO_QUICK_SLEEP_SEC 30
+
 // Static IP information
 // If unset uses DHCP, but updates may be slower, set to use a Static IP
 // #define STATIC_IP "192.168.1.10"
