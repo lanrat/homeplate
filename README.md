@@ -43,9 +43,39 @@ Setup [sibbl](https://github.com/sibbl/)'s [hass-lovelace-kindle-screensaver](ht
 
 ### Inkplate
 
-Install [PlatformIO](https://platformio.org/). Then copy `src/config_example.h` to `src/config.h` and enter your settings.
+Install [PlatformIO](https://platformio.org/).
 
-Build & run with:
+#### Configuring
+
+Copy `config_example.h` to `config.h` and add/change your settings.
+
+##### Variable sleep intervals
+
+If you want your inkplate to sleep with different intervals, copy `config_example.cpp` to `config.cpp` and uncomment the 3 lines in `config.h` starting from `#include "sleep_duration.h"`. Then configure your sleepTimeBlocks.
+
+Note that time blocks do not span multiple days, this means that the *day of week* setting is similar to configuring a cronjob. F.e. the settings below should be read as *between Xam to Ypm on every weekday*, and **not** as *from monday Xam to friday Ypm*.
+```cpp
+{
+    // on every weekday sleep for 1 hour between 12am and 8am
+    .start_dow = 1, .start_hour = 0, .start_minute = 0,
+    .end_dow = 5, .end_hour = 8, .end_minute = 0,
+    .sleep_in_seconds = 3600
+},
+{
+    // on every weekday sleep for 5min between 8am and 8pm
+    .start_dow = 1, .start_hour = 8, .start_minute = 0,
+    .end_dow = 5, .end_hour = 20, .end_minute = 0,
+    .sleep_in_seconds = 300
+},
+{
+    // on every weekday sleep for 30min between 8pm and 12am
+    .start_dow = 1, .start_hour = 20, .start_minute = 0,
+    .end_dow = 5, .end_hour = 24, .end_minute = 0,
+    .sleep_in_seconds = 1800
+}
+```
+
+#### Build & run
 
 ```shell
 pio run

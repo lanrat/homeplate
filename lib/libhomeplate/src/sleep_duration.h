@@ -4,7 +4,7 @@
 
 struct SleepTimeBlock {
     int start_dow; // 1-7, 1=monday
-    int start_hour; // 0-23
+    int start_hour; // 0-24
     int start_minute; // 0-59
     int end_dow;
     int end_hour;
