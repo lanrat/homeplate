@@ -13,6 +13,9 @@
 // How long to sleep between image refreshes
 #define TIME_TO_SLEEP_MIN 20
 
+// How long to sleep for quick activities like e.g. showing info and qr code (default 300 / 5 min)
+//#define TIME_TO_QUICK_SLEEP_SEC 300
+
 // Configure sleep times for different time blocks
 // NOTE: configure the actual sleepTimeBlocks in config.cpp, see config_example.cpp
 //#include "sleep_duration.h"
@@ -69,4 +72,7 @@
 
 // keep this to signal the program has a valid config file
 #define CONFIG_H
+<<<<<<< HEAD
 #endif
+=======
+>>>>>>> main
