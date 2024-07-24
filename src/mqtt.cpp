@@ -15,7 +15,7 @@
 AsyncMqttClient mqttClient;
 xTaskHandle mqttTaskHandle;
 bool mqttFailed = false;
-StaticJsonDocument<200> filter;
+JsonDocument filter;
 
 static bool mqttWaiting; // is MQTT waiting for status to be sent
 static bool mqttRun;     // should another MQTT status update be sent
@@ -62,8 +62,7 @@ void mqttSendWiFiStatus()
     return;
   }
 
-  const int capacity = JSON_OBJECT_SIZE(1);
-  StaticJsonDocument<capacity> doc;
+  JsonDocument doc;
   doc["signal"] = rssi;
   char buff[256];
   serializeJson(doc, buff);
@@ -88,8 +87,7 @@ void mqttSendTempStatus()
   }
 
   char buff[256];
-  const int capacity = JSON_OBJECT_SIZE(1);
-  StaticJsonDocument<capacity> doc;
+  JsonDocument doc;
   doc["temperature"] = temperature;
   serializeJson(doc, buff);
   Serial.printf("[MQTT] Sending MQTT State: [%s] %s\n", state_topic_temperature, buff);
@@ -114,8 +112,7 @@ void mqttSendBatteryStatus()
   }
 
   char buff[256];
-  const int capacity = JSON_OBJECT_SIZE(2);
-  StaticJsonDocument<capacity> doc;
+  JsonDocument doc;
   doc["voltage"] = voltage;
   doc["battery"] = percent;
   serializeJson(doc, buff);
@@ -126,8 +123,7 @@ void mqttSendBatteryStatus()
 void mqttSendBootStatus(uint boot, uint activityCount, const char *bootReason)
 {
   char buff[512];
-  const int capacity = JSON_OBJECT_SIZE(3);
-  StaticJsonDocument<capacity> doc;
+  JsonDocument doc;
   doc["boot"] = boot;
   doc["activity_count"] = activityCount;
   doc["boot_reason"] = bootReason;
@@ -147,8 +143,7 @@ void sendHAConfig()
   const bool retain = true;
   const int qos = 1;
   char buff[768];
-  const int capacity = JSON_OBJECT_SIZE(24); // intentionally larger than needed.
-  StaticJsonDocument<capacity> doc;
+  JsonDocument doc;
 
   // macaddr
   // need to copy macaddr because doc.clear() erases macaddr-pointer
@@ -156,8 +151,7 @@ void sendHAConfig()
   strncpy(macaddr, WiFi.macAddress().c_str(), 18);
 
   // deviceinfo
-  const int devCapacity = JSON_OBJECT_SIZE(7) + 32; // + sizeof(macaddr) + extra space matching obj size stepping
-  StaticJsonDocument<devCapacity> deviceInfo;
+  JsonDocument deviceInfo;
   deviceInfo.clear();
   deviceInfo["manufacturer"] = "e-radionica";
   deviceInfo["model"] = DEVICE_MODEL;
@@ -372,7 +366,7 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
     // send blank response to clear/ack the MQTT command
     mqttClient.publish(MQTT_ACTION_TOPIC, 1, true);
 
-    StaticJsonDocument<MESSAGE_BUFFER_SIZE> doc;
+    JsonDocument doc;
     DeserializationError error = deserializeJson(doc, payload, len, DeserializationOption::Filter(filter));
     if (error)
     {
