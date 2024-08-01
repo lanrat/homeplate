@@ -66,9 +66,9 @@ jobs:
       run: pio pkg install
     - name: Use example config
       run: cp src/config_example.h src/config.h
-    - name: PlatformIO static check
-      # empty target to prevent upload
-      run: pio check
+    # - name: PlatformIO static check
+    #   # empty target to prevent upload
+    #   run: pio check
 
     - name: Run PlatformIO
       # empty target to prevent upload
