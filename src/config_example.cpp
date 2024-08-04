@@ -7,7 +7,7 @@
 // - there is no validation of any kind, make sure your blocks are continuous
 // - time blocks should be configured per day
 // - dow = DayOfWeek, starts at 1 = Monday to 7 = Sunday
-// SleepScheduleSlot sleepScheduleSlots[] = {
+// SleepScheduleSlot sleepSchedule[] = {
     /* EXAMPLE BLOCKS
     { // On each workday from 00:00 to 08:30 sleep for 1 hour
         .start_dow = 1,
@@ -57,4 +57,4 @@
     */
 // };
 
-//const size_t sleepScheduleSlotCount = sizeof(sleepScheduleSlots) / sizeof(sleepScheduleSlots[0]);
+//const size_t sleepScheduleSize = sizeof(sleepSchedule) / sizeof(sleepSchedule[0]);

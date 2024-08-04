@@ -1,6 +1,6 @@
 #include "sleep_duration.h"
 
-uint getSleepDuration(SleepScheduleSlot sleepScheduleSlots[], size_t size, TimeInfo time, SleepDefaults defaults, bool doQuickSleep)
+uint getSleepDuration(SleepScheduleSlot sleepSchedule[], size_t size, TimeInfo time, SleepDefaults defaults, bool doQuickSleep)
 {
     if (doQuickSleep) {
         return defaults.quickSleep;
@@ -9,7 +9,7 @@ uint getSleepDuration(SleepScheduleSlot sleepScheduleSlots[], size_t size, TimeI
     uint timeInMinutes = time.hour * 60 + time.minute;
 
     for (int i = 0; i < size; i++) {
-        SleepScheduleSlot b = sleepScheduleSlots[i];
+        SleepScheduleSlot b = sleepSchedule[i];
 
         if (time.dow >= b.start_dow && time.dow <= b.end_dow) {
             uint startTimeInMinutes = b.start_hour * 60 + b.start_minute;

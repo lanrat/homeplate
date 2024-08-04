@@ -19,8 +19,8 @@
 // Configure sleep times for different time blocks
 // NOTE: configure the actual sleep schedule in config.cpp, see config_example.cpp
 //#include "sleep_schedule.h"
-//extern SleepScheduleSlot sleepScheduleSlots[];
-//extern const size_t sleepScheduleSlotCount;
+//extern SleepScheduleSlot sleepSchedule[];
+//extern const size_t sleepScheduleSize;
 
 // Static IP information
 // If unset uses DHCP, but updates may be slower, set to use a Static IP

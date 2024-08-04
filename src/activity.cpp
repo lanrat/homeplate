@@ -81,7 +81,7 @@ void runActivities(void *params)
 
         Serial.printf("[ACTIVITY] starting activity: %d\n", activityNext);
         bool doQuickSleep = activityNext == GuestWifi || activityNext == Info;
-#ifdef sleepScheduleSlots
+#ifdef sleepSchedule
         TimeInfo time = {
             .dow = getDayOfWeek(true),
             .hour = getHour(),
@@ -91,7 +91,7 @@ void runActivities(void *params)
             .normalSleep = TIME_TO_SLEEP_SEC,
             .quickSleep = TIME_TO_QUICK_SLEEP_SEC,
         };
-        uint timeToSleep = getSleepDuration(sleepScheduleSlots, sleepScheduleSlotCount, time, defaults, doQuickSleep);
+        uint timeToSleep = getSleepDuration(sleepSchedule, sleepScheduleSize, time, defaults, doQuickSleep);
 #else
         uint timeToSleep = doQuickSleep ? TIME_TO_QUICK_SLEEP_SEC : TIME_TO_SLEEP_SEC;
 #endif

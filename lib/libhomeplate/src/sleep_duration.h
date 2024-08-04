@@ -23,6 +23,6 @@ struct SleepDefaults {
     uint quickSleep;
 };
 
-uint getSleepDuration(SleepScheduleSlot sleepScheduleSlots[], size_t size, TimeInfo time, SleepDefaults sleep, bool doQuickSleep = false);
+uint getSleepDuration(SleepScheduleSlot sleepSchedule[], size_t size, TimeInfo time, SleepDefaults sleep, bool doQuickSleep = false);
 
 #endif
