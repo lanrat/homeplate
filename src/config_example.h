@@ -16,7 +16,7 @@
 // How long to sleep for quick activities like e.g. showing info and qr code (default 300 / 5 min)
 //#define TIME_TO_QUICK_SLEEP_SEC 300
 
-// Configure sleep times for different time blocks
+// Configure a custom sleep schedule
 // NOTE: configure the actual sleep schedule in config.cpp, see config_example.cpp
 //#include "sleep_schedule.h"
 //extern SleepScheduleSlot sleepSchedule[];

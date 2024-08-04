@@ -1,11 +1,12 @@
-// NOTE: THIS FILE IS ONLY NEEDED WHEN CONFIGURING VARIABLE SLEEP
-// DURATIONS USING TIME BLOCKS. IF USING A SINGLE SLEEP DURATION THEN
-// THIS FILE CAN BE OMITTED
+// NOTE: THIS FILE IS ONLY NEEDED WHEN CONFIGURING A CUSTOM SLEEP
+// SCHEDULE.
+// IF USING A SINGLE/STATIC SLEEP DURATION THEN THIS FILE CAN BE OMITTED
 // #include "config.h"
 
 // How long to sleep between image refreshes
-// - there is no validation of any kind, make sure your blocks are continuous
-// - time blocks should be configured per day
+// - there is no validation of any kind, make sure your slots are continuous
+// - falls back to TIME_TO_SLEEP_MIN if your slots are not continuous
+// - a schedule slot is configured per day, i.e. cronjob style
 // - dow = DayOfWeek, starts at 1 = Monday to 7 = Sunday
 // SleepScheduleSlot sleepSchedule[] = {
     /* EXAMPLE BLOCKS
