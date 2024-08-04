@@ -2,7 +2,7 @@
 #define UTIL_SLEEP_DURATION_H
 #include <Arduino.h>
 
-struct SleepTimeBlock {
+struct SleepScheduleSlot {
     int start_dow; // 1-7, 1=monday
     int start_hour; // 0-24
     int start_minute; // 0-59
@@ -23,6 +23,6 @@ struct SleepDefaults {
     uint quickSleep;
 };
 
-uint getSleepDuration(SleepTimeBlock sleepTimeBlocks[], size_t size, TimeInfo time, SleepDefaults sleep, bool doQuickSleep = false);
+uint getSleepDuration(SleepScheduleSlot sleepScheduleSlots[], size_t size, TimeInfo time, SleepDefaults sleep, bool doQuickSleep = false);
 
 #endif

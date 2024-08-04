@@ -1,7 +1,7 @@
 #include <unity.h>
 #include "sleep_duration.h"
 
-SleepTimeBlock testBlocks[] = {
+SleepScheduleSlot testSlots[] = {
     {
         .start_dow = 1,
         .start_hour = 0,
@@ -40,7 +40,7 @@ SleepTimeBlock testBlocks[] = {
     },
 };
 
-const size_t testBlocksSize = sizeof(testBlocks) / sizeof(testBlocks[0]);
+const size_t testSlotCount = sizeof(testSlots) / sizeof(testSlots[0]);
 
 SleepDefaults defaults = {
     .normalSleep = 50,
@@ -62,7 +62,7 @@ void test_tuesday_morning(void) {
         .minute = 0
     };
 
-    uint sleep = getSleepDuration(testBlocks, testBlocksSize, time, defaults, false);
+    uint sleep = getSleepDuration(testSlots, testSlotCount, time, defaults, false);
     TEST_ASSERT_EQUAL(20, sleep);
 }
 
@@ -73,7 +73,7 @@ void test_tuesday_morning_quick(void) {
         .minute = 0
     };
 
-    uint sleep = getSleepDuration(testBlocks, testBlocksSize, time, defaults, true);
+    uint sleep = getSleepDuration(testSlots, testSlotCount, time, defaults, true);
     TEST_ASSERT_EQUAL(60, sleep);
 }
 
@@ -84,7 +84,7 @@ void test_tuesday_night(void) {
         .minute = 30
     };
 
-    uint sleep = getSleepDuration(testBlocks, testBlocksSize, time, defaults, false);
+    uint sleep = getSleepDuration(testSlots, testSlotCount, time, defaults, false);
     TEST_ASSERT_EQUAL(10, sleep);
 }
 
@@ -95,7 +95,7 @@ void test_saturday_morning(void) {
         .minute = 0
     };
 
-    uint sleep = getSleepDuration(testBlocks, testBlocksSize, time, defaults, false);
+    uint sleep = getSleepDuration(testSlots, testSlotCount, time, defaults, false);
     TEST_ASSERT_EQUAL(30, sleep);
 }
 
@@ -106,7 +106,7 @@ void test_saturday_morning_quick(void) {
         .minute = 0
     };
 
-    uint sleep = getSleepDuration(testBlocks, testBlocksSize, time, defaults, true);
+    uint sleep = getSleepDuration(testSlots, testSlotCount, time, defaults, true);
     TEST_ASSERT_EQUAL(60, sleep);
 }
 
@@ -117,7 +117,7 @@ void test_saturday_night(void) {
         .minute = 30
     };
 
-    uint sleep = getSleepDuration(testBlocks, testBlocksSize, time, defaults, false);
+    uint sleep = getSleepDuration(testSlots, testSlotCount, time, defaults, false);
     TEST_ASSERT_EQUAL(30, sleep);
 }
 
@@ -128,7 +128,7 @@ void test_unconfigured_block(void) {
         .minute = 30
     };
 
-    uint sleep = getSleepDuration(testBlocks, testBlocksSize, time, defaults, false);
+    uint sleep = getSleepDuration(testSlots, testSlotCount, time, defaults, false);
     TEST_ASSERT_EQUAL(50, sleep);
 }
 
@@ -139,7 +139,7 @@ void test_unset_rtc(void) {
         .minute = -1
     };
 
-    uint sleep = getSleepDuration(testBlocks, testBlocksSize, time, defaults, false);
+    uint sleep = getSleepDuration(testSlots, testSlotCount, time, defaults, false);
     TEST_ASSERT_EQUAL(50, sleep);
 }
 

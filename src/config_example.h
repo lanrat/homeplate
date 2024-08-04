@@ -17,10 +17,10 @@
 //#define TIME_TO_QUICK_SLEEP_SEC 300
 
 // Configure sleep times for different time blocks
-// NOTE: configure the actual sleepTimeBlocks in config.cpp, see config_example.cpp
-//#include "sleep_duration.h"
-//extern SleepTimeBlock sleepTimeBlocks[];
-//extern const size_t sleepTimeBlockCount;
+// NOTE: configure the actual sleep schedule in config.cpp, see config_example.cpp
+//#include "sleep_schedule.h"
+//extern SleepScheduleSlot sleepScheduleSlots[];
+//extern const size_t sleepScheduleSlotCount;
 
 // Static IP information
 // If unset uses DHCP, but updates may be slower, set to use a Static IP

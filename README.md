@@ -54,6 +54,7 @@ Copy `config_example.h` to `config.h` and add/change your settings.
 If you want your inkplate to sleep with different intervals, copy `config_example.cpp` to `config.cpp` and uncomment the 3 lines in `config.h` starting from `#include "sleep_duration.h"`. Then configure your sleepTimeBlocks.
 
 Note that time blocks do not span multiple days, this means that the *day of week* setting is similar to configuring a cronjob. F.e. the settings below should be read as *between Xam to Ypm on every weekday*, and **not** as *from monday Xam to friday Ypm*.
+
 ```cpp
 {
     // on every weekday sleep for 1 hour between 12am and 8am
@@ -134,11 +135,11 @@ Older Inkplates don't appear to ship with an updated waveform. I found waveform 
 
 The available unit tests use the 'native' environment and can be run by either:
 
-- running them manually
+* running them manually
 
 ```shell
 pio test -v
 ```
 
-- in VSCode use Testing -> native -> Run Test
-- in VSCode use PlatformIO -> Project Tasks -> native -> Advanced -> Test
+* in VSCode use Testing -> native -> Run Test
+* in VSCode use PlatformIO -> Project Tasks -> native -> Advanced -> Test
