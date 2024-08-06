@@ -1,4 +1,5 @@
 #pragma once
+#ifndef CONFIG_H
 
 // WiFi SSID
 #define WIFI_SSID "WiFi Network Name" 
@@ -13,7 +14,13 @@
 #define TIME_TO_SLEEP_MIN 20
 
 // How long to sleep for quick activities like e.g. showing info and qr code (default 300 / 5 min)
-//#define TIME_TO_QUICK_SLEEP_SEC 30
+//#define TIME_TO_QUICK_SLEEP_SEC 300
+
+// Configure a custom sleep schedule
+// NOTE: configure the actual sleep schedule in config.cpp, see config_example.cpp
+//#include "sleep_schedule.h"
+//extern SleepScheduleSlot sleepSchedule[];
+//extern const size_t sleepScheduleSize;
 
 // Static IP information
 // If unset uses DHCP, but updates may be slower, set to use a Static IP
@@ -65,3 +72,4 @@
 
 // keep this to signal the program has a valid config file
 #define CONFIG_H
+#endif

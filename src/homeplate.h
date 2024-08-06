@@ -6,6 +6,7 @@
 #include "fonts/Roboto_32.h"
 #include "fonts/Roboto_64.h"
 #include "fonts/Roboto_128.h"
+#include "sleep_duration.h"
 #include "config.h"
 
 // check that config file is correctly set
@@ -77,6 +78,7 @@ void setupWakePins();
 #ifndef TIME_TO_QUICK_SLEEP_SEC
 #define TIME_TO_QUICK_SLEEP_SEC 5 * 60 // 5 minutes. How long ESP32 will be in deep sleep (in seconds) for short activities
 #endif
+
 void startSleep();
 void setSleepRefresh(uint32_t sec);
 void setSleepDuration(uint32_t sec);
@@ -87,6 +89,9 @@ void setupTimeAndSyncTask();
 bool getNTPSynced();
 String timeString();
 String fullDateString();
+int getDayOfWeek(bool weekStartsOnMonday = false);
+int getHour();
+int getMinute();
 
 // MQTT
 void startMQTTTask();

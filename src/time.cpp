@@ -9,6 +9,7 @@
 #define JAN_1_2000 946684800
 
 bool ntpSynced = false;
+bool rtcSet = false;
 
 ESP32Time rtc;
 
@@ -68,7 +69,7 @@ void ntpSync(void *parameter)
         Serial.printf("[TIME] synced local UNIX time Epoch(%ld) %s \n", localTime, fullDateString().c_str());
 
         i2cStart();
-        bool rtcSet = display.rtcIsSet();
+        rtcSet = display.rtcIsSet();
         i2cEnd();
         if (!rtcSet) {
             Serial.printf("[TIME] ERROR: Failed to set RTC!\n");
@@ -85,7 +86,7 @@ void setupTimeAndSyncTask()
 {
     unsigned long localTime = rtc.getLocalEpoch();
     i2cStart();
-    bool rtcSet = display.rtcIsSet();
+    rtcSet = display.rtcIsSet();
     if (rtcSet) {
         uint32_t rtcEpoch = display.rtcGetEpoch();
         rtc.offset = tzOffset(rtcEpoch);
@@ -122,4 +123,26 @@ String fullDateString() {
 
 String timeString() {
     return rtc.getTime("%H:%M");
+}
+
+int getDayOfWeek(bool weekStartsOnMonday) {
+    if (!rtcSet) {
+        // return -1 as long as rtc is not set
+        return -1;
+    }
+    return rtc.getDayofWeek() + (weekStartsOnMonday ? 1 : 0);
+}
+
+int getHour() {
+    if (!rtcSet) {
+        return -1;
+    }
+    return rtc.getHour(true);
+}
+
+int getMinute() {
+    if (!rtcSet) {
+        return -1;
+    }
+    return rtc.getMinute();
 }
