@@ -18,7 +18,7 @@
 
 // Configure a custom sleep schedule
 // NOTE: configure the actual sleep schedule in config.cpp, see config_example.cpp
-//#include "sleep_schedule.h"
+//#include "sleep_duration.h"
 //extern SleepScheduleSlot sleepSchedule[];
 //extern const size_t sleepScheduleSize;
 
