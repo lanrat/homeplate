@@ -130,7 +130,13 @@ int getDayOfWeek(bool weekStartsOnMonday) {
         // return -1 as long as rtc is not set
         return -1;
     }
-    return rtc.getDayofWeek() + (weekStartsOnMonday ? 1 : 0);
+
+    int dow = rtc.getDayofWeek();
+    if (dow == 0) {
+        return dow + 1;
+    } else {
+        return dow;
+    }
 }
 
 int getHour() {
