@@ -81,7 +81,7 @@ void runActivities(void *params)
 
         Serial.printf("[ACTIVITY] starting activity: %d\n", activityNext);
         bool doQuickSleep = activityNext == GuestWifi || activityNext == Info;
-#ifdef UTIL_SLEEP_DURATION_H
+#ifdef CONFIG_CPP
         TimeInfo time = {
             .dow = getDayOfWeek(true),
             .hour = getHour(),
