@@ -1,7 +1,9 @@
-// NOTE: THIS FILE IS ONLY NEEDED WHEN CONFIGURING A CUSTOM SLEEP
-// SCHEDULE.
-// IF USING A SINGLE/STATIC SLEEP DURATION THEN THIS FILE CAN BE OMITTED
-// #include "config.h"
+// Note:
+//   This file is only needed when configuring a custom sleep schedule.
+//   If using a single/static sleep duration then this file can be omitted
+/* REMOVE THIS LINE TO ENABLE THE SLEEP SCHEDULE
+#include "config.h"
+#define CONFIG_CPP
 
 // How long to sleep between image refreshes
 // - there is no validation of any kind, make sure your slots are continuous
@@ -9,7 +11,7 @@
 // - a schedule slot is configured per day, i.e. cronjob style
 // - dow = DayOfWeek, starts at 1 = Monday to 7 = Sunday
 // SleepScheduleSlot sleepSchedule[] = {
-    /* EXAMPLE BLOCKS
+    // EXAMPLE BLOCKS
     { // On each workday from 00:00 to 08:30 sleep for 1 hour
         .start_dow = 1,
         .start_hour = 0,
@@ -55,7 +57,7 @@
         .end_minute = 0,
         .sleep_in_seconds = 300,
     },
-    */
-// };
+};
 
-//const size_t sleepScheduleSize = sizeof(sleepSchedule) / sizeof(sleepSchedule[0]);
+const size_t sleepScheduleSize = sizeof(sleepSchedule) / sizeof(sleepSchedule[0]);
+/**/
