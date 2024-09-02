@@ -78,6 +78,10 @@ To help with debugging the current sleep duration is also send to mqtt, so you c
 }
 ```
 
+##### MQTT Expiration
+
+MQTT data sent by homeplate will by default expire after `2 * TIME_TO_SLEEP_MIN`. When using a custom sleep schedule, this could mean that MQTT data expires before homeplate wakes up and sent new values. You should adjust `MQTT_EXPIRE_AFTER_SEC` in `config.h` to a value greater than your longest sleep schedule to avoid this.
+
 #### Build & run
 
 ```shell

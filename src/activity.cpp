@@ -4,7 +4,7 @@
 
 static bool resetActivity = false;
 uint activityCount = 0;
-uint timeToSleep = 60;
+uint timeToSleep = TIME_TO_SLEEP_SEC;
 
 QueueHandle_t activityQueue = xQueueCreate(1, sizeof(Activity));
 

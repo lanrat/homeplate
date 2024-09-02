@@ -16,6 +16,10 @@
 // How long to sleep for quick activities like e.g. showing info and qr code (default 300 / 5 min)
 //#define TIME_TO_QUICK_SLEEP_SEC 300
 
+// How long before MQTT entries expire (default 2 * TIME_TO_SLEEP_MIN)
+// When configuring a custom sleep schedule you might want to change this to a value greater than your longest sleep duration
+//#define MQTT_EXPIRE_AFTER_SEC 3600
+
 // Configure a custom sleep schedule
 // NOTE: configure the actual sleep schedule in config.cpp, see config_example.cpp
 //#define CONFIG_CPP

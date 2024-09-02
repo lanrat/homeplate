@@ -170,7 +170,7 @@ void sendHAConfig()
   doc["state_topic"] = state_topic_wifi_signal;
   doc["unit_of_measurement"] = "dBm";
   doc["value_template"] = "{{ value_json.signal }}";
-  doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
+  doc["expire_after"] = MQTT_EXPIRE_AFTER_SEC;
   doc["entity_category"] = "diagnostic";
   doc["device"] = deviceInfo;
   serializeJson(doc, buff);
@@ -185,7 +185,7 @@ void sendHAConfig()
   doc["state_topic"] = state_topic_temperature;
   doc["unit_of_measurement"] = "°C";
   doc["value_template"] = "{{ value_json.temperature }}";
-  doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
+  doc["expire_after"] = MQTT_EXPIRE_AFTER_SEC;
   doc["device"] = deviceInfo;
   serializeJson(doc, buff);
   mqttClient.publish(mqtt_base_sensor("temperature/config"), qos, retain, buff);
@@ -199,7 +199,7 @@ void sendHAConfig()
   doc["state_topic"] = state_topic_battery;
   doc["unit_of_measurement"] = "V";
   doc["value_template"] = "{{ value_json.voltage }}";
-  doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
+  doc["expire_after"] = MQTT_EXPIRE_AFTER_SEC;
   doc["device"] = deviceInfo;
   serializeJson(doc, buff);
   mqttClient.publish(mqtt_base_sensor("voltage/config"), qos, retain, buff);
@@ -211,7 +211,7 @@ void sendHAConfig()
   doc["state_topic"] = state_topic_battery;
   doc["unit_of_measurement"] = "%";
   doc["value_template"] = "{{ value_json.battery }}";
-  doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
+  doc["expire_after"] = MQTT_EXPIRE_AFTER_SEC;
   doc["device"] = deviceInfo;
   serializeJson(doc, buff);
   mqttClient.publish(mqtt_base_sensor("battery/config"), qos, retain, buff);
@@ -225,7 +225,7 @@ void sendHAConfig()
   doc["unit_of_measurement"] = "boot";
   doc["icon"] = "mdi:chart-line-variant";
   doc["value_template"] = "{{ value_json.boot }}";
-  doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
+  doc["expire_after"] = MQTT_EXPIRE_AFTER_SEC;
   doc["entity_category"] = "diagnostic";
   doc["enabled_by_default"] = false;
   doc["device"] = deviceInfo;
@@ -238,7 +238,7 @@ void sendHAConfig()
   doc["name"] = "Boot Reason";
   doc["state_topic"] = state_topic_boot;
   doc["value_template"] = "{{ value_json.boot_reason }}";
-  doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
+  doc["expire_after"] = MQTT_EXPIRE_AFTER_SEC;
   doc["entity_category"] = "diagnostic";
   doc["enabled_by_default"] = false;
   doc["device"] = deviceInfo;
@@ -254,7 +254,7 @@ void sendHAConfig()
   doc["unit_of_measurement"] = "activities";
   doc["icon"] = "mdi:chart-line-variant";
   doc["value_template"] = "{{ value_json.activity_count }}";
-  doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
+  doc["expire_after"] = MQTT_EXPIRE_AFTER_SEC;
   doc["entity_category"] = "diagnostic";
   doc["enabled_by_default"] = false;
   doc["device"] = deviceInfo;
@@ -270,7 +270,7 @@ void sendHAConfig()
   doc["unit_of_measurement"] = "s";
   doc["icon"] = "mdi:power-sleep";
   doc["value_template"] = "{{ value_json.sleep_duration }}";
-  doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
+  doc["expire_after"] = MQTT_EXPIRE_AFTER_SEC;
   doc["entity_category"] = "diagnostic";
   doc["enabled_by_default"] = false;
   doc["device"] = deviceInfo;
