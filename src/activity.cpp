@@ -93,7 +93,6 @@ void runActivities(void *params)
             .quickSleep = TIME_TO_QUICK_SLEEP_SEC,
         };
         timeToSleep = getSleepDuration(sleepSchedule, sleepScheduleSize, time, defaults, doQuickSleep);
-        Serial.printf("[ACTIVITY SLEEP] Will sleep for %d\n", timeToSleep);
 #else
         timeToSleep = doQuickSleep ? TIME_TO_QUICK_SLEEP_SEC : TIME_TO_SLEEP_SEC;
 #endif
