@@ -87,6 +87,8 @@ cards:
         secondary_info: last-updated
       - entity: sensor.homeplate_wifi_signal
         secondary_info: last-updated
+      - entity: sensor.homeplate_sleep_duration
+        secondary_info: last-updated
     title: HomePlate
     state_color: false
   - type: grid

@@ -51,9 +51,11 @@ Copy `config_example.h` to `config.h` and add/change your settings.
 
 ##### Variable sleep intervals
 
-If you want your inkplate to sleep with different intervals, copy `config_example.cpp` to `config.cpp` and uncomment the 3 lines in `config.h` starting from `#include "sleep_duration.h"`. Then configure your `sleepSchedule`.
+If you want your inkplate to sleep with different intervals, copy `config_example.cpp` to `config.cpp` and uncomment the 4 lines in `config.h` starting from `#define CONFIG_CPP`. Then configure your `sleepSchedule` in config.cpp.
 
 Note that schedule slots do not span multiple days, this means that the *day of week* setting is similar to configuring a cronjob. F.e. the settings below should be read as *between Xam to Ypm on every weekday*, and **not** as *from monday Xam to friday Ypm*.
+
+To help with debugging the current sleep duration is also send to mqtt, so you can monitor it in home assistant.
 
 ```cpp
 {

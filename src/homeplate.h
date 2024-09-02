@@ -21,7 +21,7 @@ extern void vApplicationStackOverflowHook(xTaskHandle *pxTask,
 extern Inkplate display;
 extern SemaphoreHandle_t mutexI2C, mutexDisplay, mutexSPI;
 extern bool sleepBoot;
-extern uint bootCount, activityCount;
+extern uint bootCount, activityCount, timeToSleep;
 
 #define i2cStart() xSemaphoreTake(mutexI2C, portMAX_DELAY)
 #define i2cEnd() xSemaphoreGive(mutexI2C)

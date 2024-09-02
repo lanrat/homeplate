@@ -120,13 +120,14 @@ void mqttSendBatteryStatus()
   mqttClient.publish(state_topic_battery, 1, MQTT_RETAIN_SENSOR_VALUE, buff);
 }
 
-void mqttSendBootStatus(uint boot, uint activityCount, const char *bootReason)
+void mqttSendBootStatus(uint boot, uint activityCount, const char *bootReason, uint sleepDuration)
 {
   char buff[512];
   JsonDocument doc;
   doc["boot"] = boot;
   doc["activity_count"] = activityCount;
   doc["boot_reason"] = bootReason;
+  doc["sleep_duration"] = sleepDuration;
   serializeJson(doc, buff);
   Serial.printf("[MQTT] Sending MQTT State: [%s] %s\n", state_topic_boot, buff);
   mqttClient.publish(state_topic_boot, 1, MQTT_RETAIN_SENSOR_VALUE, buff);
@@ -259,6 +260,22 @@ void sendHAConfig()
   doc["device"] = deviceInfo;
   serializeJson(doc, buff);
   mqttClient.publish(mqtt_base_sensor("activity_count/config"), qos, retain, buff);
+
+  // sleepTime
+  doc.clear();
+  doc["unique_id"] = mqtt_unique_id("sleep_duration");
+  doc["state_class"] = "measurement";
+  doc["name"] = "Sleep Duration";
+  doc["state_topic"] = state_topic_boot;
+  doc["unit_of_measurement"] = "s";
+  doc["icon"] = "mdi:power-sleep";
+  doc["value_template"] = "{{ value_json.sleep_duration }}";
+  doc["expire_after"] = TIME_TO_SLEEP_SEC * 2;
+  doc["entity_category"] = "diagnostic";
+  doc["enabled_by_default"] = false;
+  doc["device"] = deviceInfo;
+  serializeJson(doc, buff);
+  mqttClient.publish(mqtt_base_sensor("sleep_duration/config"), qos, retain, buff);
 }
 
 void connectToMqtt(void *params)
@@ -521,7 +538,7 @@ void sendMQTTStatusTask(void *param)
     mqttWaiting = true;
 
     waitForMQTT();
-    mqttSendBootStatus(bootCount, activityCount, bootReason());
+    mqttSendBootStatus(bootCount, activityCount, bootReason(), timeToSleep);
     mqttSendWiFiStatus();
 
     mqttSendTempStatus();
