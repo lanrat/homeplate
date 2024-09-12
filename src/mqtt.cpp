@@ -555,7 +555,7 @@ void sendMQTTStatusTask(void *param)
 void startMQTTStatusTask()
 {
   mqttWaiting = true;
-  mqttRun = true;
+  mqttRun = false;
   mqttKill = false;
 
   xTaskCreate(
