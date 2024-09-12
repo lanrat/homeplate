@@ -4,6 +4,7 @@
 
 static bool resetActivity = false;
 uint activityCount = 0;
+uint timeToSleep = TIME_TO_SLEEP_SEC;
 
 QueueHandle_t activityQueue = xQueueCreate(1, sizeof(Activity));
 
@@ -91,9 +92,9 @@ void runActivities(void *params)
             .normalSleep = TIME_TO_SLEEP_SEC,
             .quickSleep = TIME_TO_QUICK_SLEEP_SEC,
         };
-        uint timeToSleep = getSleepDuration(sleepSchedule, sleepScheduleSize, time, defaults, doQuickSleep);
+        timeToSleep = getSleepDuration(sleepSchedule, sleepScheduleSize, time, defaults, doQuickSleep);
 #else
-        uint timeToSleep = doQuickSleep ? TIME_TO_QUICK_SLEEP_SEC : TIME_TO_SLEEP_SEC;
+        timeToSleep = doQuickSleep ? TIME_TO_QUICK_SLEEP_SEC : TIME_TO_SLEEP_SEC;
 #endif
 
         switch (activityNext)

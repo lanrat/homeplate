@@ -21,7 +21,7 @@ extern void vApplicationStackOverflowHook(xTaskHandle *pxTask,
 extern Inkplate display;
 extern SemaphoreHandle_t mutexI2C, mutexDisplay, mutexSPI;
 extern bool sleepBoot;
-extern uint bootCount, activityCount;
+extern uint bootCount, activityCount, timeToSleep;
 
 #define i2cStart() xSemaphoreTake(mutexI2C, portMAX_DELAY)
 #define i2cEnd() xSemaphoreGive(mutexI2C)
@@ -77,6 +77,9 @@ void setupWakePins();
 #define TIME_TO_SLEEP_SEC (TIME_TO_SLEEP_MIN * 60)    // How long ESP32 will be in deep sleep (in seconds)
 #ifndef TIME_TO_QUICK_SLEEP_SEC
 #define TIME_TO_QUICK_SLEEP_SEC 5 * 60 // 5 minutes. How long ESP32 will be in deep sleep (in seconds) for short activities
+#endif
+#ifndef MQTT_EXPIRE_AFTER_SEC
+#define MQTT_EXPIRE_AFTER_SEC (TIME_TO_SLEEP_SEC * 2)
 #endif
 
 void startSleep();

@@ -3,7 +3,6 @@
 //   If using a single/static sleep duration then this file can be omitted
 /* REMOVE THIS LINE TO ENABLE THE SLEEP SCHEDULE
 #include "config.h"
-#define CONFIG_CPP
 
 // How long to sleep between image refreshes
 // - there is no validation of any kind, make sure your slots are continuous
