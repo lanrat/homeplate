@@ -558,6 +558,13 @@ void startMQTTStatusTask()
   mqttRun = false;
   mqttKill = false;
 
+  #ifndef MQTT_HOST
+    // if no MQTT, return early
+    Serial.println("[MQTT] not starting status task, MQTT_HOST not defined");
+    mqttFailed = true;		// to avoid endless wait in sleep.cpp#86
+    return;
+  #endif
+
   xTaskCreate(
       sendMQTTStatusTask,      /* Task function. */
       "MQTT_STAT_TASK",        /* String with name of task. */
