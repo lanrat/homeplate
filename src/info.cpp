@@ -41,10 +41,6 @@ void displayBoundaryBox()
 
 void displayInfoScreen()
 {
-  // wait a little for the other threads to catch up
-  // get wifi connected, get mqtt connected, etc.
-  vTaskDelay(500 / portTICK_PERIOD_MS);
-
   Serial.printf("Rendering info page\n");
   static char buff[1024];
   esp_chip_info_t chip_info;
