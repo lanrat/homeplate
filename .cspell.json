@@ -16,6 +16,7 @@
         "deviceinfo",
         "EEPROM",
         "eink",
+        "espressif",
         "esptool",
         "GPIO",
         "grayscale",
