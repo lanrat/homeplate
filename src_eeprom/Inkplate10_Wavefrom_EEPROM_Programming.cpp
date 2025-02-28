@@ -100,7 +100,7 @@ void setup()
             display.setTextSize(4);
             display.setTextColor(0);
             display.setCursor(10, 10);
-            display.printf("WAVEFORM: %d", currentWaveform);
+            display.printf("WAVEFORM: %d", currentWaveform + 1);
 
             display.display();
         }
