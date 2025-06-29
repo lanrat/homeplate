@@ -156,7 +156,7 @@ uint8_t* httpGet(const char* url, std::map<String, String> headers, int32_t* def
     http.begin(url);
 
     for (const auto& header : headers) {
-        Serial.printf("[NET][DEBUG] adding http header: %s: %s\n", header.first.c_str(), header.second.c_str());
+        //Serial.printf("[NET][DEBUG] adding http header: %s: %s\n", header.first.c_str(), header.second.c_str());
         http.addHeader(header.first, header.second);
     }
 

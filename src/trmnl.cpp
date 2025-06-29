@@ -13,8 +13,7 @@ bool trmnlDisplay(const char *url)
     }
     displayStatusMessage("Loading next image...");
     Serial.printf("[TRMNL] API: %s\n", url);
-    // set len for png image, or set 54373?
-    static int32_t defaultLen = E_INK_WIDTH * E_INK_HEIGHT * 4 + 100;
+    static int32_t defaultLen = 5000;
 
     // set headers
     std::map<String, String> headers = {
@@ -52,7 +51,6 @@ bool trmnlDisplay(const char *url)
 
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, buff, defaultLen, DeserializationOption::Filter(trmnl_display_filter));
-    //DeserializationError error = deserializeJson(doc, buff, defaultLen);
     if (error)
     {
       Serial.printf("[TRMNL][ERROR] JSON Deserialize error: %s\n", error.c_str());
@@ -60,10 +58,6 @@ bool trmnlDisplay(const char *url)
       free(buff);
       return false;
     }
-    
-    // Serial.printf("[TRMNL][DEBUG] raw resp:\n");
-    // Serial.printf("%.*s\n", defaultLen, buff);
-    // Serial.printf("\n");
 
     free(buff);
     Serial.printf("[TRMNL] Deserialized json:\n");
