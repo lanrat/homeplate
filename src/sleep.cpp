@@ -8,14 +8,16 @@ static unsigned long sleepTime;
 uint32_t sleepDuration = TIME_TO_SLEEP_SEC;
 uint32_t sleepRefresh = 0;
 
-void setSleepRefresh(uint32_t sec)
-{
-    sleepRefresh = sec;
-}
-
 void setSleepDuration(uint32_t sec)
 {
-    sleepDuration = sec;
+    if (sec > 0 && sec < MAX_REFRESH_SEC)
+      {
+        sleepDuration = sec;
+      }
+      else
+      {
+        Serial.printf("[SLEEP][ERROR] refresh value is out of range: %d\n", sec);
+      }
 }
 
 void gotoSleepNow()

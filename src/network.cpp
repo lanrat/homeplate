@@ -1,4 +1,7 @@
 #include <WiFi.h>
+#include <HTTPClient.h>
+
+
 #include "homeplate.h"
 
 #define WIFI_TASK_PRIORITY 2
@@ -130,4 +133,84 @@ void wifiStopTask()
         WiFi.mode(WIFI_OFF);
         wifiTaskHandle = NULL;
     }
+}
+
+
+uint8_t* httpGet(const char* url, std::map<String, String> headers, int32_t* defaultLen) {
+    Serial.printf("[NET] downloading file at URL %s\n", url);
+
+    bool sleep = WiFi.getSleep();
+    WiFi.setSleep(false);
+
+    HTTPClient http;
+    http.getStream().setNoDelay(true);
+    http.getStream().setTimeout(5);
+
+    // const char* headersToCollect[] = {
+    //     "X-Next-Refresh",
+    // };
+    // const size_t numberOfHeaders = 1;
+    // http.collectHeaders(headersToCollect, numberOfHeaders);
+
+    // Connect with HTTP
+    http.begin(url);
+
+    for (const auto& header : headers) {
+        Serial.printf("[NET][DEBUG] adding http header: %s: %s\n", header.first.c_str(), header.second.c_str());
+        http.addHeader(header.first, header.second);
+    }
+
+    int httpCode = http.GET();
+
+    int32_t size = http.getSize();
+    if (size == -1)
+        size = *defaultLen;
+    else
+        *defaultLen = size;
+
+    uint8_t* buffer = (uint8_t *)ps_malloc(size);
+    uint8_t *buffPtr = buffer;
+
+    if (httpCode != HTTP_CODE_OK) {
+        Serial.printf("[NET] Non-200 response from URL %s: %d", url, httpCode);
+        return buffer;
+    }
+
+    // if (http.hasHeader("X-Next-Refresh")) {
+    //     // Get the next refresh header value from the server.
+    //     // We use this to determine when to wake up next.
+    //     String headerVal = http.header("X-Next-Refresh");
+    //     *nextRefresh = headerVal.toInt();
+    //     // const char* headerValPtr = headerVal.c_str();
+    //     // strcpy(nextRefresh, headerValPtr);
+    //     logf(LOG_DEBUG, "received header X-Next-Refresh: %d", *nextRefresh);
+    // } else {
+    //     logf(LOG_WARNING, "header X-Next-Refresh not found in response");
+    // }
+
+    int32_t total = http.getSize();
+    int32_t len = total;
+
+    uint8_t buff[512] = {0};
+
+    WiFiClient* stream = http.getStreamPtr();
+    while (http.connected() && (len > 0 || len == -1)) {
+        size_t size = stream->available();
+
+        if (size) {
+            int c = stream->readBytes(
+                buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
+            memcpy(buffPtr, buff, c);
+
+            if (len > 0) len -= c;
+            buffPtr += c;
+        } else if (len == -1) {
+            len = 0;
+        }
+    }
+
+    http.end();
+    WiFi.setSleep(sleep);
+
+    return buffer;
 }

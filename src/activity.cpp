@@ -16,10 +16,10 @@ void startActivity(Activity activity)
     static SemaphoreHandle_t mutex = xSemaphoreCreateMutex();
     if (xSemaphoreTake(mutex, (SECOND) / portTICK_PERIOD_MS) == pdTRUE)
     {
-        // dont re-queue HomeAssistant Activity is run within 60 sec and already running
-        if (activity == HomeAssistant && activityCurrent == HomeAssistant && ((millis() - lastActivityTime) / SECOND < 60))
+        // dont re-queue main Activity is run within 60 sec and already running
+        if (activity == DEFAULT_ACTIVITY && activityCurrent == DEFAULT_ACTIVITY && ((millis() - lastActivityTime) / SECOND < 60))
         {
-            Serial.printf("[ACTIVITY] startActivity(%d) HomeAssistant already running within time limit, skipping\n", activity);
+            Serial.printf("[ACTIVITY] startActivity(%d) main activity already running within time limit, skipping\n", activity);
             xSemaphoreGive(mutex);
             return;
         }
@@ -101,6 +101,7 @@ void runActivities(void *params)
         {
         case NONE:
             break;
+#ifdef IMAGE_URL
         case HomeAssistant:
             delaySleep(15);
             setSleepDuration(timeToSleep);
@@ -116,6 +117,23 @@ void runActivities(void *params)
             remotePNG(IMAGE_URL);
             // delaySleep(10);
             break;
+#endif
+#ifdef TRMNL_ID
+        case Trmnl:
+            delaySleep(15);
+            setSleepDuration(timeToSleep);
+            // wait for wifi or reset activity
+            waitForWiFiOrActivityChange();
+            if (resetActivity)
+            {
+                Serial.printf("[ACTIVITY][ERROR] Trmnl Activity reset while waiting, aborting...\n");
+                continue;
+            }
+            delaySleep(20);
+            trmnlDisplay(TRMNL_URL);
+            // delaySleep(10);
+            break;
+# endif
         case GuestWifi:
             setSleepDuration(timeToSleep);
             displayWiFiQR();
@@ -133,7 +151,7 @@ void runActivities(void *params)
             waitForWiFiOrActivityChange();
             if (resetActivity)
             {
-                Serial.printf("[ACTIVITY][ERROR] HomeAssistant Activity reset while waiting, aborting...\n");
+                Serial.printf("[ACTIVITY][ERROR] IMG Activity reset while waiting, aborting...\n");
                 continue;
             }
             // get & render image

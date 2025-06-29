@@ -43,6 +43,12 @@
 // URL of PNG image to display
 #define IMAGE_URL "HTTP URL of dashboard screenshot to display"
 
+// Settings for Trmnl (optional)
+// #define TRMNL_URL "https://trmnl.app/api/display"
+// #define TRMNL_ID ""
+// #define TRMNL_TOKEN ""
+// #define DEFAULT_ACTIVITY Trmnl
+
 // WiFi QR Code
 #define QR_WIFI_NAME "Guest WiFi Network Name"
 #define QR_WIFI_PASSWORD "Guest WiFi Password"

@@ -59,7 +59,7 @@ void checkButtons(void *params)
             if (checkPad(PAD1))
             {
                 Serial.printf("[INPUT] touchpad 1\n");
-                startActivity(HomeAssistant);
+                startActivity(DEFAULT_ACTIVITY);
                 button = true;
             }
             else if (checkPad(PAD2))
@@ -77,7 +77,7 @@ void checkButtons(void *params)
             else if (!digitalRead(WAKE_BUTTON))
             {
                 Serial.printf("[INPUT] wake button\n");
-                startActivity(HomeAssistant);
+                startActivity(DEFAULT_ACTIVITY);
                 button = true;
             }
         }
@@ -130,7 +130,7 @@ void checkBootPads()
             if (key & INT_PAD1)
             {
                 Serial.println("[INPUT] boot: PAD1");
-                startActivity(HomeAssistant);
+                startActivity(DEFAULT_ACTIVITY);
             }
             else if (key & INT_PAD2)
             {

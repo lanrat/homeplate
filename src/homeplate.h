@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Inkplate.h>
+#include <map>
 #include "fonts/Roboto_12.h"
 #include "fonts/Roboto_16.h"
 #include "fonts/Roboto_32.h"
@@ -68,6 +69,9 @@ uint16_t centerTextX(const char *t, int16_t x1, int16_t x2, int16_t y, bool lock
 void displayStatusMessage(const char *format, ...);
 void splashScreen();
 
+// Trmnl
+bool trmnlDisplay(const char *url);
+
 // Input
 void startMonitoringButtonsTask();
 void checkBootPads();
@@ -83,7 +87,6 @@ void setupWakePins();
 #endif
 
 void startSleep();
-void setSleepRefresh(uint32_t sec);
 void setSleepDuration(uint32_t sec);
 void gotoSleepNow();
 
@@ -120,6 +123,9 @@ void printDebugStackSpace();
 void displayBatteryWarning();
 void printDebug(const char *s);
 
+// network
+uint8_t* httpGet(const char* url, std::map<String, String> headers, int32_t* defaultLen);
+
 // message
 void setMessage(const char *m);
 void displayMessage(const char * = NULL);
@@ -130,13 +136,16 @@ enum Activity
 {
     NONE,
     HomeAssistant,
+    Trmnl,
     GuestWifi,
     Info,
     Message,
     IMG,
 };
 
+#ifndef DEFAULT_ACTIVITY
 #define DEFAULT_ACTIVITY HomeAssistant
+#endif
 void startActivity(Activity activity);
 void startActivitiesTask();
 bool stopActivity();
@@ -189,6 +198,8 @@ void delaySleep(uint seconds);
 
 // Sleep
 #define SLEEP_TIMEOUT_SEC 15
+#define MAX_REFRESH_SEC 60*60*24 // 1 day
+
 
 // Device Models (from Inkplate-Arduino-library/src/include/defines.h)
 #ifdef ARDUINO_ESP32_DEV

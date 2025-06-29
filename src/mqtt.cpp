@@ -5,8 +5,6 @@
 #define MQTT_TASK_PRIORITY 3
 #define MQTT_SEND_TASK_PRIORITY 5
 
-#define MAX_MQTT_REFRESH_SEC 60*60*24 // 1 day
-
 #define MQTT_ACTION_TOPIC        "homeplate/" MQTT_NODE_ID "/activity/run"
 #define MQTT_DISCOVERY_TOPIC     "homeassistant"
 #define mqtt_base_sensor(topic)  MQTT_DISCOVERY_TOPIC "/sensor/" MQTT_NODE_ID "/" topic
@@ -15,7 +13,7 @@
 AsyncMqttClient mqttClient;
 xTaskHandle mqttTaskHandle;
 bool mqttFailed = false;
-JsonDocument filter;
+JsonDocument mqtt_filter;
 
 static bool mqttWaiting; // is MQTT waiting for status to be sent
 static bool mqttRun;     // should another MQTT status update be sent
@@ -384,7 +382,7 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
     mqttClient.publish(MQTT_ACTION_TOPIC, 1, true);
 
     JsonDocument doc;
-    DeserializationError error = deserializeJson(doc, payload, len, DeserializationOption::Filter(filter));
+    DeserializationError error = deserializeJson(doc, payload, len, DeserializationOption::Filter(mqtt_filter));
     if (error)
     {
       Serial.printf("[MQTT][ERROR] JSON Deserialize error: %s\n", error.c_str());
@@ -401,9 +399,9 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
     {
       int refresh = doc["refresh"].as<int>();
       Serial.printf("[MQTT][REFRESH]: %d\n", refresh);
-      if (refresh > 0 && refresh < MAX_MQTT_REFRESH_SEC)
+      if (refresh > 0 && refresh < MAX_REFRESH_SEC)
       {
-        setSleepRefresh((uint32_t) refresh);
+        setSleepDuration((uint32_t) refresh);
       }
       else
       {
@@ -424,6 +422,11 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
     else if (strncmp("hass", action, 5) == 0)
     {
       startActivity(HomeAssistant);
+      return;
+    }
+    else if (strncmp("trmnl", action, 6) == 0)
+    {
+      startActivity(Trmnl);
       return;
     }
     else if (strncmp("message", action, 9) == 0)
@@ -480,9 +483,9 @@ void startMQTTTask()
   // mqttClient.onPublish(onMqttPublish);
 
   // set deserialization filter
-  filter["action"] = true;
-  filter["message"] = true;
-  filter["refresh"] = true;
+  mqtt_filter["action"] = true;
+  mqtt_filter["message"] = true;
+  mqtt_filter["refresh"] = true;
 
   mqttClient.setClientId(HOSTNAME);
 #ifdef MQTT_HOST
@@ -503,10 +506,10 @@ void startMQTTTask()
 
 void mqttStopTask()
 {
-  Serial.println("[MQTT] Stopping and disconnecting...");
   mqttKill = true;
   if (mqttTaskHandle != NULL)
   {
+    Serial.println("[MQTT] Stopping and disconnecting...");
     vTaskDelete(mqttTaskHandle);
     mqttClient.disconnect();
     mqttTaskHandle = NULL;

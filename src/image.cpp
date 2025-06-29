@@ -18,7 +18,7 @@ void displayStats()
 bool remotePNG(const char *url)
 {
     if (url == NULL) {
-         Serial.print("[IMAGE] ERROR: got null image!");
+         Serial.print("[IMAGE] ERROR: got null url!");
          return false;
     }
     displayStatusMessage("Downloading image...");

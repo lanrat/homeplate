@@ -22,6 +22,7 @@
 * Partial screen updates in grayscale mode.
 * Power saving sleep mode.
 * Display any PNG image from MQTT Command
+* [Trmnl](https://usetrmnl.com) support!
 
 ## Future Ideas
 
@@ -40,6 +41,11 @@ Create a Home Assistant Dashboard you want to display. I recommend using the [ki
 Setup [sibbl](https://github.com/sibbl/)'s [hass-lovelace-kindle-screensaver](https://github.com/sibbl/hass-lovelace-kindle-screensaver) or [my fork hass-screenshot](https://github.com/lanrat/hass-screenshot) to regularly screenshot the desired dashboards for the HomePlate.
 
 ### More information in [hass.md](hass.md) and [dashboard.md](dashboard.md)
+
+### Trmnl
+
+In order to use this with Trmnl, you must set `TRMNL_URL`, `TRMNL_ID`, and `TRMNL_TOKEN` in `config.h`.
+You can optionally set `#define DEFAULT_ACTIVITY Trmnl` to have Trmnl be the default image displayed if `IMAGE_URL` is also set.
 
 ### Inkplate
 
