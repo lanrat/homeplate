@@ -20,6 +20,11 @@ void setSleepDuration(uint32_t sec)
       }
 }
 
+uint32_t getSleepDuration()
+{
+    return sleepDuration;
+}
+
 void gotoSleepNow()
 {
     Serial.println("[SLEEP] prepping for sleep");

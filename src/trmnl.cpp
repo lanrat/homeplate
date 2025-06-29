@@ -19,19 +19,29 @@ bool trmnlDisplay(const char *url)
     std::map<String, String> headers = {
         {"ID", TRMNL_ID},
         {"Access-Token", TRMNL_TOKEN},
+        {"RSSI", String(WiFi.RSSI())},
+        {"Refresh-Rate", String(getSleepDuration())},
+        {"Accept", "application/json"},
+        {"Width", String(E_INK_WIDTH)},
+        {"Height", String(E_INK_HEIGHT)},
+        {"Model", DEVICE_MODEL},
     };
 
     // set voltage
     i2cStart();
     double voltage = display.readBattery();
     i2cEnd();
-    char buffer[10];
-    dtostrf(voltage, 0, 2, buffer);
-
     if (voltage > 0) {
-        headers["Battery-Voltage"] = buffer;
+        char volt_buffer[10];
+        dtostrf(voltage, 0, 2, volt_buffer);
+        headers["Battery-Voltage"] = volt_buffer;
         Serial.printf("[TRMNL] Sending battery voltage: %s\n", headers["Battery-Voltage"].c_str());
     }
+
+    // set version
+    char ver_buffer[50];
+    snprintf(ver_buffer, 50, "Homeplate %s", VERSION);
+    headers["FW-Version"] = ver_buffer;
 
     uint8_t *buff = httpGet(url, headers, &defaultLen);
     if (!buff)
@@ -48,6 +58,7 @@ bool trmnlDisplay(const char *url)
     trmnl_display_filter["refresh_rate"] = true;
     trmnl_display_filter["special_function"] = true;
     trmnl_display_filter["status"] = true;
+    trmnl_display_filter["error"] = true;
 
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, buff, defaultLen, DeserializationOption::Filter(trmnl_display_filter));
@@ -71,10 +82,29 @@ bool trmnlDisplay(const char *url)
       setSleepDuration(refresh);
     }
 
+    if (doc.containsKey("status")) {
+        uint32_t status = doc["status"].as<int32_t>();
+        if (status != 0) {
+            Serial.printf("[TRMNL][ERROR]: received non-zero status: %d!\n", status);
+        }
+    }
+
+    if (doc.containsKey("error")) {
+        String error = doc["error"].as<String>();
+        Serial.printf("[TRMNL][ERROR]: received error: %s\n", error.c_str());
+    }
+
     if (doc.containsKey("image_url"))
     {
         // grab the image and display it
-        return remotePNG(doc["image_url"]);
+        String image_url = doc["image_url"].as<String>();
+        // detect if we are served a bmp image
+        if (image_url.endsWith(".bmp")) {
+            Serial.printf("[TRMNL][ERROR]: received bmp image: %s\n", image_url.c_str());
+            displayStatusMessage("Image failed!");
+            return false;
+        }
+        return remotePNG(image_url.c_str());
     } else {
         Serial.printf("[TRMNL][ERROR]: No image_url found!\n");
         displayStatusMessage("Download failed!");

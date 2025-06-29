@@ -88,6 +88,7 @@ void setupWakePins();
 
 void startSleep();
 void setSleepDuration(uint32_t sec);
+uint32_t getSleepDuration();
 void gotoSleepNow();
 
 // time
