@@ -92,6 +92,7 @@ bool trmnlDisplay(const char *url)
     if (doc.containsKey("error")) {
         String error = doc["error"].as<String>();
         Serial.printf("[TRMNL][ERROR]: received error: %s\n", error.c_str());
+        displayStatusMessage("Error: %s", error.c_str());
     }
 
     if (doc.containsKey("image_url"))
