@@ -4,6 +4,9 @@
 // https://docs.usetrmnl.com/go/private-api/fetch-screen-content
 bool trmnlDisplay(const char *url)
 {
+#ifndef TRMNL_ID
+    return false;
+#else
     if (url == NULL) {
          Serial.println("[TRMNL] ERROR: got null url!");
          return false;
@@ -83,4 +86,5 @@ bool trmnlDisplay(const char *url)
         displayStatusMessage("Download failed!");
     }
     return false;
+#endif
 }
