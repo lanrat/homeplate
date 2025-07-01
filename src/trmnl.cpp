@@ -1,6 +1,9 @@
 #include <ArduinoJson.h>
 #include "homeplate.h"
 
+
+RTC_DATA_ATTR char current_filename[32] = "";
+
 // https://docs.usetrmnl.com/go/private-api/fetch-screen-content
 bool trmnlDisplay(const char *url)
 {
@@ -93,6 +96,18 @@ bool trmnlDisplay(const char *url)
         String error = doc["error"].as<String>();
         Serial.printf("[TRMNL][ERROR]: received error: %s\n", error.c_str());
         displayStatusMessage("Error: %s", error.c_str());
+    }
+
+    if (doc.containsKey("filename"))
+    {
+      String filename = doc["filename"].as<String>();
+      Serial.printf("[TRMNL] Last filename: %s --> new filename: %s\n", current_filename, filename);
+      if (filename.length() > 0 && filename.equals(current_filename)) {
+         Serial.printf("[TRMNL] filename unchanged, not refreshing\n");
+         return true;
+      }
+      // update the saved current_filename
+      strncpy(current_filename, filename.c_str(), sizeof(current_filename)-1);
     }
 
     if (doc.containsKey("image_url"))
