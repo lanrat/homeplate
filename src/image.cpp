@@ -22,11 +22,9 @@ bool remotePNG(const char *url)
          return false;
     }
     displayStatusMessage("Downloading image...");
-    Serial.print("[IMAGE] Downloading image: ");
-    Serial.println(url);
-    // set len for png image, or set 54373?
-    static int32_t defaultLen = E_INK_WIDTH * E_INK_HEIGHT * 4 + 100;
-    uint8_t *buff = display.downloadFile(url, &defaultLen);
+    Serial.printf("[IMAGE] Downloading image: %s", url);
+    static int32_t defaultLen = E_INK_WIDTH * E_INK_HEIGHT + 100;
+    uint8_t *buff = httpGet(url, NULL, &defaultLen, 10);
     if (!buff)
     {
         Serial.println("[IMAGE] Download failed");

@@ -136,7 +136,7 @@ void wifiStopTask()
 }
 
 
-uint8_t* httpGet(const char* url, std::map<String, String> headers, int32_t* defaultLen) {
+uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec) {
     Serial.printf("[NET] downloading file at URL %s\n", url);
 
     bool sleep = WiFi.getSleep();
@@ -144,7 +144,7 @@ uint8_t* httpGet(const char* url, std::map<String, String> headers, int32_t* def
 
     HTTPClient http;
     http.getStream().setNoDelay(true);
-    http.getStream().setTimeout(5);
+    http.getStream().setTimeout(timeout_sec);
 
     // const char* headersToCollect[] = {
     //     "X-Next-Refresh",
@@ -155,9 +155,11 @@ uint8_t* httpGet(const char* url, std::map<String, String> headers, int32_t* def
     // Connect with HTTP
     http.begin(url);
 
-    for (const auto& header : headers) {
-        //Serial.printf("[NET][DEBUG] adding http header: %s: %s\n", header.first.c_str(), header.second.c_str());
-        http.addHeader(header.first, header.second);
+    if (headers) {
+        for (const auto& header : *headers) {
+            //Serial.printf("[NET][DEBUG] adding http header: %s: %s\n", header.first.c_str(), header.second.c_str());
+            http.addHeader(header.first, header.second);
+        }
     }
 
     int httpCode = http.GET();

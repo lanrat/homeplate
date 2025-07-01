@@ -125,7 +125,7 @@ void displayBatteryWarning();
 void printDebug(const char *s);
 
 // network
-uint8_t* httpGet(const char* url, std::map<String, String> headers, int32_t* defaultLen);
+uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec = 5);
 
 // message
 void setMessage(const char *m);

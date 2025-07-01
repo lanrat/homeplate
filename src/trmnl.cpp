@@ -2,7 +2,7 @@
 #include "homeplate.h"
 
 
-RTC_DATA_ATTR char current_filename[32] = "";
+RTC_DATA_ATTR char current_filename[64] = "";
 
 // https://docs.usetrmnl.com/go/private-api/fetch-screen-content
 bool trmnlDisplay(const char *url)
@@ -46,7 +46,7 @@ bool trmnlDisplay(const char *url)
     snprintf(ver_buffer, 50, "Homeplate %s", VERSION);
     headers["FW-Version"] = ver_buffer;
 
-    uint8_t *buff = httpGet(url, headers, &defaultLen);
+    uint8_t *buff = httpGet(url, &headers, &defaultLen);
     if (!buff)
     {
         Serial.println("[TRMNL] Download failed");
@@ -101,7 +101,7 @@ bool trmnlDisplay(const char *url)
     if (doc.containsKey("filename"))
     {
       String filename = doc["filename"].as<String>();
-      Serial.printf("[TRMNL] Last filename: %s --> new filename: %s\n", current_filename, filename);
+      Serial.printf("[TRMNL] Last filename: %s --> new filename: %s\n", current_filename, filename.c_str());
       if (filename.length() > 0 && filename.equals(current_filename)) {
          Serial.printf("[TRMNL] filename unchanged, not refreshing\n");
          return true;
