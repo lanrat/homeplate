@@ -1,8 +1,8 @@
 # HomePlate
 
-[Home Assistant](https://www.home-assistant.io/) E-Ink Dashboard on the [Inkplate 10](https://www.crowdsupply.com/e-radionica/inkplate-10)
+[Trmnl](https://usetrmnl.com/) and [Home Assistant](https://www.home-assistant.io/) E-Ink Dashboard on the [Inkplate 10](https://soldered.com/product/inkplate-10-9-7-e-paper-board-copy/)
 
-![homeplate](https://user-images.githubusercontent.com/164192/150657050-d919b70e-d3a0-42e3-a842-9d7684b0dcc7.jpeg)
+![Home Assistant](screenshots/hass.jpeg)
 
 ## [Activities Screenshots](activities.md)
 
