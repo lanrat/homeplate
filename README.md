@@ -8,6 +8,7 @@
 
 ## Features
 
+* [Trmnl](https://usetrmnl.com) support
 * Display Home Assistant dashboards on a beautiful e-ink display
 * Display WiFi QR Codes for guests/friends to connect to home/guest wifi
 * Can display messages directly from Home Assistant over MQTT
@@ -22,11 +23,6 @@
 * Partial screen updates in grayscale mode.
 * Power saving sleep mode.
 * Display any PNG image from MQTT Command
-* [Trmnl](https://usetrmnl.com) support!
-
-## Future Ideas
-
-* Incorporate [WiFi Manager](https://github.com/tzapu/WiFiManager) for settings
 
 ## Setup
 
@@ -34,18 +30,20 @@
 
 See [hardware.md](hardware.md)
 
-### Home Assistant Dashboard
-
-Create a Home Assistant Dashboard you want to display. I recommend using the [kiosk-mode](https://github.com/NemesisRE/kiosk-mode), [card-mod](https://github.com/thomasloven/lovelace-card-mod) and [layout-card](https://github.com/thomasloven/lovelace-layout-card) plugins to customize and tune the dashboard for your display.
-
-Setup [sibbl](https://github.com/sibbl/)'s [hass-lovelace-kindle-screensaver](https://github.com/sibbl/hass-lovelace-kindle-screensaver) or [my fork hass-screenshot](https://github.com/lanrat/hass-screenshot) to regularly screenshot the desired dashboards for the HomePlate.
-
-### More information in [hass.md](hass.md) and [dashboard.md](dashboard.md)
-
 ### Trmnl
 
 In order to use this with Trmnl, you must set `TRMNL_URL`, `TRMNL_ID`, and `TRMNL_TOKEN` in `config.h`.
 You can optionally set `#define DEFAULT_ACTIVITY Trmnl` to have Trmnl be the default image displayed if `IMAGE_URL` is also set.
+
+The [Alias Plugin](https://help.usetrmnl.com/en/articles/10701448-alias-plugin) can be used to display images from your local network, such as a Home Assistant Dashboard.
+
+### Home Assistant Dashboard
+
+Create a Home Assistant Dashboard you want to display. I recommend using the [kiosk-mode](https://github.com/NemesisRE/kiosk-mode), [card-mod](https://github.com/thomasloven/lovelace-card-mod) and [layout-card](https://github.com/thomasloven/lovelace-layout-card) plugins to customize and tune the dashboard for your display.
+
+Setup the [Screenshot Home Assistant using Puppeteer](https://github.com/balloob/home-assistant-addons/tree/main/puppet) service to create screenshots of the desired dashboards for the HomePlate. This also works with the Terminal Alias plugin.
+
+### More information in [hass.md](hass.md) and [dashboard.md](dashboard.md)
 
 ### Inkplate
 
@@ -155,3 +153,8 @@ pio test -v
 
 * in VSCode use Testing -> native -> Run Test
 * in VSCode use PlatformIO -> Project Tasks -> native -> Advanced -> Test
+
+
+## Future Ideas
+
+* Incorporate [WiFi Manager](https://github.com/tzapu/WiFiManager) for settings
