@@ -16,7 +16,7 @@ max_cols: 3
 
 ## Weather
 
-<img width="414" src="https://user-images.githubusercontent.com/164192/168654417-8a2723a7-ed51-4bc7-8197-a26a510f1674.png">
+<img width="414" alt="weather" src="https://user-images.githubusercontent.com/164192/168654417-8a2723a7-ed51-4bc7-8197-a26a510f1674.png">
 
 ```yaml
 type: weather-forecast
@@ -56,7 +56,7 @@ card_mod:
 
 ## Sun
 
-<img width="405" src="https://user-images.githubusercontent.com/164192/168654644-e97b6981-9329-4d88-b494-2e0fddd834ee.png">
+<img width="405" alt="sun" src="https://user-images.githubusercontent.com/164192/168654644-e97b6981-9329-4d88-b494-2e0fddd834ee.png">
 
 ```yaml
 type: custom:sun-card
@@ -111,7 +111,7 @@ card_mod:
 
 ## Mini Graph Card
 
-<img width="204" src="https://user-images.githubusercontent.com/164192/168654937-f59b4a51-618e-4446-bbd1-b80affd23488.png">
+<img width="204" alt="graph card" src="https://user-images.githubusercontent.com/164192/168654937-f59b4a51-618e-4446-bbd1-b80affd23488.png">
 
 ```yaml
 type: custom:mini-graph-card
@@ -151,7 +151,7 @@ card_mod:
 
 ## Apex Charts Card
 
-<img width="392" src="https://user-images.githubusercontent.com/164192/168655215-4e2b0ff2-d7f6-435f-9a6d-9e6d8cd7d8dc.png">
+<img width="392" alt="apex charts card" src="https://user-images.githubusercontent.com/164192/168655215-4e2b0ff2-d7f6-435f-9a6d-9e6d8cd7d8dc.png">
 
 ```yaml
 type: custom:apexcharts-card
@@ -221,7 +221,7 @@ card_mod:
     }
 ```
 
-<img width="393" src="https://user-images.githubusercontent.com/164192/168655333-ce1bbcc6-87c7-4ce8-a6a3-b750f42196ab.png">
+<img width="393" alt="apex charts card" src="https://user-images.githubusercontent.com/164192/168655333-ce1bbcc6-87c7-4ce8-a6a3-b750f42196ab.png">
 
 ```yaml
 type: custom:apexcharts-card
@@ -275,7 +275,7 @@ card_mod:
 
 With [multiple-entity-row](https://github.com/benct/lovelace-multiple-entity-row).
 
-<img width="394" src="https://user-images.githubusercontent.com/164192/168655614-5cdf03e4-f171-45b3-aed4-5854fabd97bb.png">
+<img width="394" alt="entities card" src="https://user-images.githubusercontent.com/164192/168655614-5cdf03e4-f171-45b3-aed4-5854fabd97bb.png">
 
 ```yaml
 type: entities
@@ -315,7 +315,7 @@ card_mod:
     }
 ```
 
-<img width="596" src="https://user-images.githubusercontent.com/164192/168656051-efecc73e-cea9-42df-a4ca-a02436c31aad.png">
+<img width="596" alt="entities card" src="https://user-images.githubusercontent.com/164192/168656051-efecc73e-cea9-42df-a4ca-a02436c31aad.png">
 
 ```yaml
 type: entities

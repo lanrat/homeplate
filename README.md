@@ -30,12 +30,14 @@
 
 See [hardware.md](hardware.md)
 
-### Trmnl
+### [Trmnl](trmnl.md)
 
-In order to use this with Trmnl, you must set `TRMNL_URL`, `TRMNL_ID`, and `TRMNL_TOKEN` in `config.h`.
+In order to use this with [Trmnl](usetrmnl.com), you must set `TRMNL_URL`, `TRMNL_ID`, and `TRMNL_TOKEN` in `config.h`.
 You can optionally set `#define DEFAULT_ACTIVITY Trmnl` to have Trmnl be the default image displayed if `IMAGE_URL` is also set.
 
 The [Alias Plugin](https://help.usetrmnl.com/en/articles/10701448-alias-plugin) can be used to display images from your local network, such as a Home Assistant Dashboard.
+
+See [trmnl.md](trmnl.md) for more information.
 
 ### Home Assistant Dashboard
 
