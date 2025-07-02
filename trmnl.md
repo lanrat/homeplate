@@ -22,6 +22,6 @@ It is also a good diea to update the __MAC Address_ to your device's MAC Address
 
 ## Home Assistant Config
 
-The [Trmnl Alias Pligin](https://usetrmnl.com/integrations/alias) can be used to display a screenshot directly from your Home Assistant instance. You most likely want to set "Enable Cache" to `No` to ensure you always display a fresh image.
+The [Trmnl Alias Plugin](https://usetrmnl.com/integrations/alias) can be used to display a screenshot directly from your Home Assistant instance. You most likely want to set "Enable Cache" to `No` to ensure you always display a fresh image.
 
 See the [Home Assistant](hass.md) documentation for more information on setting up Home Assistant screenshots.
