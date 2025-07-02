@@ -18,7 +18,7 @@ You can obtain `TRMNL_ID` and `TRMNL_TOKEN` by visting [usetrmnl.com/devices](ht
 `TRMNL_ID` is the _Device ID_.
 `TRMNL_TOKEN` is the _API Key_ in the _Device Credentials_ section.
 You should also set the _Device Model_ to `Inkplate 10 - 1200x820`.
-It is also a good diea to update the __MAC Address_ to your device's MAC Address as well.
+It is also a good diea to update the _MAC Address_ to your device's MAC Address as well.
 
 ## Home Assistant Config
 
