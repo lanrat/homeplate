@@ -31,9 +31,9 @@ Update `docker-compose.yaml`:
       - ./puppet_config.json:/data/options.json:ro
     depends_on:
       - homeassistant
-    extra_hosts:
-      # this is optional, if homeassistant should resolve to a different IP, specify it here
-      #- "homeassistant:host-gateway"
+    # this section is optional, if homeassistant should resolve to a different IP, specify it here
+    # extra_hosts:
+    #  - "homeassistant:host-gateway"
     ports:
       - 10000:10000
 ```
