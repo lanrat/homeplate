@@ -114,7 +114,11 @@ bool trmnlDisplay(const char *url)
     {
         // grab the image and display it
         String image_url = doc["image_url"].as<String>();
-        return drawImageFromURL(image_url.c_str());
+        bool ret = drawImageFromURL(image_url.c_str());
+        if (!ret) {
+            displayMessage((String("Unable to Display Image\n")+String(current_filename)).c_str());
+        }
+        return ret;
     } else {
         Serial.printf("[TRMNL][ERROR]: No image_url found!\n");
         displayStatusMessage("Download failed!");

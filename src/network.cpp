@@ -1,7 +1,5 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
-
-
 #include "homeplate.h"
 
 #define WIFI_TASK_PRIORITY 2
@@ -173,11 +171,6 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
     uint8_t* buffer = (uint8_t *)ps_malloc(size);
     uint8_t *buffPtr = buffer;
 
-    if (httpCode != HTTP_CODE_OK) {
-        Serial.printf("[NET] Non-200 response: %d from URL %s", httpCode, url);
-        return buffer;
-    }
-
     // if (http.hasHeader("X-Next-Refresh")) {
     //     // Get the next refresh header value from the server.
     //     // We use this to determine when to wake up next.
@@ -209,6 +202,15 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
         } else if (len == -1) {
             len = 0;
         }
+    }
+
+    if (httpCode != HTTP_CODE_OK) {
+        Serial.printf("[NET] Non-200 response: %d from URL %s", httpCode, url);
+        if (size) {
+            Serial.printf("[NET] HTTP response buffer: \n\n%s\n\n", buffer);
+        }
+        free(buffer);
+        buffer = 0;
     }
 
     http.end();

@@ -1,6 +1,8 @@
 #include "homeplate.h"
 #include <libs/pngle/pngle.h>
 
+#define IMAGE_HTTP_REQUEST_TIMEOUT 15
+
 void displayStats()
 {
     displayStart();
@@ -87,9 +89,9 @@ bool drawImageFromURL(const char *url) {
          return false;
     }
     displayStatusMessage("Downloading image...");
-    Serial.printf("[IMAGE] Downloading image: %s", url);
     static int32_t len = E_INK_WIDTH * E_INK_HEIGHT + 100;
-    uint8_t *buff = httpGet(url, NULL, &len, 10);
+    Serial.printf("[IMAGE] Downloading image: %s", url);
+    uint8_t *buff = httpGet(url, NULL, &len, IMAGE_HTTP_REQUEST_TIMEOUT);
     if (!buff)
     {
         Serial.println("[IMAGE] Download failed");
