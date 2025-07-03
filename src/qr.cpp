@@ -35,7 +35,12 @@ void displayWiFiQR()
     // 100px padding on each size, 20px padding between text
     uint16_t h = centerTextX("WiFi", 100, x - 100, y);
     y = y + 60;
+
+    // do some math to resize the wifi information to fit in the bounding box
+    FontSizing font = findFontSizeFit(QR_WIFI_NAME, x-100, (E_INK_HEIGHT-y/2));
+    display.setFont(font.font);
     h = centerTextX(QR_WIFI_NAME, 100, x - 100, y + h + 30);
+    font = findFontSizeFit(QR_WIFI_PASSWORD, x, (E_INK_HEIGHT-y));
     h = centerTextX(QR_WIFI_PASSWORD, 100, x - 100, y + (h + 30) * 2);
 
     i2cStart();

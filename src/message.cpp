@@ -13,18 +13,7 @@ const char* getMessage()
     return message;
 }
 
-static const GFXfont *fonts[] = {&Roboto_128, &Roboto_64, &Roboto_32, &Roboto_16, &Roboto_12};
-
-struct FontSizing
-{
-    const GFXfont *font;
-    uint16_t height;
-    uint16_t width;
-    uint8_t lineHeight;
-    uint8_t yAdvance;
-};
-
-FontSizing findFontSizeFit(char *m)
+FontSizing findFontSizeFit(const char *m, uint16_t max_width, uint16_t max_height)
 {
     int16_t x1, y1;
     FontSizing font;
@@ -40,7 +29,7 @@ FontSizing findFontSizeFit(char *m)
         font.yAdvance = (uint8_t)font.font->yAdvance;
         font.lineHeight = font.height % font.yAdvance;
         // Serial.printf("[MESSAGE][DEBUG] Testing font # %u with height = %u and width = %u  bounds = (%d, %d) lineHeight = %d\n", i, font.height, font.width, x1, y1, font.lineHeight);
-        if (font.width <= E_INK_WIDTH && font.height <= E_INK_HEIGHT)
+        if (font.width <= max_width && font.height <= max_height)
         {
             // Serial.printf("[MESSAGE] Using font %u with height = %u and width = %u  bounds = (%d, %d) screen(%d, %d) lineHeight = %d\n", i, font.height, font.width, x1, y1, E_INK_WIDTH, E_INK_HEIGHT, font.lineHeight);
             return font;
@@ -65,7 +54,7 @@ void displayMessage(const char *m)
     display.setTextSize(1);
     display.clearDisplay();
 
-    FontSizing font = findFontSizeFit(message);
+    FontSizing font = findFontSizeFit(message, E_INK_WIDTH, E_INK_HEIGHT);
     display.setFont(font.font);
 
     char *savePtr;

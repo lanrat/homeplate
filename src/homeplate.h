@@ -129,6 +129,16 @@ void printDebug(const char *s);
 uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec = 5);
 
 // message
+static const GFXfont *fonts[] = {&Roboto_128, &Roboto_64, &Roboto_32, &Roboto_16, &Roboto_12};
+struct FontSizing
+{
+    const GFXfont *font;
+    uint16_t height;
+    uint16_t width;
+    uint8_t lineHeight;
+    uint8_t yAdvance;
+};
+FontSizing findFontSizeFit(const char *m, uint16_t max_width, uint16_t max_height);
 void setMessage(const char *m);
 void displayMessage(const char * = NULL);
 const char* getMessage();
