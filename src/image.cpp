@@ -19,10 +19,11 @@ void displayStats()
 
 // Enum to represent the different image types we can detect.
 enum class ImageType {
+    UNKNOWN,
     PNG,
     JPEG,
     BMP,
-    UNKNOWN
+    WEBP,
 };
 
 /**
@@ -67,6 +68,14 @@ ImageType getImageType(const unsigned char* buffer, size_t size) {
         return ImageType::BMP;
     }
 
+    // --- WebP Check ---
+    // WebP files have "RIFF" at bytes 0-3 and "WEBP" at bytes 8-11.
+    // We need at least 12 bytes to check for this signature.
+    if (size >= 12 && buffer[0] == 'R' && buffer[1] == 'I' && buffer[2] == 'F' && buffer[3] == 'F' &&
+        buffer[8] == 'W' && buffer[9] == 'E' && buffer[10] == 'B' && buffer[11] == 'P') {
+        return ImageType::WEBP;
+    }
+
     // --- Unknown Type ---
     // If none of the above signatures match, we return UNKNOWN.
     return ImageType::UNKNOWN;
@@ -78,6 +87,7 @@ const char* imageTypeToString(ImageType type) {
         case ImageType::PNG:    return "PNG";
         case ImageType::JPEG:   return "JPEG";
         case ImageType::BMP:    return "BMP";
+        case ImageType::WEBP:   return "WEBP";
         case ImageType::UNKNOWN:return "UNKNOWN";
         default:                return "ERROR";
     }
@@ -143,7 +153,7 @@ bool drawImageFromBuffer(uint8_t *buff, size_t size) {
                 break;
             default:
                 good = false;
-                Serial.println("[IMAGE][ERROR] Attempt to render unknown image!");
+                Serial.println("[IMAGE][ERROR] Attempt to render unsupported image!");
         }
         displayEnd();
     }
