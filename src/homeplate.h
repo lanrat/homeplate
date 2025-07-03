@@ -63,8 +63,9 @@ void displayWiFiQR();
 void displayInfoScreen();
 
 // Image
-bool remotePNG(const char *);
-bool drawPngFromBuffer(uint8_t *buff, int32_t len, int x, int y);
+bool drawImageFromURL(const char *url);
+bool drawImageFromBuffer(uint8_t *buff, size_t size);
+bool drawPngFromBuffer(uint8_t *buf, int32_t len, int x, int y, bool dither, bool invert);
 uint16_t centerTextX(const char *t, int16_t x1, int16_t x2, int16_t y, bool lock = true);
 void displayStatusMessage(const char *format, ...);
 void splashScreen();
@@ -165,6 +166,10 @@ void delaySleep(uint seconds);
 
 // enable SD card (currently unused)
 #define USE_SDCARD false
+
+// set some display defaults
+#define USE_DITHERING false
+#define DISPLAY_MODE INKPLATE_3BIT
 
 // debounce time limit for static activities
 #define MIN_ACTIVITY_RESTART_SECS 5

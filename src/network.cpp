@@ -174,7 +174,7 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
     uint8_t *buffPtr = buffer;
 
     if (httpCode != HTTP_CODE_OK) {
-        Serial.printf("[NET] Non-200 response from URL %s: %d", url, httpCode);
+        Serial.printf("[NET] Non-200 response: %d from URL %s", httpCode, url);
         return buffer;
     }
 

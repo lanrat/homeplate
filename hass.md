@@ -8,7 +8,7 @@ Install the [Puppet Home Assistant Addon](https://github.com/balloob/home-assist
 
 If you are running Home Assistant in Docker, you can manually run the puppet addon by adding it to your `docker-compose.yaml`
 
-First Clone the repository locally:
+First clone the repository:
 
 ```shell
 git clone https://github.com/balloob/home-assistant-addons balloob_addons
@@ -31,9 +31,9 @@ Update `docker-compose.yaml`:
       - ./puppet_config.json:/data/options.json:ro
     depends_on:
       - homeassistant
-    extra_hosts:
-      # this is optional, if homeassistant should resolve to a different IP, specify it here
-      #- "homeassistant:host-gateway"
+    # this section is optional, if homeassistant should resolve to a different IP, specify it here
+    # extra_hosts:
+    #  - "homeassistant:host-gateway"
     ports:
       - 10000:10000
 ```
