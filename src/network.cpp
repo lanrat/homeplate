@@ -143,6 +143,7 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
     HTTPClient http;
     http.getStream().setNoDelay(true);
     http.getStream().setTimeout(timeout_sec);
+    delaySleep(timeout_sec);
 
     // const char* headersToCollect[] = {
     //     "X-Next-Refresh",
