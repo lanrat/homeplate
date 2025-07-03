@@ -1,5 +1,7 @@
 # TRMNL Setup
 
+In order to use Homeplate with Trmnl you will either need [BYOD](https://docs.usetrmnl.com/go/diy/byod), [BYOS](https://docs.usetrmnl.com/go/diy/byos), or [both](https://docs.usetrmnl.com/go/diy/byod-s).
+
 ## Homeplate Config
 
 Add the following to your `config.h`
@@ -22,6 +24,6 @@ It is also a good diea to update the _MAC Address_ to your device's MAC Address 
 
 ## Home Assistant Config
 
-The [Trmnl Alias Pligin](https://usetrmnl.com/integrations/alias) can be used to display a screenshot directly from your Home Assistant instance. You most likely want to set "Enable Cache" to `No` to ensure you always display a fresh image.
+The [Trmnl Alias Plugin](https://usetrmnl.com/integrations/alias) can be used to display a screenshot directly from your Home Assistant instance. You most likely want to set "Enable Cache" to `No` to ensure you always display a fresh image.
 
 See the [Home Assistant](hass.md) documentation for more information on setting up Home Assistant screenshots.
