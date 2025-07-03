@@ -1,5 +1,7 @@
 # TRMNL Setup
 
+In order to use Homeplate with Trmnl you will either need [BYOD](https://docs.usetrmnl.com/go/diy/byod), [BYOS](https://docs.usetrmnl.com/go/diy/byos), or [both](https://docs.usetrmnl.com/go/diy/byod-s).
+
 ## Homeplate Config
 
 Add the following to your `config.h`
