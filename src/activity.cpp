@@ -114,7 +114,7 @@ void runActivities(void *params)
             }
             // get & render hass image
             delaySleep(20);
-            remotePNG(IMAGE_URL);
+            drawImageFromURL(IMAGE_URL);
             // delaySleep(10);
             break;
 #endif
@@ -156,7 +156,7 @@ void runActivities(void *params)
             }
             // get & render image
             delaySleep(20);
-            remotePNG(getMessage());
+            drawImageFromURL(getMessage());
             break;
         default:
             Serial.printf("[ACTIVITY][ERROR] runActivities() unhandled Activity: %d\n", activityNext);

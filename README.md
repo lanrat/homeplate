@@ -22,7 +22,8 @@
 * OTA updates over WiFi
 * Partial screen updates in grayscale mode.
 * Power saving sleep mode.
-* Display any PNG image from MQTT Command
+* Display any image from MQTT Command
+* Supports PNG, BMP, and JPEG images
 
 ## Setup
 

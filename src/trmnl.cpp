@@ -114,13 +114,7 @@ bool trmnlDisplay(const char *url)
     {
         // grab the image and display it
         String image_url = doc["image_url"].as<String>();
-        // detect if we are served a bmp image
-        if (image_url.endsWith(".bmp")) {
-            Serial.printf("[TRMNL][ERROR]: received bmp image: %s\n", image_url.c_str());
-            displayStatusMessage("Image failed!");
-            return false;
-        }
-        return remotePNG(image_url.c_str());
+        return drawImageFromURL(image_url.c_str());
     } else {
         Serial.printf("[TRMNL][ERROR]: No image_url found!\n");
         displayStatusMessage("Download failed!");
