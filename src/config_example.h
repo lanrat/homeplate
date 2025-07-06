@@ -71,6 +71,9 @@
 // see timezone_config.h for options
 #define TIMEZONE_UTC
 
+// OTA
+#define ENABLE_OTA true
+
 // If your Inkplate doesn't have external (or second) MCP I/O expander, you should uncomment next line,
 // otherwise your code could hang out when you send code to your Inkplate.
 // You can easily check if your Inkplate has second MCP by turning it over and 

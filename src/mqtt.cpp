@@ -470,10 +470,6 @@ void startMQTTTask()
     Serial.printf("[MQTT] MQTT Task Already running\n");
     return;
   }
-  #ifndef MQTT_HOST
-    // if no MQTT, exit early
-    return;
-  #endif
   Serial.printf("[MQTT] starting MQTT\n");
   mqttClient.onConnect(onMqttConnect);
   mqttClient.onDisconnect(onMqttDisconnect);

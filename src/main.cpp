@@ -100,11 +100,15 @@ void setup()
     Serial.println("[SETUP] starting WiFi task");
     wifiConnectTask();
 
+    #if ENABLE_OTA
     Serial.println("[SETUP] starting OTA task");
     startOTATask();
+    #endif
 
+    # ifdef MQTT_HOST
     Serial.println("[SETUP] starting MQTT task");
     startMQTTTask();
+    #endif
 
     Serial.println("[SETUP] starting sleep task");
     sleepTask();
