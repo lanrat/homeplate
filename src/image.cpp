@@ -100,8 +100,8 @@ bool drawImageFromURL(const char *url) {
     }
     displayStatusMessage("Downloading image...");
     static int32_t len = E_INK_WIDTH * E_INK_HEIGHT + 100;
-    Serial.printf("[IMAGE] Downloading image: %s", url);
-    uint8_t *buff = httpGet(url, NULL, &len, IMAGE_HTTP_REQUEST_TIMEOUT);
+    Serial.printf("[IMAGE] Downloading image: %s\n", url);
+    uint8_t *buff = httpGetRetry(3, url, NULL, &len, IMAGE_HTTP_REQUEST_TIMEOUT);
     if (!buff)
     {
         Serial.println("[IMAGE] Download failed");

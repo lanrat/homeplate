@@ -133,6 +133,20 @@ void wifiStopTask()
     }
 }
 
+uint8_t* httpGetRetry(uint32_t trys, const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec) {
+    uint8_t* ret = 0;
+    for (uint32_t i = 0; i < trys; i++) {
+        Serial.printf("[NET] download attempt: %d\n", i);
+        ret = httpGet(url, headers, defaultLen,timeout_sec);
+        if (ret > 0) {
+            return ret;
+        }
+        // wait before trying again
+        vTaskDelay(1 * SECOND/portTICK_PERIOD_MS);
+    }
+    return ret;
+}
+
 
 uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec) {
     Serial.printf("[NET] downloading file at URL %s\n", url);
@@ -142,7 +156,9 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
 
     HTTPClient http;
     http.getStream().setNoDelay(true);
-    http.getStream().setTimeout(timeout_sec);
+    // Set connection timeout (for establishing the connection)
+    //http.setConnectTimeout(2000); // 2 seconds
+    //http.getStream().setTimeout(timeout_sec); // TODO this seems to have no effect..
     delaySleep(timeout_sec);
 
     // const char* headersToCollect[] = {
@@ -206,7 +222,7 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
     }
 
     if (httpCode != HTTP_CODE_OK) {
-        Serial.printf("[NET] Non-200 response: %d from URL %s", httpCode, url);
+        Serial.printf("[NET] Non-200 response: %d from URL %s\n", httpCode, url);
         if (size) {
             Serial.printf("[NET] HTTP response buffer: \n\n%s\n\n", buffer);
         }
