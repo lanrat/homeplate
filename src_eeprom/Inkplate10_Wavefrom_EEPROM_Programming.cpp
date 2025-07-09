@@ -77,6 +77,9 @@ void setup()
     // Flag for data receive
     int uartFlag = 0;
 
+    Serial.printf("Current waveform: %d\n", currentWaveform+1);
+    Serial.printf("Send wavefrom [1-5], \"ok\" to burn it, \"test\" for image: ");
+
     // Until "ok" is not send, user can select one of the waveforms
     while (uartFlag != 255)
     {
@@ -87,12 +90,17 @@ void setup()
         if (uartFlag > 0 && uartFlag <= waveformListSize)
         {
             currentWaveform = uartFlag - 1;
+            Serial.printf("Showing Gradient using waveform: %d\n", currentWaveform+1);
             showGradient(currentWaveform);
+
+            Serial.printf("Current waveform: %d\n", currentWaveform+1);
+            Serial.printf("Send wavefrom [1-5], \"ok\" to burn it, \"test\" for image: ");
         }
 
         // If function returns 254, show test image
         if (uartFlag == 254)
         {
+            Serial.printf("Showing Test Image using waveform: %d\n", currentWaveform+1);
             display.clearDisplay();
             display.drawBitmap3Bit(0, 0, demo_image, demo_image_w, demo_image_h);
 
@@ -103,8 +111,13 @@ void setup()
             display.printf("WAVEFORM: %d", currentWaveform + 1);
 
             display.display();
+
+            Serial.printf("Current waveform: %d\n", currentWaveform+1);
+            Serial.printf("Send wavefrom [1-5], \"ok\" to burn it, \"test\" for image: ");
         }
     }
+
+    Serial.printf("Burning waveform: %d\n", currentWaveform+1);
 
     // Load waveform in EEPROM memory of ESP32
     waveformEEPROM.waveformId = INKPLATE10_WAVEFORM1 + currentWaveform;
@@ -119,6 +132,8 @@ void setup()
     display.print(currentWaveform + 1, DEC);
     display.print(" selected & programmed into ESP32 EEPROM");
     display.display();
+
+    Serial.printf("Done, please reboot & program Inkplate\n");
 }
 
 void loop()
@@ -193,6 +208,7 @@ int getWaveformNumer()
             if (Serial.available() && _n < 19)
             {
                 _buffer[_n++] = Serial.read();
+                Serial.write(_buffer[_n-1]); // echo back response
             }
             else
             {
@@ -214,6 +230,8 @@ int getWaveformNumer()
     // Check if you got something.
     if (_n != 0)
     {
+        // print newline
+        Serial.printf("\n");
         // Try to parse it.
 
         // First check for the keyword for programming or show test image.
