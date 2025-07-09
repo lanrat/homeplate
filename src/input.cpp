@@ -74,12 +74,14 @@ void checkButtons(void *params)
                 startActivity(Info);
                 button = true;
             }
+            #ifdef WAKE_BUTTON
             else if (!digitalRead(WAKE_BUTTON))
             {
                 Serial.printf("[INPUT] wake button\n");
                 startActivity(DEFAULT_ACTIVITY);
                 button = true;
             }
+            #endif
         }
 
         if (button)
@@ -167,12 +169,13 @@ void checkBootPads()
 
 void setupWakePins()
 {
-    #if defined(ARDUINO_INKPLATE10)
+    #if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2)
         // set which pads can allow wakeup
         display.setIntPin(PAD1, RISING, IO_INT_ADDR);
         display.setIntPin(PAD2, RISING, IO_INT_ADDR);
         display.setIntPin(PAD3, RISING, IO_INT_ADDR);
     #endif
-    pinMode(WAKE_BUTTON, INPUT_PULLUP);
-
+    #ifdef WAKE_BUTTON
+        pinMode(WAKE_BUTTON, INPUT_PULLUP);
+    #endif
 }

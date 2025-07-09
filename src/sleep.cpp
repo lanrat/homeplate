@@ -40,11 +40,11 @@ void gotoSleepNow()
     mqttStopTask(); // prevent i2c lock in main thread
     wifiStopTask(); // prevent i2c lock in main thread
 
-    #if defined(ARDUINO_INKPLATE10)
+    #if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2)
         // set MCP interrupts
         if (TOUCHPAD_ENABLE)
             display.setIntOutput(1, false, false, HIGH, IO_INT_ADDR);
-        #endif
+    #endif
     i2cEnd();
 
     // Go to sleep for TIME_TO_SLEEP seconds
@@ -52,9 +52,12 @@ void gotoSleepNow()
         Serial.printf("[SLEEP] ERROR esp_sleep_enable_timer_wakeup(%u) invalid value\n", sleepDuration * uS_TO_S_FACTOR);
     }
 
-    // Enable wakeup from deep sleep on gpio 36 (WAKE BUTTON)
-    esp_sleep_enable_ext0_wakeup(WAKE_BUTTON, LOW);
-    #if defined(ARDUINO_INKPLATE10)
+    #ifdef WAKE_BUTTON
+        // Enable wakeup from deep sleep on WAKE BUTTON
+        esp_sleep_enable_ext0_wakeup(WAKE_BUTTON, LOW);
+    #endif
+
+    #if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2)
         // enable wake from MCP port expander
         if (TOUCHPAD_ENABLE)
             esp_sleep_enable_ext1_wakeup(TOUCHPAD_WAKE_MASK, ESP_EXT1_WAKEUP_ANY_HIGH);
