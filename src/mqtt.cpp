@@ -147,7 +147,9 @@ void sendHAConfig()
   // macaddr
   // need to copy macaddr because doc.clear() erases macaddr-pointer
   char macaddr[18];
-  strncpy(macaddr, WiFi.macAddress().c_str(), 18);
+  String mac_string = WiFi.macAddress();
+  strncpy(macaddr, mac_string.c_str(), 17);
+  macaddr[17] = '\0'; // Ensure null termination
 
   // deviceinfo
   JsonDocument deviceInfo;
@@ -351,6 +353,19 @@ void onMqttUnsubscribe(uint16_t packetId)
 
 void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
 {
+  // Input validation
+  if (!topic || !payload) {
+    Serial.println("[MQTT] Invalid message: null topic or payload");
+    return;
+  }
+  
+  // Validate payload length to prevent processing excessively large messages
+  const size_t MAX_MQTT_PAYLOAD_SIZE = 8192; // 8KB limit
+  if (len > MAX_MQTT_PAYLOAD_SIZE) {
+    Serial.printf("[MQTT] Payload too large: %zu bytes (max %zu)\n", len, MAX_MQTT_PAYLOAD_SIZE);
+    return;
+  }
+  
   Serial.println("[MQTT] Publish received.");
   Serial.print("  topic: ");
   Serial.println(topic);

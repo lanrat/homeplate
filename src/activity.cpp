@@ -3,6 +3,7 @@
 #define ACTIVITY_TASK_PRIORITY 4
 
 static bool resetActivity = false;
+static SemaphoreHandle_t resetActivityMutex = xSemaphoreCreateMutex();
 uint activityCount = 0;
 uint timeToSleep = TIME_TO_SLEEP_SEC;
 
@@ -11,9 +12,29 @@ QueueHandle_t activityQueue = xQueueCreate(1, sizeof(Activity));
 static unsigned long lastActivityTime = 0;
 static Activity activityNext, activityCurrent = NONE;
 
+// Helper functions for thread-safe resetActivity access
+static void setResetActivity(bool value) {
+    if (xSemaphoreTake(resetActivityMutex, 100 / portTICK_PERIOD_MS) == pdTRUE) {
+        resetActivity = value;
+        xSemaphoreGive(resetActivityMutex);
+    }
+}
+
+static bool getResetActivity() {
+    bool value = false;
+    if (xSemaphoreTake(resetActivityMutex, 10 / portTICK_PERIOD_MS) == pdTRUE) {
+        value = resetActivity;
+        xSemaphoreGive(resetActivityMutex);
+    }
+    return value;
+}
+
 void startActivity(Activity activity)
 {
-    static SemaphoreHandle_t mutex = xSemaphoreCreateMutex();
+    static SemaphoreHandle_t mutex = NULL;
+    if (mutex == NULL) {
+        mutex = xSemaphoreCreateMutex();
+    }
     if (xSemaphoreTake(mutex, (SECOND) / portTICK_PERIOD_MS) == pdTRUE)
     {
         // dont re-queue main Activity is run within 60 sec and already running
@@ -25,7 +46,7 @@ void startActivity(Activity activity)
         }
         // insert into queue
         Serial.printf("[ACTIVITY] startActivity(%d) put into queue\n", activity);
-        resetActivity = true;
+        setResetActivity(true);
         xQueueOverwrite(activityQueue, &activity);
         xSemaphoreGive(mutex);
     }
@@ -39,12 +60,12 @@ void startActivity(Activity activity)
 // returns true if there was an event that should cause the curent activity to stop/break early to start something new
 bool stopActivity()
 {
-    return resetActivity;
+    return getResetActivity();
 }
 
 void waitForWiFiOrActivityChange()
 {
-    while (!WiFi.isConnected() && !resetActivity)
+    while (!WiFi.isConnected() && !getResetActivity())
     {
         vTaskDelay(250 / portTICK_PERIOD_MS);
     }
@@ -64,7 +85,7 @@ void runActivities(void *params)
             continue;
         }
         waitForOTA();
-        resetActivity = false;
+        setResetActivity(false);
         printDebug("[ACTIVITY] runActivities ready...");
 
         if (activityNext != NONE)
@@ -107,7 +128,7 @@ void runActivities(void *params)
             setSleepDuration(timeToSleep);
             // wait for wifi or reset activity
             waitForWiFiOrActivityChange();
-            if (resetActivity)
+            if (getResetActivity())
             {
                 Serial.printf("[ACTIVITY][ERROR] HomeAssistant Activity reset while waiting, aborting...\n");
                 continue;
@@ -124,7 +145,7 @@ void runActivities(void *params)
             setSleepDuration(timeToSleep);
             // wait for wifi or reset activity
             waitForWiFiOrActivityChange();
-            if (resetActivity)
+            if (getResetActivity())
             {
                 Serial.printf("[ACTIVITY][ERROR] Trmnl Activity reset while waiting, aborting...\n");
                 continue;
@@ -149,7 +170,7 @@ void runActivities(void *params)
         case IMG:
             setSleepDuration(timeToSleep);
             waitForWiFiOrActivityChange();
-            if (resetActivity)
+            if (getResetActivity())
             {
                 Serial.printf("[ACTIVITY][ERROR] IMG Activity reset while waiting, aborting...\n");
                 continue;

@@ -31,7 +31,9 @@ void WiFiStationConnected(WiFiEvent_t event, WiFiEventInfo_t info)
 void WiFiGotIP(WiFiEvent_t event, WiFiEventInfo_t info)
 {
     wifiFailed = false;
-    Serial.printf("[WIFI] IP address: %s\n", WiFi.localIP().toString().c_str());
+    char ip_str[16];
+    WiFi.localIP().toString().toCharArray(ip_str, sizeof(ip_str));
+    Serial.printf("[WIFI] IP address: %s\n", ip_str);
     displayStatusMessage("WiFi connected");
 }
 
@@ -138,7 +140,7 @@ uint8_t* httpGetRetry(uint32_t trys, const char* url, std::map<String, String> *
     for (uint32_t i = 0; i < trys; i++) {
         Serial.printf("[NET] download attempt: %d\n", i);
         ret = httpGet(url, headers, defaultLen,timeout_sec);
-        if (ret > 0) {
+        if (ret != nullptr) {
             return ret;
         }
         // wait before trying again
@@ -149,6 +151,18 @@ uint8_t* httpGetRetry(uint32_t trys, const char* url, std::map<String, String> *
 
 
 uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec) {
+    // Input validation
+    if (!url || strlen(url) == 0) {
+        Serial.println("[NET] Invalid URL: null or empty");
+        return nullptr;
+    }
+    
+    // Basic URL format validation
+    if (strncmp(url, "http://", 7) != 0 && strncmp(url, "https://", 8) != 0) {
+        Serial.printf("[NET] Invalid URL protocol: %s\n", url);
+        return nullptr;
+    }
+    
     Serial.printf("[NET] downloading file at URL %s\n", url);
 
     bool sleep = WiFi.getSleep();
@@ -185,7 +199,22 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
     else
         *defaultLen = size;
 
+    // Validate size to prevent buffer overflow attacks
+    const int32_t MAX_HTTP_BUFFER_SIZE = 1024 * 1024; // 1MB limit
+    if (size <= 0 || size > MAX_HTTP_BUFFER_SIZE) {
+        Serial.printf("[NET] Invalid or excessive buffer size: %d bytes\n", size);
+        http.end();
+        WiFi.setSleep(sleep);
+        return nullptr;
+    }
+
     uint8_t* buffer = (uint8_t *)ps_malloc(size);
+    if (buffer == nullptr) {
+        Serial.printf("[NET] Failed to allocate %d bytes\n", size);
+        http.end();
+        WiFi.setSleep(sleep);
+        return nullptr;
+    }
     uint8_t *buffPtr = buffer;
 
     // if (http.hasHeader("X-Next-Refresh")) {

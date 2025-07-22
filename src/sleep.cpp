@@ -48,8 +48,13 @@ void gotoSleepNow()
     i2cEnd();
 
     // Go to sleep for TIME_TO_SLEEP seconds
-    if (esp_sleep_enable_timer_wakeup(sleepDuration * uS_TO_S_FACTOR) != ESP_OK) {
-        Serial.printf("[SLEEP] ERROR esp_sleep_enable_timer_wakeup(%u) invalid value\n", sleepDuration * uS_TO_S_FACTOR);
+    // Prevent integer overflow by checking max sleep duration (ESP32 limit is ~71 minutes)
+    const uint32_t MAX_SLEEP_SECONDS = 4200; // ~70 minutes to stay well under ESP32 limit
+    uint32_t safeSleepDuration = (sleepDuration > MAX_SLEEP_SECONDS) ? MAX_SLEEP_SECONDS : sleepDuration;
+    
+    uint64_t sleepMicroseconds = (uint64_t)safeSleepDuration * uS_TO_S_FACTOR;
+    if (esp_sleep_enable_timer_wakeup(sleepMicroseconds) != ESP_OK) {
+        Serial.printf("[SLEEP] ERROR esp_sleep_enable_timer_wakeup(%llu) invalid value\n", sleepMicroseconds);
     }
 
     // Enable wakeup from deep sleep on gpio 36 (WAKE BUTTON)
@@ -59,7 +64,7 @@ void gotoSleepNow()
         if (TOUCHPAD_ENABLE)
             esp_sleep_enable_ext1_wakeup(TOUCHPAD_WAKE_MASK, ESP_EXT1_WAKEUP_ANY_HIGH);
     #endif
-    Serial.printf("[SLEEP] entering sleep for %u seconds (%u min)\n\n\n", sleepDuration, sleepDuration / 60);
+    Serial.printf("[SLEEP] entering sleep for %u seconds (%u min)\n\n\n", safeSleepDuration, safeSleepDuration / 60);
     vTaskDelay(50 / portTICK_PERIOD_MS);
     esp_deep_sleep_start(); // Put ESP32 into deep sleep. Program stops here.
 }

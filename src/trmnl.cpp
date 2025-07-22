@@ -108,6 +108,7 @@ bool trmnlDisplay(const char *url)
       }
       // update the saved current_filename
       strncpy(current_filename, filename.c_str(), sizeof(current_filename)-1);
+      current_filename[sizeof(current_filename)-1] = '\0'; // Ensure null termination
     }
 
     if (doc.containsKey("image_url"))
@@ -116,7 +117,9 @@ bool trmnlDisplay(const char *url)
         String image_url = doc["image_url"].as<String>();
         bool ret = drawImageFromURL(image_url.c_str());
         if (!ret) {
-            displayMessage((String("Unable to Display Image\n")+String(current_filename)).c_str());
+            char error_msg[256];
+            snprintf(error_msg, sizeof(error_msg), "Unable to Display Image\n%s", current_filename);
+            displayMessage(error_msg);
         }
         return ret;
     } else {
