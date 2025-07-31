@@ -169,7 +169,7 @@ void checkBootPads()
 
 void setupWakePins()
 {
-    #if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2)
+    #if TOUCHPAD_ENABLE && (defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2))
         // set which pads can allow wakeup
         display.setIntPin(PAD1, RISING, IO_INT_ADDR);
         display.setIntPin(PAD2, RISING, IO_INT_ADDR);
