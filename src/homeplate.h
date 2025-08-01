@@ -66,7 +66,7 @@ void displayInfoScreen();
 
 // Image
 bool drawImageFromURL(const char *url);
-bool drawImageFromBuffer(uint8_t *buff, size_t size);
+bool drawImageFromBuffer(uint8_t *buff, size_t size, bool center = true);
 bool drawPngFromBuffer(uint8_t *buf, int32_t len, int x, int y, bool dither, bool invert);
 uint16_t centerTextX(const char *t, int16_t x1, int16_t x2, int16_t y, bool lock = true);
 void displayStatusMessage(const char *format, ...);

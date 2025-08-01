@@ -3,6 +3,88 @@
 
 #define IMAGE_HTTP_REQUEST_TIMEOUT 15
 
+// Enum to represent the different image types we can detect.
+enum class ImageType {
+    UNKNOWN,
+    PNG,
+    JPEG,
+    BMP,
+    WEBP,
+};
+
+// Forward declaration
+ImageType getImageType(const unsigned char* buffer, size_t size);
+
+struct imageInfo {
+    ImageType type;
+    int width;
+    int height;
+};
+
+imageInfo getImageInfo(uint8_t *buff, size_t size) {
+    imageInfo result = {ImageType::UNKNOWN, 0, 0};
+    
+    if (buff == nullptr || size < 8) {
+        return result;
+    }
+    
+    ImageType type = getImageType(buff, size);
+    result.type = type;
+    
+    switch (type) {
+        case ImageType::PNG:
+            if (size >= 24) {
+                // PNG IHDR chunk starts at byte 8, width at bytes 16-19, height at bytes 20-23
+                result.width = (buff[16] << 24) | (buff[17] << 16) | (buff[18] << 8) | buff[19];
+                result.height = (buff[20] << 24) | (buff[21] << 16) | (buff[22] << 8) | buff[23];
+            }
+            break;
+            
+        case ImageType::JPEG:
+            // Find SOF (Start of Frame) marker
+            for (size_t i = 2; i < size - 9; i++) {
+                if (buff[i] == 0xFF && (buff[i+1] == 0xC0 || buff[i+1] == 0xC2)) {
+                    // SOF marker found, dimensions are at offset +5 (height) and +7 (width)
+                    result.height = (buff[i+5] << 8) | buff[i+6];
+                    result.width = (buff[i+7] << 8) | buff[i+8];
+                    break;
+                }
+            }
+            break;
+            
+        case ImageType::BMP:
+            if (size >= 26) {
+                // BMP width is at bytes 18-21, height at bytes 22-25
+                result.width = buff[18] | (buff[19] << 8) | (buff[20] << 16) | (buff[21] << 24);
+                result.height = buff[22] | (buff[23] << 8) | (buff[24] << 16) | (buff[25] << 24);
+                // BMP height can be negative (top-down), take absolute value
+                if (result.height < 0) result.height = -result.height;
+            }
+            break;
+            
+        case ImageType::WEBP:
+            if (size >= 30) {
+                // Check for VP8 or VP8L format
+                if (buff[12] == 'V' && buff[13] == 'P' && buff[14] == '8' && buff[15] == ' ') {
+                    // VP8 format - dimensions start at byte 26
+                    result.width = ((buff[26] | (buff[27] << 8)) & 0x3FFF);
+                    result.height = ((buff[28] | (buff[29] << 8)) & 0x3FFF);
+                } else if (buff[12] == 'V' && buff[13] == 'P' && buff[14] == '8' && buff[15] == 'L') {
+                    // VP8L format - dimensions start at byte 21
+                    uint32_t bits = buff[21] | (buff[22] << 8) | (buff[23] << 16) | (buff[24] << 24);
+                    result.width = (bits & 0x3FFF) + 1;
+                    result.height = ((bits >> 14) & 0x3FFF) + 1;
+                }
+            }
+            break;
+            
+        default:
+            break;
+    }
+    
+    return result;
+}
+
 void displayStats()
 {
     displayStart();
@@ -16,15 +98,6 @@ void displayStats()
     display.printf("[%s]", timeString().c_str());
     displayEnd();
 }
-
-// Enum to represent the different image types we can detect.
-enum class ImageType {
-    UNKNOWN,
-    PNG,
-    JPEG,
-    BMP,
-    WEBP,
-};
 
 /**
  * @brief Determines the image type from a buffer of bytes.
@@ -123,7 +196,7 @@ bool drawImageFromURL(const char *url) {
     return good;
 }
 
-bool drawImageFromBuffer(uint8_t *buff, size_t size) {
+bool drawImageFromBuffer(uint8_t *buff, size_t size, bool center) {
     displayStatusMessage("Rendering image...");
 
     displayStart();
@@ -132,24 +205,35 @@ bool drawImageFromBuffer(uint8_t *buff, size_t size) {
     displayEnd();
 
     bool good = false;
-    auto type = getImageType(buff, size);
-    if (type == ImageType::UNKNOWN) {
+    auto img = getImageInfo(buff, size);
+    if (img.type == ImageType::UNKNOWN) {
         displayStatusMessage("Unsupported Image!");
         Serial.println("[IMAGE][ERROR] Image render unknown type!");
         good = false;
     } else {
-        Serial.printf("[IMAGE] Detected image as %s\n", imageTypeToString(type));
+        Serial.printf("[IMAGE] Detected image as %s %dx%d\n", imageTypeToString(img.type), img.width, img.height);
+        int xLoc = 0;
+        int yLoc = 0;
+        if (center) {
+            if (img.width < E_INK_WIDTH) {
+                xLoc = (E_INK_WIDTH - img.width) / 2;
+            }
+            if (img.height < E_INK_HEIGHT) {
+                yLoc = (E_INK_HEIGHT - img.height) / 2;
+            }
+            Serial.printf("[IMAGE] Centering Image at %dx%d\n",xLoc, yLoc);
+        }
         // display the image
         displayStart();
-        switch(type) {
+        switch(img.type) {
             case ImageType::PNG:
-                good = drawPngFromBuffer(buff, size, 0, 0, USE_DITHERING, false);
+                good = drawPngFromBuffer(buff, size, xLoc, yLoc, USE_DITHERING, false);
                 break;
             case ImageType::BMP:
-                good = display.drawBitmapFromBuffer(buff, 0, 0, USE_DITHERING, false);
+                good = display.drawBitmapFromBuffer(buff, xLoc, yLoc, USE_DITHERING, false);
                 break;
             case ImageType::JPEG:
-                good = display.drawJpegFromBuffer(buff, size, 0, 0, USE_DITHERING, false);
+                good = display.drawJpegFromBuffer(buff, size, xLoc, yLoc, USE_DITHERING, false);
                 break;
             default:
                 good = false;
