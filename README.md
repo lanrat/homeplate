@@ -1,6 +1,6 @@
 # HomePlate
 
-A [Trmnl](https://usetrmnl.com/) and [Home Assistant](https://www.home-assistant.io/) E-Ink Dashboard on the [Inkplate 10](https://soldered.com/product/inkplate-10-9-7-e-paper-board-copy/)
+A [Trmnl](https://trmnl.com/) and [Home Assistant](https://www.home-assistant.io/) E-Ink Dashboard on the [Inkplate 10](https://soldered.com/product/inkplate-10-9-7-e-paper-board-copy/)
 
 ![Home Assistant](screenshots/hass.jpeg)
 
@@ -8,7 +8,7 @@ A [Trmnl](https://usetrmnl.com/) and [Home Assistant](https://www.home-assistant
 
 ## Features
 
-* [Trmnl](https://usetrmnl.com) support
+* [Trmnl](https://trmnl.com) support
 * Display Home Assistant dashboards on a beautiful e-ink display
 * Display WiFi QR Codes for guests/friends to connect to home/guest wifi
 * Display messages directly from Home Assistant over MQTT
@@ -31,10 +31,10 @@ A [Trmnl](https://usetrmnl.com/) and [Home Assistant](https://www.home-assistant
 
 ### [Trmnl](trmnl.md)
 
-In order to use this with [Trmnl](https://usetrmnl.com), you must set `TRMNL_URL`, `TRMNL_ID`, and `TRMNL_TOKEN` in `config.h`.
+In order to use this with [Trmnl](https://trmnl.com), you must set `TRMNL_URL`, `TRMNL_ID`, and `TRMNL_TOKEN` in `config.h`.
 You can optionally set `#define DEFAULT_ACTIVITY Trmnl` to have Trmnl be the default image displayed if `IMAGE_URL` is also set.
 
-The [Alias Plugin](https://help.usetrmnl.com/en/articles/10701448-alias-plugin) can be used to display images from your local network, such as a Home Assistant Dashboard.
+The [Alias Plugin](https://help.trmnl.com/en/articles/10701448-alias-plugin) can be used to display images from your local network, such as a Home Assistant Dashboard.
 
 See [trmnl.md](trmnl.md) for more information.
 

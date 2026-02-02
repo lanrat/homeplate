@@ -4,7 +4,7 @@
 
 RTC_DATA_ATTR char current_filename[64] = "";
 
-// https://docs.usetrmnl.com/go/private-api/fetch-screen-content
+// https://docs.trmnl.com/go/private-api/screens
 bool trmnlDisplay(const char *url)
 {
 #ifndef TRMNL_ID
