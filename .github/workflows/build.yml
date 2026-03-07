@@ -55,10 +55,36 @@ jobs:
         run: pio pkg install
       - name: Build ${{ matrix.environment }}
         run: pio run -e ${{ matrix.environment }} -t ''
-      - name: Rename firmware
-        run: cp .pio/build/${{ matrix.environment }}/firmware.bin .pio/build/${{ matrix.environment }}/homeplate-${{ matrix.environment }}.bin
+      - name: Collect flash binaries
+        run: |
+          mkdir -p flash-package
+          IDEDATA=".pio/build/${{ matrix.environment }}/idedata.json"
+
+          # Copy firmware
+          cp .pio/build/${{ matrix.environment }}/firmware.bin flash-package/firmware.bin
+          cp .pio/build/${{ matrix.environment }}/firmware.bin flash-package/homeplate-${{ matrix.environment }}.bin
+
+          # Copy extra flash images (bootloader, partitions, boot_app0) from idedata
+          for row in $(python3 -c "import json; d=json.load(open('$IDEDATA')); [print(r['path']) for r in d['extra']['flash_images']]"); do
+            cp "$row" flash-package/
+          done
+
+          # Generate ESP Web Tools manifest from idedata
+          python3 -c "
+          import json
+          d = json.load(open('$IDEDATA'))
+          parts = [{'path': '${{ matrix.environment }}/' + p['path'].rsplit('/',1)[1], 'offset': int(p['offset'],16)} for p in d['extra']['flash_images']]
+          parts.append({'path': '${{ matrix.environment }}/firmware.bin', 'offset': int(d['extra']['application_offset'],16)})
+          manifest = {
+            'name': 'HomePlate (${{ matrix.environment }})',
+            'version': 'VERSION_PLACEHOLDER',
+            'new_install_prompt_erase': True,
+            'builds': [{'chipFamily': 'ESP32', 'parts': parts}]
+          }
+          json.dump(manifest, open('flash-package/manifest.json','w'), indent=2)
+          "
       - name: Upload firmware
         uses: actions/upload-artifact@v4
         with:
           name: firmware-${{ matrix.environment }}
-          path: .pio/build/${{ matrix.environment }}/homeplate-${{ matrix.environment }}.bin
+          path: flash-package/

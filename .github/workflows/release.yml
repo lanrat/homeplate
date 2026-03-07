@@ -21,6 +21,48 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          append_body: true
+          body: |
+            ## Install
+
+            Flash directly from your browser using the [Web Installer](https://lanrat.github.io/homeplate/).
           files: |
             firmware-inkplate10/homeplate-inkplate10.bin
             firmware-inkplate10v2/homeplate-inkplate10v2.bin
+
+  deploy-web-installer:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download firmware artifacts
+        uses: actions/download-artifact@v4
+      - name: Prepare GitHub Pages site
+        run: |
+          mkdir -p site/inkplate10 site/inkplate10v2
+          VERSION="${GITHUB_REF_NAME#v}"
+
+          # Copy web installer page
+          cp web-installer/index.html site/
+
+          # Copy firmware binaries and generate versioned manifests
+          for env in inkplate10 inkplate10v2; do
+            cp firmware-${env}/bootloader.bin site/${env}/
+            cp firmware-${env}/partitions.bin site/${env}/
+            cp firmware-${env}/boot_app0.bin site/${env}/
+            cp firmware-${env}/firmware.bin site/${env}/
+            sed "s/VERSION_PLACEHOLDER/$VERSION/" firmware-${env}/manifest.json > site/manifest-${env}.json
+          done
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

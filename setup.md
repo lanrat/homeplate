@@ -6,7 +6,13 @@ HomePlate uses a WiFi captive portal for configuration. No `config.h` file is re
 
 ### 1. Flash the firmware
 
-Flash the firmware to your Inkplate via USB:
+#### Option A: Web installer (recommended)
+
+Visit the [HomePlate Web Installer](https://lanrat.github.io/homeplate/) in Chrome or Edge on desktop. Select your board variant, connect your Inkplate via USB, and click **Install**. No development tools required.
+
+#### Option B: PlatformIO
+
+Install [PlatformIO](https://platformio.org/) and flash via USB:
 
 ```shell
 pio run -e inkplate10    # Inkplate 10 (original with touchpads)

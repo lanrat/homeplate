@@ -55,7 +55,11 @@ Setup the [Screenshot Home Assistant using Puppeteer](https://github.com/balloob
 
 See [hass.md](hass.md) and [dashboard.md](dashboard.md) for additional details.
 
-### Building
+### Flashing
+
+The easiest way to flash HomePlate is using the [web installer](https://lanrat.github.io/homeplate/) — no tools required, just a USB cable and Chrome or Edge.
+
+### Building (for development)
 
 Install [PlatformIO](https://platformio.org/).
 
