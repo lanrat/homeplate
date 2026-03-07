@@ -5,6 +5,7 @@
 RTC_DATA_ATTR char current_filename[64] = "";
 
 // https://docs.trmnl.com/go/private-api/screens
+// https://trmnl.com/api-docs/index.html
 bool trmnlDisplay(const char *url)
 {
 #ifndef TRMNL_ID
@@ -38,7 +39,9 @@ bool trmnlDisplay(const char *url)
         char volt_buffer[10];
         dtostrf(voltage, 0, 2, volt_buffer);
         headers["Battery-Voltage"] = volt_buffer;
-        Serial.printf("[TRMNL] Sending battery voltage: %s\n", headers["Battery-Voltage"].c_str());
+        uint percent = getBatteryPercent(voltage);
+        headers["Percent-Charged"] = String(percent);
+        Serial.printf("[TRMNL] Sending battery voltage: %s, percent: %u%%\n", headers["Battery-Voltage"].c_str(), percent);
     }
 
     // set version
