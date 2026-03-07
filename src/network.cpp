@@ -57,8 +57,8 @@ void keepWiFiAlive(void *parameter)
         }
 
         Serial.println("[WIFI] Reconnecting...");
-        WiFi.setHostname(plateCfg.hostname);
         WiFi.mode(WIFI_STA);
+        WiFi.setHostname(plateCfg.hostname);
         if (strlen(plateCfg.staticIp) > 0)
         {
             if (ip.fromString(plateCfg.staticIp) && gateway.fromString(plateCfg.staticGateway) &&
