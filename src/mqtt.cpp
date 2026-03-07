@@ -410,7 +410,7 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
     Serial.printf("\n");
     const char *action = doc["action"];
 
-    if (doc.containsKey("refresh"))
+    if (doc["refresh"].is<JsonVariant>())
     {
       int refresh = doc["refresh"].as<int>();
       Serial.printf("[MQTT][REFRESH]: %d\n", refresh);
@@ -446,7 +446,7 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
     }
     else if (strncmp("message", action, 9) == 0)
     {
-      if (!doc.containsKey("message"))
+      if (!doc["message"].is<JsonVariant>())
       {
         Serial.printf("[MQTT][ERROR] message action has no message!\n");
         return;
@@ -457,7 +457,7 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
     }
     else if (strncmp("img", action, 4) == 0)
     {
-      if (!doc.containsKey("message"))
+      if (!doc["message"].is<JsonVariant>())
       {
         Serial.printf("[MQTT][ERROR] img action has no url message!\n");
         return;

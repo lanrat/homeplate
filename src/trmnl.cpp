@@ -78,27 +78,27 @@ bool trmnlDisplay(const char *url)
     serializeJsonPretty(doc, Serial);
     Serial.printf("\n");
 
-    if (doc.containsKey("refresh_rate"))
+    if (doc["refresh_rate"].is<JsonVariant>())
     {
       uint32_t refresh = doc["refresh_rate"].as<uint32_t>();
       Serial.printf("[TRMNL][REFRESH]: %d\n", refresh);
       setSleepDuration(refresh);
     }
 
-    if (doc.containsKey("status")) {
+    if (doc["status"].is<JsonVariant>()) {
         uint32_t status = doc["status"].as<int32_t>();
         if (status != 0) {
             Serial.printf("[TRMNL][ERROR]: received non-zero status: %d!\n", status);
         }
     }
 
-    if (doc.containsKey("error")) {
+    if (doc["error"].is<JsonVariant>()) {
         String error = doc["error"].as<String>();
         Serial.printf("[TRMNL][ERROR]: received error: %s\n", error.c_str());
         displayStatusMessage("Error: %s", error.c_str());
     }
 
-    if (doc.containsKey("filename"))
+    if (doc["filename"].is<JsonVariant>())
     {
       String filename = doc["filename"].as<String>();
       Serial.printf("[TRMNL] Last filename: %s --> new filename: %s\n", current_filename, filename.c_str());
@@ -111,7 +111,7 @@ bool trmnlDisplay(const char *url)
       current_filename[sizeof(current_filename)-1] = '\0'; // Ensure null termination
     }
 
-    if (doc.containsKey("image_url"))
+    if (doc["image_url"].is<JsonVariant>())
     {
         // grab the image and display it
         String image_url = doc["image_url"].as<String>();
