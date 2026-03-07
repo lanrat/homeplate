@@ -74,6 +74,8 @@ void splashScreen();
 
 // Trmnl
 bool trmnlDisplay(const char *url);
+void trmnlLogAdd(const char *message);
+void trmnlLogSend();
 
 // Input
 void startMonitoringButtonsTask();
@@ -130,6 +132,7 @@ void printDebug(const char *s);
 // network
 uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec = 5);
 uint8_t* httpGetRetry(uint32_t trys, const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec);
+int httpPost(const char* url, std::map<String, String> *headers, const char* body);
 
 // message
 static const GFXfont *fonts[] = {&Roboto_128, &Roboto_64, &Roboto_32, &Roboto_16, &Roboto_12};

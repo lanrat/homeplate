@@ -48,6 +48,8 @@
 // #define TRMNL_ID ""
 // #define TRMNL_TOKEN ""
 // #define DEFAULT_ACTIVITY Trmnl
+// Enable sending device logs to TRMNL (optional, requires TRMNL_TOKEN)
+// #define TRMNL_ENABLE_LOG
 
 // WiFi QR Code
 #define QR_WIFI_NAME "Guest WiFi Network Name"

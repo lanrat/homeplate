@@ -4,6 +4,82 @@
 
 RTC_DATA_ATTR char current_filename[64] = "";
 
+// TRMNL Log support
+#if defined(TRMNL_ENABLE_LOG) && defined(TRMNL_TOKEN)
+#define TRMNL_LOG_ENABLED
+#define TRMNL_LOG_MAX_ENTRIES 8
+
+static JsonDocument trmnlLogDoc;
+static int trmnlLogCount = 0;
+
+static void trmnlLogAddDeviceStatus(JsonObject entry) {
+    entry["created_at"] = (long)time(nullptr);
+    entry["wifi_signal"] = WiFi.RSSI();
+    entry["wifi_status"] = WiFi.status();
+    entry["refresh_rate"] = getSleepDuration();
+    entry["sleep_duration"] = (long)(millis() / 1000);
+    entry["wake_reason"] = bootReason();
+    entry["free_heap_size"] = ESP.getFreeHeap();
+    entry["max_alloc_size"] = ESP.getMaxAllocHeap();
+
+    char ver[50];
+    snprintf(ver, sizeof(ver), "Homeplate %s", VERSION);
+    entry["firmware_version"] = ver;
+
+    i2cStart();
+    double voltage = display.readBattery();
+    i2cEnd();
+    if (voltage > 0) {
+        entry["battery_voltage"] = voltage;
+    }
+}
+
+void trmnlLogAdd(const char *message) {
+    if (trmnlLogCount >= TRMNL_LOG_MAX_ENTRIES) {
+        Serial.printf("[TRMNL_LOG] Log buffer full, dropping: %s\n", message);
+        return;
+    }
+    JsonObject entry = trmnlLogDoc["logs"].add<JsonObject>();
+    entry["message"] = message;
+    trmnlLogAddDeviceStatus(entry);
+    trmnlLogCount++;
+    Serial.printf("[TRMNL_LOG] Added: %s\n", message);
+}
+
+void trmnlLogSend() {
+    if (trmnlLogCount == 0) return;
+
+    // derive log URL from TRMNL_URL: replace /display with /log
+    String logUrl = String(TRMNL_URL);
+    logUrl.replace("/display", "/log");
+
+    std::map<String, String> headers = {
+        {"Access-Token", TRMNL_TOKEN},
+        {"Content-Type", "application/json"},
+    };
+
+    char buff[1024];
+    serializeJson(trmnlLogDoc, buff, sizeof(buff));
+    Serial.printf("[TRMNL_LOG] Sending %d log(s) to %s: %s\n", trmnlLogCount, logUrl.c_str(), buff);
+
+    int code = httpPost(logUrl.c_str(), &headers, buff);
+    if (code == 204) {
+        Serial.println("[TRMNL_LOG] Logs sent successfully");
+    } else {
+        Serial.printf("[TRMNL_LOG] Failed to send logs, HTTP %d\n", code);
+    }
+
+    // clear buffer
+    trmnlLogDoc.clear();
+    trmnlLogCount = 0;
+}
+
+#else
+// no-op when logging is disabled
+void trmnlLogAdd(const char *message) { (void)message; }
+void trmnlLogSend() {}
+#endif
+
 // https://docs.trmnl.com/go/private-api/screens
 // https://trmnl.com/api-docs/index.html
 bool trmnlDisplay(const char *url)
@@ -18,6 +94,11 @@ bool trmnlDisplay(const char *url)
     displayStatusMessage("Loading next image...");
     Serial.printf("[TRMNL] API: %s\n", url);
     static int32_t defaultLen = 5000;
+
+    // log boot info
+    char boot_msg[128];
+    snprintf(boot_msg, sizeof(boot_msg), "boot: count=%u reason=%s sleep=%us", bootCount, bootReason(), getSleepDuration());
+    trmnlLogAdd(boot_msg);
 
     // set headers
     std::map<String, String> headers = {
@@ -65,6 +146,8 @@ bool trmnlDisplay(const char *url)
     {
         Serial.println("[TRMNL] Download failed");
         displayStatusMessage("Download failed!");
+        trmnlLogAdd("error: download failed");
+        trmnlLogSend();
         return false;
     }
 
@@ -84,6 +167,10 @@ bool trmnlDisplay(const char *url)
       Serial.printf("[TRMNL][ERROR] JSON Deserialize error: %s\n", error.c_str());
       Serial.printf("[TRMNL][ERROR] JSON: %.*s\n", defaultLen, buff);
       free(buff);
+      char err_msg[128];
+      snprintf(err_msg, sizeof(err_msg), "error: JSON parse failed: %s", error.c_str());
+      trmnlLogAdd(err_msg);
+      trmnlLogSend();
       return false;
     }
 
@@ -118,6 +205,8 @@ bool trmnlDisplay(const char *url)
       Serial.printf("[TRMNL] Last filename: %s --> new filename: %s\n", current_filename, filename.c_str());
       if (filename.length() > 0 && filename.equals(current_filename)) {
          Serial.printf("[TRMNL] filename unchanged, not refreshing\n");
+         trmnlLogAdd("display: filename unchanged, skipped");
+         trmnlLogSend();
          return true;
       }
       // update the saved current_filename
@@ -134,12 +223,20 @@ bool trmnlDisplay(const char *url)
             char error_msg[256];
             snprintf(error_msg, sizeof(error_msg), "Unable to Display Image\n%s", current_filename);
             displayMessage(error_msg);
+            trmnlLogAdd("error: failed to render image");
+        } else {
+            char ok_msg[128];
+            snprintf(ok_msg, sizeof(ok_msg), "display: updated %s", current_filename);
+            trmnlLogAdd(ok_msg);
         }
+        trmnlLogSend();
         return ret;
     } else {
         Serial.printf("[TRMNL][ERROR]: No image_url found!\n");
         displayStatusMessage("Download failed!");
+        trmnlLogAdd("error: no image_url in response");
     }
+    trmnlLogSend();
     return false;
 #endif
 }

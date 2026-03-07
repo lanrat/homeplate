@@ -150,6 +150,40 @@ uint8_t* httpGetRetry(uint32_t trys, const char* url, std::map<String, String> *
 }
 
 
+int httpPost(const char* url, std::map<String, String> *headers, const char* body) {
+    if (!url || strlen(url) == 0) {
+        Serial.println("[NET] httpPost: Invalid URL");
+        return -1;
+    }
+    if (strncmp(url, "http://", 7) != 0 && strncmp(url, "https://", 8) != 0) {
+        Serial.printf("[NET] httpPost: Invalid URL protocol: %s\n", url);
+        return -1;
+    }
+
+    Serial.printf("[NET] POST %s\n", url);
+
+    bool sleep = WiFi.getSleep();
+    WiFi.setSleep(false);
+
+    HTTPClient http;
+    http.begin(url);
+
+    if (headers) {
+        for (const auto& header : *headers) {
+            http.addHeader(header.first, header.second);
+        }
+    }
+
+    int httpCode = http.POST(body ? body : "");
+
+    Serial.printf("[NET] POST response: %d\n", httpCode);
+
+    http.end();
+    WiFi.setSleep(sleep);
+
+    return httpCode;
+}
+
 uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec) {
     // Input validation
     if (!url || strlen(url) == 0) {
