@@ -115,6 +115,7 @@ void sendMQTTStatus();
 bool mqttRunning();
 void sendMQTTStatus();
 void startMQTTStatusTask();
+void mqttSendLowBatteryAlert(double voltage);
 
 // OTA
 void startOTATask();

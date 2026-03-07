@@ -29,15 +29,23 @@ void ntpSync(void *parameter)
 {
     WiFiUDP ntpUDP;
     NTPClient timeClient(ntpUDP, NTP_SERVER);
-    while (true)
+    const int MAX_NTP_RETRIES = 5;
+    int retryCount = 0;
+    while (retryCount < MAX_NTP_RETRIES)
     {
         printDebug("[TIME] loop...");
         waitForWiFi();
-        Serial.println("[TIME] Syncing RTC to NTP");
+        Serial.printf("[TIME] Syncing RTC to NTP (attempt %d/%d)\n", retryCount + 1, MAX_NTP_RETRIES);
         timeClient.begin();
         if (!timeClient.forceUpdate())
         {
+            retryCount++;
             Serial.printf("[TIME] NTP Sync failed\n");
+            if (retryCount >= MAX_NTP_RETRIES)
+            {
+                Serial.printf("[TIME] NTP Sync failed after %d attempts, giving up\n", MAX_NTP_RETRIES);
+                break;
+            }
             vTaskDelay((30 * SECOND) / portTICK_PERIOD_MS);
             continue;
         }
@@ -132,10 +140,14 @@ int getDayOfWeek(bool weekStartsOnMonday) {
     }
 
     int dow = rtc.getDayofWeek();
-    if (dow == 0) {
-        return dow + 1;
+    // rtc.getDayofWeek() returns 0-6 where 0=Sunday
+    // We need to return 1-7
+    if (weekStartsOnMonday) {
+        // Monday=1, Tuesday=2, ..., Sunday=7
+        return (dow == 0) ? 7 : dow;
     } else {
-        return dow;
+        // Sunday=1, Monday=2, ..., Saturday=7
+        return dow + 1;
     }
 }
 

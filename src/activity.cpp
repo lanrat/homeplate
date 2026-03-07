@@ -4,6 +4,7 @@
 
 static bool resetActivity = false;
 static SemaphoreHandle_t resetActivityMutex = xSemaphoreCreateMutex();
+static SemaphoreHandle_t startActivityMutex = xSemaphoreCreateMutex();
 uint activityCount = 0;
 uint timeToSleep = TIME_TO_SLEEP_SEC;
 
@@ -31,24 +32,20 @@ static bool getResetActivity() {
 
 void startActivity(Activity activity)
 {
-    static SemaphoreHandle_t mutex = NULL;
-    if (mutex == NULL) {
-        mutex = xSemaphoreCreateMutex();
-    }
-    if (xSemaphoreTake(mutex, (SECOND) / portTICK_PERIOD_MS) == pdTRUE)
+    if (xSemaphoreTake(startActivityMutex, (SECOND) / portTICK_PERIOD_MS) == pdTRUE)
     {
         // dont re-queue main Activity is run within 60 sec and already running
         if (activity == DEFAULT_ACTIVITY && activityCurrent == DEFAULT_ACTIVITY && ((millis() - lastActivityTime) / SECOND < 60))
         {
             Serial.printf("[ACTIVITY] startActivity(%d) main activity already running within time limit, skipping\n", activity);
-            xSemaphoreGive(mutex);
+            xSemaphoreGive(startActivityMutex);
             return;
         }
         // insert into queue
         Serial.printf("[ACTIVITY] startActivity(%d) put into queue\n", activity);
         setResetActivity(true);
         xQueueOverwrite(activityQueue, &activity);
-        xSemaphoreGive(mutex);
+        xSemaphoreGive(startActivityMutex);
     }
     else
     {

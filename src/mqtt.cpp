@@ -23,6 +23,7 @@ const static char *state_topic_wifi_signal = mqtt_base_sensor("wifi_signal/state
 const static char *state_topic_temperature = mqtt_base_sensor("temperature/state");
 const static char *state_topic_battery = mqtt_base_sensor("battery/state");
 const static char *state_topic_boot = mqtt_base_sensor("boot/state");
+const static char *state_topic_low_battery_alert = mqtt_base_sensor("low_battery_alert/state");
 
 bool getMQTTFailed()
 {
@@ -129,6 +130,20 @@ void mqttSendBootStatus(uint boot, uint activityCount, const char *bootReason, u
   serializeJson(doc, buff);
   Serial.printf("[MQTT] Sending MQTT State: [%s] %s\n", state_topic_boot, buff);
   mqttClient.publish(state_topic_boot, 1, MQTT_RETAIN_SENSOR_VALUE, buff);
+}
+
+void mqttSendLowBatteryAlert(double voltage)
+{
+  JsonDocument doc;
+  int percent = getBatteryPercent(voltage);
+  doc["voltage"] = voltage;
+  doc["battery"] = percent;
+  doc["alert"] = "critical_low_battery";
+
+  char buff[256];
+  serializeJson(doc, buff);
+  Serial.printf("[MQTT] Sending Low Battery Alert: [%s] %s\n", state_topic_low_battery_alert, buff);
+  mqttClient.publish(state_topic_low_battery_alert, 2, true, buff);
 }
 
 void sendHAConfig()
@@ -276,6 +291,19 @@ void sendHAConfig()
   doc["device"] = deviceInfo;
   serializeJson(doc, buff);
   mqttClient.publish(mqtt_base_sensor("sleep_duration/config"), qos, retain, buff);
+
+  // low battery alert
+  doc.clear();
+  doc["unique_id"] = mqtt_unique_id("low_battery_alert");
+  doc["name"] = "Low Battery Alert";
+  doc["state_topic"] = state_topic_low_battery_alert;
+  doc["value_template"] = "{{ value_json.alert }}";
+  doc["json_attributes_topic"] = state_topic_low_battery_alert;
+  doc["icon"] = "mdi:battery-alert";
+  doc["entity_category"] = "diagnostic";
+  doc["device"] = deviceInfo;
+  serializeJson(doc, buff);
+  mqttClient.publish(mqtt_base_sensor("low_battery_alert/config"), qos, retain, buff);
 }
 
 void connectToMqtt(void *params)
@@ -330,7 +358,7 @@ void onMqttConnect(bool sessionPresent)
 
   // only send this on first boot, or after every 10 sleep boots
   // depending on MQTT server configuration , some persistent messages may expire after a while, so we'll resend them
-  if (!sleepBoot || bootCount % MQTT_RESEND_CONFIG_EVERY)
+  if (!sleepBoot || (bootCount % MQTT_RESEND_CONFIG_EVERY) == 0)
     sendHAConfig();
 }
 
