@@ -31,9 +31,10 @@ bool trmnlDisplay(const char *url)
         {"Model", DEVICE_MODEL},
     };
 
-    // set voltage
+    // set voltage and temperature
     i2cStart();
     double voltage = display.readBattery();
+    int temp = display.readTemperature();
     i2cEnd();
     if (voltage > 0) {
         char volt_buffer[10];
@@ -42,6 +43,16 @@ bool trmnlDisplay(const char *url)
         uint percent = getBatteryPercent(voltage);
         headers["Percent-Charged"] = String(percent);
         Serial.printf("[TRMNL] Sending battery voltage: %s, percent: %u%%\n", headers["Battery-Voltage"].c_str(), percent);
+    }
+
+    // set temperature sensor
+    if (temp > 0) {
+        char sensor_buffer[128];
+        snprintf(sensor_buffer, sizeof(sensor_buffer),
+            "make=TI;model=TPS65186;kind=temperature;value=%d;unit=celsius;created_at=%ld",
+            temp, (long)time(nullptr));
+        headers["SENSORS"] = sensor_buffer;
+        Serial.printf("[TRMNL] Sending sensor data: %s\n", sensor_buffer);
     }
 
     // set version

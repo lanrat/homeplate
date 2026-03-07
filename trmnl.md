@@ -22,6 +22,10 @@ You can obtain `TRMNL_ID` and `TRMNL_TOKEN` by visiting [trmnl.com/devices](http
 You should also set the _Device Model_ to `Inkplate 10 - 1200x820`.
 It is also a good idea to update the _MAC Address_ to your device's MAC Address as well.
 
+## Sensors
+
+Homeplate reports the device's internal temperature sensor to TRMNL via the `SENSORS` HTTP header. This is sent automatically with each display API request when a valid temperature reading is available. The temperature is read from the TPS65186 e-paper power management IC in degrees Celsius.
+
 ## Home Assistant Config
 
 The [Trmnl Alias Plugin](https://trmnl.com/integrations/alias) can be used to display a screenshot directly from your Home Assistant instance. You most likely want to set "Enable Cache" to `No` to ensure you always display a fresh image.
