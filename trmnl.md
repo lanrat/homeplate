@@ -26,6 +26,16 @@ It is also a good idea to update the _MAC Address_ to your device's MAC Address 
 
 Homeplate reports the device's internal temperature sensor to TRMNL via the `SENSORS` HTTP header. This is sent automatically with each display API request when a valid temperature reading is available. The temperature is read from the TPS65186 e-paper power management IC in degrees Celsius.
 
+## Logging
+
+Homeplate can optionally send device logs to TRMNL's `POST /api/log` endpoint. This is useful for remote debugging and monitoring device health. To enable, add the following to your `config.h`:
+
+```c
+#define TRMNL_ENABLE_LOG
+```
+
+When enabled, logs are batched and sent once per wake cycle at the end of each display update. Each log entry includes device status (battery voltage, WiFi signal, heap memory, wake reason, firmware version, etc.) along with event messages for boot, display updates, and errors.
+
 ## Home Assistant Config
 
 The [Trmnl Alias Plugin](https://trmnl.com/integrations/alias) can be used to display a screenshot directly from your Home Assistant instance. You most likely want to set "Enable Cache" to `No` to ensure you always display a fresh image.
