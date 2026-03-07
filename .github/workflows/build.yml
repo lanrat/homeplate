@@ -5,6 +5,7 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_call: # allow calling from other workflows
   workflow_dispatch: # allow manually calling the action
 
 jobs:
