@@ -46,8 +46,8 @@ jobs:
     #   run: pio check
 
     - name: Run PlatformIO
-      # empty target to prevent upload
-      run: pio run -t ''
+      # empty target to prevent upload, single env is sufficient for analysis
+      run: pio run -e inkplate10 -t ''
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3

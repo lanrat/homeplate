@@ -9,7 +9,7 @@ on:
   workflow_dispatch: # allow manually calling the action
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,23 +29,36 @@ jobs:
       - name: Install PlatformIO Libs
         run: pio pkg install
       - name: Run PlatformIO Tests
-        # empty target to prevent upload
         run: pio test -e native
-      - name: Build inkplate10
-        run: pio run -e inkplate10 -t ''
-      - name: Build inkplate10v2
-        run: pio run -e inkplate10v2 -t ''
-      - name: Rename firmware files
-        run: |
-          cp .pio/build/inkplate10/firmware.bin .pio/build/inkplate10/homeplate-inkplate10.bin
-          cp .pio/build/inkplate10v2/firmware.bin .pio/build/inkplate10v2/homeplate-inkplate10v2.bin
-      - name: Upload inkplate10 firmware
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [inkplate10, inkplate10v2]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: ${{ runner.os }}-pio-${{ hashFiles('platformio.ini') }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install PlatformIO
+        run: pip install platformio==6.1.19
+      - name: Install PlatformIO Libs
+        run: pio pkg install
+      - name: Build ${{ matrix.environment }}
+        run: pio run -e ${{ matrix.environment }} -t ''
+      - name: Rename firmware
+        run: cp .pio/build/${{ matrix.environment }}/firmware.bin .pio/build/${{ matrix.environment }}/homeplate-${{ matrix.environment }}.bin
+      - name: Upload firmware
         uses: actions/upload-artifact@v4
         with:
-          name: firmware-inkplate10
-          path: .pio/build/inkplate10/homeplate-inkplate10.bin
-      - name: Upload inkplate10v2 firmware
-        uses: actions/upload-artifact@v4
-        with:
-          name: firmware-inkplate10v2
-          path: .pio/build/inkplate10v2/homeplate-inkplate10v2.bin
+          name: firmware-${{ matrix.environment }}
+          path: .pio/build/${{ matrix.environment }}/homeplate-${{ matrix.environment }}.bin
