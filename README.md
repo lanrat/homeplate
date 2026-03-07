@@ -156,7 +156,3 @@ pio test -v
 
 * in VSCode use Testing -> native -> Run Test
 * in VSCode use PlatformIO -> Project Tasks -> native -> Advanced -> Test
-
-## Future Ideas
-
-* Incorporate [WiFi Manager](https://github.com/tzapu/WiFiManager) for settings
