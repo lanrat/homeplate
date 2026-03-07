@@ -204,6 +204,9 @@ bool drawImageFromBuffer(uint8_t *buff, size_t size, bool center) {
     display.clearDisplay();                   // refresh the display buffer before rendering.
     displayEnd();
 
+    // Extend sleep timer to cover image render time (can take 15+ seconds for large PNGs)
+    delaySleep(16);
+
     bool good = false;
     auto img = getImageInfo(buff, size);
     if (img.type == ImageType::UNKNOWN) {
@@ -245,7 +248,7 @@ bool drawImageFromBuffer(uint8_t *buff, size_t size, bool center) {
     if (good)
     {
         Serial.println("[IMAGE] Image render ready");
-        if (DISPLAY_LAST_UPDATE_TIME) {
+        if (plateCfg.displayLastUpdateTime) {
             displayStats();
         }
     }
@@ -257,6 +260,8 @@ bool drawImageFromBuffer(uint8_t *buff, size_t size, bool center) {
         displayEnd();
         displayStatusMessage("Image display error");
     }
+    // Extend sleep timer to cover display.display() and post-render work
+    delaySleep(10);
     // check for stop (could have happened inside drawPngFromBuffer())
     if (stopActivity())
     {

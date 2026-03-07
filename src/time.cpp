@@ -1,9 +1,7 @@
 #include <NTPClient.h>
-#include <Timezone.h>
 #include <ESP32Time.h>
 
 #include "homeplate.h"
-#include "timezone_config.h"
 #define NTP_TASK_PRIORITY 3
 
 #define JAN_1_2000 946684800
@@ -14,9 +12,11 @@ bool rtcSet = false;
 ESP32Time rtc;
 
 long tzOffset(time_t epoch) {
-    TimeChangeRule *tcr; // pointer to the time change rule, use to get TZ abbrev
-    time_t local = tz.toLocal(epoch, &tcr);
-    return local - epoch;
+    struct tm utc;
+    gmtime_r(&epoch, &utc);
+    // mktime interprets its argument as local time, so the difference
+    // between epoch (UTC) and mktime(utc_components) gives the TZ offset
+    return (long)difftime(epoch, mktime(&utc));
 }
 
 bool getNTPSynced()
@@ -24,11 +24,17 @@ bool getNTPSynced()
     return ntpSynced;
 }
 
-#ifdef NTP_SERVER
 void ntpSync(void *parameter)
 {
+    if (strlen(plateCfg.ntpServer) == 0)
+    {
+        Serial.println("[TIME] NTP server not configured, skipping sync");
+        vTaskDelete(NULL);
+        return;
+    }
+
     WiFiUDP ntpUDP;
-    NTPClient timeClient(ntpUDP, NTP_SERVER);
+    NTPClient timeClient(ntpUDP, plateCfg.ntpServer);
     const int MAX_NTP_RETRIES = 5;
     int retryCount = 0;
     while (retryCount < MAX_NTP_RETRIES)
@@ -88,7 +94,6 @@ void ntpSync(void *parameter)
     printDebugStackSpace();
     vTaskDelete(NULL); // end self task
 }
-#endif
 
 void setupTimeAndSyncTask()
 {
@@ -108,10 +113,12 @@ void setupTimeAndSyncTask()
         rtcSet = false;
     }
 
-    #ifdef NTP_SERVER
+    if (strlen(plateCfg.ntpServer) > 0)
+    {
+        uint16_t syncInterval = getNtpSyncInterval();
         // Sync RTC if unset or fresh boot
-        bool resync = ((bootCount % (NTP_SYNC_INTERVAL)) == 0);
-        if (resync) Serial.printf("[TIME] re-syncing NTP: on boot %d, ever %d\n", bootCount, NTP_SYNC_INTERVAL);
+        bool resync = ((bootCount % syncInterval) == 0);
+        if (resync) Serial.printf("[TIME] re-syncing NTP: on boot %d, every %d\n", bootCount, syncInterval);
         if (!rtcSet || !sleepBoot || resync)
         {
             xTaskCreate(
@@ -122,7 +129,7 @@ void setupTimeAndSyncTask()
                 NTP_TASK_PRIORITY, /* Priority of the task. */
                 NULL);             /* Task handle. */
         }
-    #endif
+    }
 }
 
 String fullDateString() {
@@ -135,18 +142,13 @@ String timeString() {
 
 int getDayOfWeek(bool weekStartsOnMonday) {
     if (!rtcSet) {
-        // return -1 as long as rtc is not set
         return -1;
     }
 
     int dow = rtc.getDayofWeek();
-    // rtc.getDayofWeek() returns 0-6 where 0=Sunday
-    // We need to return 1-7
     if (weekStartsOnMonday) {
-        // Monday=1, Tuesday=2, ..., Sunday=7
         return (dow == 0) ? 7 : dow;
     } else {
-        // Sunday=1, Monday=2, ..., Saturday=7
         return dow + 1;
     }
 }

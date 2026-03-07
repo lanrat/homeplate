@@ -8,13 +8,13 @@
 #include "fonts/Roboto_64.h"
 #include "fonts/Roboto_128.h"
 #include "sleep_duration.h"
-#include "config.h"
 
-// check that config file is correctly set
-#if !defined CONFIG_H
-#error Missing config.h!
-#error HINT: copy config_example.h to config.h and make changes.
+// Config: include user's config.h if it exists, then defaults
+#if __has_include("config.h")
+#include "config.h"
 #endif
+#include "config_defaults.h"
+#include "config_manager.h"
 
 extern void vApplicationStackOverflowHook(xTaskHandle *pxTask,
                                           signed char *pcTaskName);
@@ -37,7 +37,9 @@ extern uint bootCount, activityCount, timeToSleep;
 #define WAKE_BUTTON GPIO_NUM_36
 #endif
 
-#define VERSION __DATE__ ", " __TIME__
+#ifndef VERSION
+#define VERSION "dev"
+#endif
 
 // Image "colors" (3bit mode)
 #define C_BLACK 0
@@ -83,14 +85,6 @@ void checkBootPads();
 void setupWakePins();
 
 // Sleep
-#define TIME_TO_SLEEP_SEC (TIME_TO_SLEEP_MIN * 60)    // How long ESP32 will be in deep sleep (in seconds)
-#ifndef TIME_TO_QUICK_SLEEP_SEC
-#define TIME_TO_QUICK_SLEEP_SEC 5 * 60 // 5 minutes. How long ESP32 will be in deep sleep (in seconds) for short activities
-#endif
-#ifndef MQTT_EXPIRE_AFTER_SEC
-#define MQTT_EXPIRE_AFTER_SEC (TIME_TO_SLEEP_SEC * 2)
-#endif
-
 void startSleep();
 void setSleepDuration(uint32_t sec);
 uint32_t getSleepDuration();
@@ -162,9 +156,9 @@ enum Activity
     IMG,
 };
 
-#ifndef DEFAULT_ACTIVITY
-#define DEFAULT_ACTIVITY HomeAssistant
-#endif
+Activity activityFromString(const char *s);
+const char *activityToString(Activity a);
+
 void startActivity(Activity activity);
 void startActivitiesTask();
 bool stopActivity();
@@ -211,13 +205,8 @@ void delaySleep(uint seconds);
 #define MQTT_RESEND_CONFIG_EVERY 10
 #define MQTT_RETAIN_SENSOR_VALUE true
 
-#if !defined MQTT_NODE_ID
-#define MQTT_NODE_ID HOSTNAME
-#endif
-
-#if !defined MQTT_DEVICE_NAME
-#define MQTT_DEVICE_NAME "HomePlate"
-#endif
+// MQTT discovery topic (compile-time constant)
+#define MQTT_DISCOVERY_TOPIC "homeassistant"
 
 // Sleep
 #define SLEEP_TIMEOUT_SEC 15

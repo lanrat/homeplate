@@ -41,8 +41,14 @@ void setup()
     if (!sleepBoot)
         printChipInfo();
 
+    // Load configuration from NVS (with compile-time defaults as fallback)
+    loadConfig();
+
+    // Set sleep duration from config (must happen before any sleep logic)
+    setSleepDuration(plateCfg.sleepMinutes * 60);
+
     // must be called before checkPads() so buttons can override pre-boot activity
-    startActivity(DEFAULT_ACTIVITY);
+    startActivity(activityFromString(plateCfg.defaultActivityStr));
 
     // check touchpads for wake event, must be done before display.begin()
     if (sleepBoot && TOUCHPAD_ENABLE)
@@ -96,21 +102,62 @@ void setup()
     Serial.println("[SETUP] starting button task");
     startMonitoringButtonsTask();
 
+    // WiFiManager: handles initial WiFi connection and config portal
+    // Force portal if device has never been configured via NVS,
+    // if the selected activity is missing required settings,
+    // or if the wake button is held during boot
+    bool forcePortal = !isConfigured();
+#ifdef WAKE_BUTTON
+    if (!forcePortal && digitalRead(WAKE_BUTTON) == LOW)
+    {
+        Serial.println("[SETUP] Wake button held at boot, forcing config portal");
+        forcePortal = true;
+    }
+#endif
+    if (!forcePortal)
+    {
+        Activity act = activityFromString(plateCfg.defaultActivityStr);
+        if ((act == HomeAssistant && strlen(plateCfg.imageUrl) == 0) ||
+            (act == Trmnl && strlen(plateCfg.trmnlId) == 0) ||
+            (act == GuestWifi && strlen(plateCfg.qrWifiName) == 0))
+        {
+            Serial.println("[SETUP] Activity missing required settings, forcing config portal");
+            forcePortal = true;
+        }
+    }
+    if (forcePortal)
+        Serial.println("[SETUP] Device not configured, forcing config portal");
+    Serial.println("[SETUP] starting WiFiManager");
+    if (!startWiFiManager(forcePortal))
+    {
+        // WiFiManager timed out - no connection established
+        Serial.println("[SETUP] WiFiManager timeout, going to sleep");
+        displayUnconfiguredScreen();
+        setSleepDuration(plateCfg.sleepMinutes * 60);
+        gotoSleepNow();
+        return; // won't reach here after deep sleep
+    }
+
+    Serial.println("[SETUP] WiFi connected, continuing setup");
+
     Serial.println("[SETUP] starting time task");
     setupTimeAndSyncTask();
 
-    Serial.println("[SETUP] starting WiFi task");
+    // Start WiFi reconnection task for ongoing connectivity
+    Serial.println("[SETUP] starting WiFi reconnect task");
     wifiConnectTask();
 
-    #if ENABLE_OTA
-    Serial.println("[SETUP] starting OTA task");
-    startOTATask();
-    #endif
+    if (plateCfg.enableOta)
+    {
+        Serial.println("[SETUP] starting OTA task");
+        startOTATask();
+    }
 
-    # ifdef MQTT_HOST
-    Serial.println("[SETUP] starting MQTT task");
-    startMQTTTask();
-    #endif
+    if (strlen(plateCfg.mqttHost) > 0)
+    {
+        Serial.println("[SETUP] starting MQTT task");
+        startMQTTTask();
+    }
 
     Serial.println("[SETUP] starting sleep task");
     sleepTask();

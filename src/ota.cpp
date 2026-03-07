@@ -37,7 +37,7 @@ void ota_handle(void *parameter)
 
 void startOTATask()
 {
-    ArduinoOTA.setHostname(HOSTNAME);
+    ArduinoOTA.setHostname(plateCfg.hostname);
 
     ArduinoOTA
         .onStart([]()

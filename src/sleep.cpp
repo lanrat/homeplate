@@ -5,7 +5,7 @@
 #define TOUCHPAD_WAKE_MASK (int64_t(1) << GPIO_NUM_34)
 
 static unsigned long sleepTime;
-uint32_t sleepDuration = TIME_TO_SLEEP_SEC;
+uint32_t sleepDuration = 0; // set from plateCfg at boot
 uint32_t sleepRefresh = 0;
 
 void setSleepDuration(uint32_t sec)
@@ -46,7 +46,6 @@ void gotoSleepNow()
     #endif
     i2cEnd();
 
-    // Go to sleep for TIME_TO_SLEEP seconds
     // Prevent integer overflow by checking max sleep duration (ESP32 limit is ~71 minutes)
     const uint32_t MAX_SLEEP_SECONDS = 4200; // ~70 minutes to stay well under ESP32 limit
     uint32_t safeSleepDuration = (sleepDuration > MAX_SLEEP_SECONDS) ? MAX_SLEEP_SECONDS : sleepDuration;

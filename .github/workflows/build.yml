@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Cache PlatformIO
         uses: actions/cache@v4
         with:
@@ -25,11 +27,24 @@ jobs:
         run: pip install platformio==6.1.19
       - name: Install PlatformIO Libs
         run: pio pkg install
-      - name: Use example config
-        run: cp src/config_example.h src/config.h
       - name: Run PlatformIO Tests
         # empty target to prevent upload
         run: pio test -e native
-      - name: Run PlatformIO
-        # empty target to prevent upload
-        run: pio run -t ''
+      - name: Build inkplate10
+        run: pio run -e inkplate10 -t ''
+      - name: Build inkplate10v2
+        run: pio run -e inkplate10v2 -t ''
+      - name: Rename firmware files
+        run: |
+          cp .pio/build/inkplate10/firmware.bin .pio/build/inkplate10/homeplate-inkplate10.bin
+          cp .pio/build/inkplate10v2/firmware.bin .pio/build/inkplate10v2/homeplate-inkplate10v2.bin
+      - name: Upload inkplate10 firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-inkplate10
+          path: .pio/build/inkplate10/homeplate-inkplate10.bin
+      - name: Upload inkplate10v2 firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-inkplate10v2
+          path: .pio/build/inkplate10v2/homeplate-inkplate10v2.bin

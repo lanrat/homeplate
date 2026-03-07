@@ -5,10 +5,23 @@
 #define MQTT_TASK_PRIORITY 3
 #define MQTT_SEND_TASK_PRIORITY 5
 
-#define MQTT_ACTION_TOPIC        "homeplate/" MQTT_NODE_ID "/activity/run"
-#define MQTT_DISCOVERY_TOPIC     "homeassistant"
-#define mqtt_base_sensor(topic)  MQTT_DISCOVERY_TOPIC "/sensor/" MQTT_NODE_ID "/" topic
-#define mqtt_unique_id(id)       MQTT_NODE_ID "_" id
+// Runtime MQTT topic buffers
+static char mqttActionTopic[128];
+static char topicBuf[128]; // shared buffer for topic construction
+static char uidBuf[64];    // shared buffer for unique ID construction
+
+static const char *mqttBaseSensor(const char *topic)
+{
+  snprintf(topicBuf, sizeof(topicBuf), "%s/sensor/%s/%s",
+           MQTT_DISCOVERY_TOPIC, plateCfg.mqttNodeId, topic);
+  return topicBuf;
+}
+
+static const char *mqttUniqueId(const char *id)
+{
+  snprintf(uidBuf, sizeof(uidBuf), "%s_%s", plateCfg.mqttNodeId, id);
+  return uidBuf;
+}
 
 AsyncMqttClient mqttClient;
 xTaskHandle mqttTaskHandle;
@@ -19,11 +32,29 @@ static bool mqttWaiting; // is MQTT waiting for status to be sent
 static bool mqttRun;     // should another MQTT status update be sent
 static bool mqttKill;    // should the status task stop running
 
-const static char *state_topic_wifi_signal = mqtt_base_sensor("wifi_signal/state");
-const static char *state_topic_temperature = mqtt_base_sensor("temperature/state");
-const static char *state_topic_battery = mqtt_base_sensor("battery/state");
-const static char *state_topic_boot = mqtt_base_sensor("boot/state");
-const static char *state_topic_low_battery_alert = mqtt_base_sensor("low_battery_alert/state");
+// State topic buffers (populated at startup)
+static char state_topic_wifi_signal[128];
+static char state_topic_temperature[128];
+static char state_topic_battery[128];
+static char state_topic_boot[128];
+static char state_topic_low_battery_alert[128];
+
+static void initMqttTopics()
+{
+  snprintf(mqttActionTopic, sizeof(mqttActionTopic),
+           "homeplate/%s/activity/run", plateCfg.mqttNodeId);
+
+  snprintf(state_topic_wifi_signal, sizeof(state_topic_wifi_signal),
+           "%s/sensor/%s/wifi_signal/state", MQTT_DISCOVERY_TOPIC, plateCfg.mqttNodeId);
+  snprintf(state_topic_temperature, sizeof(state_topic_temperature),
+           "%s/sensor/%s/temperature/state", MQTT_DISCOVERY_TOPIC, plateCfg.mqttNodeId);
+  snprintf(state_topic_battery, sizeof(state_topic_battery),
+           "%s/sensor/%s/battery/state", MQTT_DISCOVERY_TOPIC, plateCfg.mqttNodeId);
+  snprintf(state_topic_boot, sizeof(state_topic_boot),
+           "%s/sensor/%s/boot/state", MQTT_DISCOVERY_TOPIC, plateCfg.mqttNodeId);
+  snprintf(state_topic_low_battery_alert, sizeof(state_topic_low_battery_alert),
+           "%s/sensor/%s/low_battery_alert/state", MQTT_DISCOVERY_TOPIC, plateCfg.mqttNodeId);
+}
 
 bool getMQTTFailed()
 {
@@ -148,153 +179,159 @@ void mqttSendLowBatteryAlert(double voltage)
 
 void sendHAConfig()
 {
-  // sends MQTT info for auto discovery
-  // https://www.home-assistant.io/docs/mqtt/discovery/
-  // https://www.home-assistant.io/integrations/sensor.mqtt/
-
   Serial.println("[MQTT] Sending MQTT Config");
-  // retain must be true for config
   const bool retain = true;
   const int qos = 1;
   char buff[768];
+  char configTopic[128];
   JsonDocument doc;
+  uint32_t expireAfter = getMqttExpireAfterSec();
 
   // macaddr
-  // need to copy macaddr because doc.clear() erases macaddr-pointer
   char macaddr[18];
   String mac_string = WiFi.macAddress();
   strncpy(macaddr, mac_string.c_str(), 17);
-  macaddr[17] = '\0'; // Ensure null termination
+  macaddr[17] = '\0';
 
   // deviceinfo
   JsonDocument deviceInfo;
   deviceInfo.clear();
   deviceInfo["manufacturer"] = "e-radionica";
   deviceInfo["model"] = DEVICE_MODEL;
-  deviceInfo["name"] = MQTT_DEVICE_NAME;
+  deviceInfo["name"] = plateCfg.mqttDeviceName;
   deviceInfo["sw_version"] = VERSION;
-  deviceInfo["identifiers"][0] = MQTT_NODE_ID;
+  deviceInfo["identifiers"][0] = plateCfg.mqttNodeId;
   deviceInfo["identifiers"][1] = macaddr;
 
   // wifi RSSI
   doc.clear();
-  doc["unique_id"] = mqtt_unique_id("wifi_signal");
+  doc["unique_id"] = mqttUniqueId("wifi_signal");
   doc["device_class"] = "signal_strength";
   doc["state_class"] = "measurement";
   doc["name"] = "WiFi Signal";
   doc["state_topic"] = state_topic_wifi_signal;
   doc["unit_of_measurement"] = "dBm";
   doc["value_template"] = "{{ value_json.signal }}";
-  doc["expire_after"] = MQTT_EXPIRE_AFTER_SEC;
+  doc["expire_after"] = expireAfter;
   doc["entity_category"] = "diagnostic";
   doc["device"] = deviceInfo;
   serializeJson(doc, buff);
-  mqttClient.publish(mqtt_base_sensor("wifi_signal/config"), qos, retain, buff);
+  snprintf(configTopic, sizeof(configTopic), "%s/config", mqttBaseSensor("wifi_signal"));
+  mqttClient.publish(configTopic, qos, retain, buff);
 
   // temp
   doc.clear();
-  doc["unique_id"] = mqtt_unique_id("temperature");
+  doc["unique_id"] = mqttUniqueId("temperature");
   doc["device_class"] = "temperature";
   doc["state_class"] = "measurement";
   doc["name"] = "Temperature";
   doc["state_topic"] = state_topic_temperature;
   doc["unit_of_measurement"] = "°C";
   doc["value_template"] = "{{ value_json.temperature }}";
-  doc["expire_after"] = MQTT_EXPIRE_AFTER_SEC;
+  doc["expire_after"] = expireAfter;
   doc["device"] = deviceInfo;
   serializeJson(doc, buff);
-  mqttClient.publish(mqtt_base_sensor("temperature/config"), qos, retain, buff);
+  snprintf(configTopic, sizeof(configTopic), "%s/config", mqttBaseSensor("temperature"));
+  mqttClient.publish(configTopic, qos, retain, buff);
 
-  // battery
+  // voltage
   doc.clear();
-  doc["unique_id"] = mqtt_unique_id("voltage");
+  doc["unique_id"] = mqttUniqueId("voltage");
   doc["device_class"] = "voltage";
   doc["state_class"] = "measurement";
   doc["name"] = "Voltage";
   doc["state_topic"] = state_topic_battery;
   doc["unit_of_measurement"] = "V";
   doc["value_template"] = "{{ value_json.voltage }}";
-  doc["expire_after"] = MQTT_EXPIRE_AFTER_SEC;
+  doc["expire_after"] = expireAfter;
   doc["device"] = deviceInfo;
   serializeJson(doc, buff);
-  mqttClient.publish(mqtt_base_sensor("voltage/config"), qos, retain, buff);
+  snprintf(configTopic, sizeof(configTopic), "%s/config", mqttBaseSensor("voltage"));
+  mqttClient.publish(configTopic, qos, retain, buff);
+
+  // battery
   doc.clear();
-  doc["unique_id"] = mqtt_unique_id("battery");
+  doc["unique_id"] = mqttUniqueId("battery");
   doc["device_class"] = "battery";
   doc["state_class"] = "measurement";
   doc["name"] = "Battery";
   doc["state_topic"] = state_topic_battery;
   doc["unit_of_measurement"] = "%";
   doc["value_template"] = "{{ value_json.battery }}";
-  doc["expire_after"] = MQTT_EXPIRE_AFTER_SEC;
+  doc["expire_after"] = expireAfter;
   doc["device"] = deviceInfo;
   serializeJson(doc, buff);
-  mqttClient.publish(mqtt_base_sensor("battery/config"), qos, retain, buff);
+  snprintf(configTopic, sizeof(configTopic), "%s/config", mqttBaseSensor("battery"));
+  mqttClient.publish(configTopic, qos, retain, buff);
 
   // boot
   doc.clear();
-  doc["unique_id"] = mqtt_unique_id("boot");
+  doc["unique_id"] = mqttUniqueId("boot");
   doc["state_class"] = "total_increasing";
   doc["name"] = "Boot Count";
   doc["state_topic"] = state_topic_boot;
   doc["unit_of_measurement"] = "boot";
   doc["icon"] = "mdi:chart-line-variant";
   doc["value_template"] = "{{ value_json.boot }}";
-  doc["expire_after"] = MQTT_EXPIRE_AFTER_SEC;
+  doc["expire_after"] = expireAfter;
   doc["entity_category"] = "diagnostic";
   doc["enabled_by_default"] = false;
   doc["device"] = deviceInfo;
   serializeJson(doc, buff);
-  mqttClient.publish(mqtt_base_sensor("boot/config"), qos, retain, buff);
+  snprintf(configTopic, sizeof(configTopic), "%s/config", mqttBaseSensor("boot"));
+  mqttClient.publish(configTopic, qos, retain, buff);
 
   // boot reason
   doc.clear();
-  doc["unique_id"] = mqtt_unique_id("boot_reason");
+  doc["unique_id"] = mqttUniqueId("boot_reason");
   doc["name"] = "Boot Reason";
   doc["state_topic"] = state_topic_boot;
   doc["value_template"] = "{{ value_json.boot_reason }}";
-  doc["expire_after"] = MQTT_EXPIRE_AFTER_SEC;
+  doc["expire_after"] = expireAfter;
   doc["entity_category"] = "diagnostic";
   doc["enabled_by_default"] = false;
   doc["device"] = deviceInfo;
   serializeJson(doc, buff);
-  mqttClient.publish(mqtt_base_sensor("boot_reason/config"), qos, retain, buff);
+  snprintf(configTopic, sizeof(configTopic), "%s/config", mqttBaseSensor("boot_reason"));
+  mqttClient.publish(configTopic, qos, retain, buff);
 
   // activityCount
   doc.clear();
-  doc["unique_id"] = mqtt_unique_id("activity_count");
+  doc["unique_id"] = mqttUniqueId("activity_count");
   doc["state_class"] = "total_increasing";
   doc["name"] = "Activity Count";
   doc["state_topic"] = state_topic_boot;
   doc["unit_of_measurement"] = "activities";
   doc["icon"] = "mdi:chart-line-variant";
   doc["value_template"] = "{{ value_json.activity_count }}";
-  doc["expire_after"] = MQTT_EXPIRE_AFTER_SEC;
+  doc["expire_after"] = expireAfter;
   doc["entity_category"] = "diagnostic";
   doc["enabled_by_default"] = false;
   doc["device"] = deviceInfo;
   serializeJson(doc, buff);
-  mqttClient.publish(mqtt_base_sensor("activity_count/config"), qos, retain, buff);
+  snprintf(configTopic, sizeof(configTopic), "%s/config", mqttBaseSensor("activity_count"));
+  mqttClient.publish(configTopic, qos, retain, buff);
 
   // sleepTime
   doc.clear();
-  doc["unique_id"] = mqtt_unique_id("sleep_duration");
+  doc["unique_id"] = mqttUniqueId("sleep_duration");
   doc["state_class"] = "measurement";
   doc["name"] = "Sleep Duration";
   doc["state_topic"] = state_topic_boot;
   doc["unit_of_measurement"] = "s";
   doc["icon"] = "mdi:power-sleep";
   doc["value_template"] = "{{ value_json.sleep_duration }}";
-  doc["expire_after"] = MQTT_EXPIRE_AFTER_SEC;
+  doc["expire_after"] = expireAfter;
   doc["entity_category"] = "diagnostic";
   doc["enabled_by_default"] = false;
   doc["device"] = deviceInfo;
   serializeJson(doc, buff);
-  mqttClient.publish(mqtt_base_sensor("sleep_duration/config"), qos, retain, buff);
+  snprintf(configTopic, sizeof(configTopic), "%s/config", mqttBaseSensor("sleep_duration"));
+  mqttClient.publish(configTopic, qos, retain, buff);
 
   // low battery alert
   doc.clear();
-  doc["unique_id"] = mqtt_unique_id("low_battery_alert");
+  doc["unique_id"] = mqttUniqueId("low_battery_alert");
   doc["name"] = "Low Battery Alert";
   doc["state_topic"] = state_topic_low_battery_alert;
   doc["value_template"] = "{{ value_json.alert }}";
@@ -303,7 +340,8 @@ void sendHAConfig()
   doc["entity_category"] = "diagnostic";
   doc["device"] = deviceInfo;
   serializeJson(doc, buff);
-  mqttClient.publish(mqtt_base_sensor("low_battery_alert/config"), qos, retain, buff);
+  snprintf(configTopic, sizeof(configTopic), "%s/config", mqttBaseSensor("low_battery_alert"));
+  mqttClient.publish(configTopic, qos, retain, buff);
 }
 
 void connectToMqtt(void *params)
@@ -311,7 +349,6 @@ void connectToMqtt(void *params)
   while (true)
   {
     printDebug("[MQTT] MQTT loop...");
-    // if already connected, do nothing
     if (mqttClient.connected())
     {
       vTaskDelay(10000 / portTICK_PERIOD_MS);
@@ -323,7 +360,6 @@ void connectToMqtt(void *params)
     mqttClient.connect();
 
     unsigned long startAttemptTime = millis();
-    // Keep looping while we're not connected and haven't reached the timeout
     while (!mqttClient.connected() &&
            millis() - startAttemptTime < MQTT_TIMEOUT_MS)
     {
@@ -335,7 +371,6 @@ void connectToMqtt(void *params)
       Serial.println("[MQTT] FAILED");
       displayStatusMessage("MQTT failed!");
       mqttFailed = true;
-      // if sleep is enabled, we'll likely sleep before this continues
       vTaskDelay(MQTT_RECOVER_TIME_MS / portTICK_PERIOD_MS);
       continue;
     }
@@ -352,12 +387,10 @@ void onMqttConnect(bool sessionPresent)
   Serial.print("[MQTT] Session present: ");
   Serial.println(sessionPresent);
 
-  uint16_t packetIdSub = mqttClient.subscribe(MQTT_ACTION_TOPIC, 2);
+  uint16_t packetIdSub = mqttClient.subscribe(mqttActionTopic, 2);
   Serial.print("[MQTT] Subscribing at QoS 2, packetId: ");
   Serial.println(packetIdSub);
 
-  // only send this on first boot, or after every 10 sleep boots
-  // depending on MQTT server configuration , some persistent messages may expire after a while, so we'll resend them
   if (!sleepBoot || (bootCount % MQTT_RESEND_CONFIG_EVERY) == 0)
     sendHAConfig();
 }
@@ -381,48 +414,35 @@ void onMqttUnsubscribe(uint16_t packetId)
 
 void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
 {
-  // Input validation
   if (!topic || !payload) {
     Serial.println("[MQTT] Invalid message: null topic or payload");
     return;
   }
-  
-  // Validate payload length to prevent processing excessively large messages
-  const size_t MAX_MQTT_PAYLOAD_SIZE = 8192; // 8KB limit
+
+  const size_t MAX_MQTT_PAYLOAD_SIZE = 8192;
   if (len > MAX_MQTT_PAYLOAD_SIZE) {
     Serial.printf("[MQTT] Payload too large: %zu bytes (max %zu)\n", len, MAX_MQTT_PAYLOAD_SIZE);
     return;
   }
-  
+
   Serial.println("[MQTT] Publish received.");
   Serial.print("  topic: ");
   Serial.println(topic);
   Serial.print("  qos: ");
   Serial.println(properties.qos);
-  // Serial.print("  dup: ");
-  // Serial.println(properties.dup);
   Serial.print("  retain: ");
   Serial.println(properties.retain);
   Serial.print("  len: ");
   Serial.println(len);
-  // Serial.print("  index: ");
-  // Serial.println(index);
-  // Serial.print("  total: ");
-  // Serial.println(total);
-  // Serial.print("  payload: ");
-  // Serial.println(payload);
 
-  // if received message is wrong topic, do nothing.
-  if (strncmp(topic, MQTT_ACTION_TOPIC, strlen(MQTT_ACTION_TOPIC)) != 0)
+  if (strncmp(topic, mqttActionTopic, strlen(mqttActionTopic)) != 0)
   {
     return;
   }
 
-  // only clear if there is a payload, otherwise the MQTT messages are cleared
   if (len > 0)
   {
-    // send blank response to clear/ack the MQTT command
-    mqttClient.publish(MQTT_ACTION_TOPIC, 1, true);
+    mqttClient.publish(mqttActionTopic, 1, true);
 
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, payload, len, DeserializationOption::Filter(mqtt_filter));
@@ -490,7 +510,6 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
         Serial.printf("[MQTT][ERROR] img action has no url message!\n");
         return;
       }
-      // use the message buffer to hold the URL
       setMessage(doc["message"]);
       startActivity(IMG);
       return;
@@ -499,13 +518,6 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
   }
 }
 
-/*void onMqttPublish(uint16_t packetId)
-{
-  Serial.println("Publish acknowledged.");
-  Serial.print("  packetId: ");
-  Serial.println(packetId);
-}*/
-
 void startMQTTTask()
 {
   if (mqttTaskHandle != NULL)
@@ -513,34 +525,34 @@ void startMQTTTask()
     Serial.printf("[MQTT] MQTT Task Already running\n");
     return;
   }
+
+  initMqttTopics();
+
   Serial.printf("[MQTT] starting MQTT\n");
   mqttClient.onConnect(onMqttConnect);
   mqttClient.onDisconnect(onMqttDisconnect);
   mqttClient.onSubscribe(onMqttSubscribe);
   mqttClient.onUnsubscribe(onMqttUnsubscribe);
   mqttClient.onMessage(onMqttMessage);
-  // mqttClient.onPublish(onMqttPublish);
 
-  // set deserialization filter
   mqtt_filter["action"] = true;
   mqtt_filter["message"] = true;
   mqtt_filter["refresh"] = true;
 
-  mqttClient.setClientId(HOSTNAME);
-#ifdef MQTT_HOST
-  mqttClient.setServer(MQTT_HOST, MQTT_PORT);
-#endif
-#ifdef MQTT_USER
-  mqttClient.setCredentials(MQTT_USER, MQTT_PASSWORD);
-#endif
+  mqttClient.setClientId(plateCfg.hostname);
+  mqttClient.setServer(plateCfg.mqttHost, plateCfg.mqttPort);
+  if (strlen(plateCfg.mqttUser) > 0)
+  {
+    mqttClient.setCredentials(plateCfg.mqttUser, plateCfg.mqttPassword);
+  }
 
   xTaskCreate(
-      connectToMqtt,      /* Task function. */
-      "MQTT_TASK",        /* String with name of task. */
-      4096,               /* Stack size */
-      NULL,               /* Parameter passed as input of the task */
-      MQTT_TASK_PRIORITY, /* Priority of the task. */
-      &mqttTaskHandle);   /* Task handle. */
+      connectToMqtt,
+      "MQTT_TASK",
+      4096,
+      NULL,
+      MQTT_TASK_PRIORITY,
+      &mqttTaskHandle);
 }
 
 void mqttStopTask()
@@ -569,7 +581,6 @@ void sendMQTTStatusTask(void *param)
 {
   while (!mqttKill)
   {
-    // first wait for some other tasks to settle
     vTaskDelay(SECOND * 2 / portTICK_PERIOD_MS);
     while (!mqttRun)
     {
@@ -582,7 +593,6 @@ void sendMQTTStatusTask(void *param)
     waitForMQTT();
     mqttSendBootStatus(bootCount, activityCount, bootReason(), timeToSleep);
     mqttSendWiFiStatus();
-
     mqttSendTempStatus();
     mqttSendBatteryStatus();
 
@@ -591,7 +601,7 @@ void sendMQTTStatusTask(void *param)
     printDebugStackSpace();
   }
   Serial.println("[MQTT] killing status task");
-  vTaskDelete(NULL); // end self task
+  vTaskDelete(NULL);
 }
 
 void startMQTTStatusTask()
@@ -600,18 +610,18 @@ void startMQTTStatusTask()
   mqttRun = false;
   mqttKill = false;
 
-  #ifndef MQTT_HOST
-    // if no MQTT, return early
-    Serial.println("[MQTT] not starting status task, MQTT_HOST not defined");
-    mqttFailed = true;		// to avoid endless wait in sleep.cpp#86
+  if (strlen(plateCfg.mqttHost) == 0)
+  {
+    Serial.println("[MQTT] not starting status task, MQTT host not configured");
+    mqttFailed = true;
     return;
-  #endif
+  }
 
   xTaskCreate(
-      sendMQTTStatusTask,      /* Task function. */
-      "MQTT_STAT_TASK",        /* String with name of task. */
-      4096,                    /* Stack size */
-      NULL,                    /* Parameter passed as input of the task */
-      MQTT_SEND_TASK_PRIORITY, /* Priority of the task. */
-      NULL);                   /* Task handle. */
+      sendMQTTStatusTask,
+      "MQTT_STAT_TASK",
+      4096,
+      NULL,
+      MQTT_SEND_TASK_PRIORITY,
+      NULL);
 }

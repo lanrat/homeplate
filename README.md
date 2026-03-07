@@ -27,12 +27,19 @@ A [Trmnl](https://trmnl.com/) and [Home Assistant](https://www.home-assistant.io
 
 ## Setup
 
+### [Quick Start Guide](setup.md)
+
+HomePlate is configured through a WiFi captive portal — no `config.h` file is required. Flash the firmware, connect to the **HomePlate-Setup** WiFi network, and configure your settings through the web interface.
+
+See [setup.md](setup.md) for detailed setup instructions, settings reference, and timezone configuration.
+
+To change settings later, hold the **wake button** during boot to re-open the config portal.
+
 ### [Hardware](hardware.md)
 
 ### [Trmnl](trmnl.md)
 
-In order to use this with [Trmnl](https://trmnl.com), you must set `TRMNL_URL`, `TRMNL_ID`, and `TRMNL_TOKEN` in `config.h`.
-You can optionally set `#define DEFAULT_ACTIVITY Trmnl` to have Trmnl be the default image displayed if `IMAGE_URL` is also set.
+Set the `TRMNL ID` and `TRMNL Token` in the WiFi setup portal, and set the Default Activity to `Trmnl`.
 
 The [Alias Plugin](https://help.trmnl.com/en/articles/10701448-alias-plugin) can be used to display images from your local network, such as a Home Assistant Dashboard.
 
@@ -48,57 +55,13 @@ Setup the [Screenshot Home Assistant using Puppeteer](https://github.com/balloob
 
 See [hass.md](hass.md) and [dashboard.md](dashboard.md) for additional details.
 
-### Inkplate
+### Building
 
 Install [PlatformIO](https://platformio.org/).
 
-#### Configuring
-
-Copy `config_example.h` to `config.h` and add/change your settings.
-
-##### Variable sleep intervals
-
-If you want your inkplate to sleep with different intervals, copy `config_example.cpp` to `config.cpp` and uncomment the 4 lines in `config.h` starting from `#define CONFIG_CPP`. Then configure your `sleepSchedule` in config.cpp.
-
-Note that schedule slots do not span multiple days, this means that the *day of week* setting is similar to configuring a cronjob. For example, the settings below should be read as *between Xam to Ypm on every weekday*, and **not** as *from monday Xam to friday Ypm*.
-
-To help with debugging, the current sleep duration is also sent to MQTT, so you can monitor it in Home Assistant.
-
-```cpp
-{
-    // on every weekday sleep for 1 hour between 12am and 8am
-    .start_dow = 1, .start_hour = 0, .start_minute = 0,
-    .end_dow = 5, .end_hour = 8, .end_minute = 0,
-    .sleep_in_seconds = 3600
-},
-{
-    // on every weekday sleep for 5min between 8am and 8pm
-    .start_dow = 1, .start_hour = 8, .start_minute = 0,
-    .end_dow = 5, .end_hour = 20, .end_minute = 0,
-    .sleep_in_seconds = 300
-},
-{
-    // on every weekday sleep for 30min between 8pm and 12am
-    .start_dow = 1, .start_hour = 20, .start_minute = 0,
-    .end_dow = 5, .end_hour = 24, .end_minute = 0,
-    .sleep_in_seconds = 1800
-}
-```
-
-##### MQTT Expiration
-
-MQTT data sent by homeplate will by default expire after `2 * TIME_TO_SLEEP_MIN`. When using a custom sleep schedule, this could mean that MQTT data expires before homeplate wakes up and sends new values. You should adjust `MQTT_EXPIRE_AFTER_SEC` in `config.h` to a value greater than your longest sleep schedule to avoid this.
-
-#### Build & run
-
 ```shell
-pio run
-```
-
-If you have the Inkplate 10v2 (without the additional MCP expander and touchpads), use the `inkplate10v2` environment:
-
-```shell
-pio run -e inkplate10v2
+pio run -e inkplate10    # Inkplate 10 (original with touchpads)
+pio run -e inkplate10v2  # Inkplate 10v2 (without touchpads)
 ```
 
 The first flash/installation needs to be done over USB. Future updates can be done over USB or WiFi with:
@@ -132,7 +95,7 @@ Sometimes running `pio run --target=clean` can resolve this before you build & f
 
 The touchpad sensitivity is set in hardware by resistors, but the touch sensors are calibrated on bootup when the Device first gets power. I have found that USB power can mess with this calibration. If you are using battery power, restarting the Homeplate (by using the power switch on the side of the PCB) without USB power attached is enough to fix the sensitivity.
 
-Alternatively, the touchpads can be completely disabled by setting `#define TOUCHPAD_ENABLE false` in `config.h`.
+Alternatively, the touchpads can be completely disabled by adding `#define TOUCHPAD_ENABLE false` in a `src/config.h` file (this is a compile-time only setting and cannot be changed via the WiFi portal). Touchpads are automatically disabled when building for the Inkplate 10v2.
 
 #### Waveform
 

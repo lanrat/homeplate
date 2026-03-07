@@ -64,7 +64,7 @@ The parameters `viewport` and `eink` tell the addon to return a screenshot with 
 
 See the [Puppet Home Assistant Addon](https://github.com/balloob/home-assistant-addons/tree/main/puppet) for more documentation and options.
 
-Set this dashboard URL to `IMAGE_URL` in `config.h` or the Alias plugin URL if using [Trmnl](trmnl.md).
+Set this dashboard URL as the `Image URL` in the WiFi setup portal (see [setup.md](setup.md)), or use the Alias plugin URL if using [Trmnl](trmnl.md).
 
 ## MQTT
 

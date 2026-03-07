@@ -56,13 +56,24 @@ void keepWiFiAlive(void *parameter)
             continue;
         }
 
-        Serial.println("[WIFI] Connecting...");
-        WiFi.setHostname(HOSTNAME); // only works with DHCP....
+        Serial.println("[WIFI] Reconnecting...");
+        WiFi.setHostname(plateCfg.hostname);
         WiFi.mode(WIFI_STA);
-#ifdef STATIC_IP
-        WiFi.config(ip, gateway, subnet, dns);
-#endif
-        WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+        if (strlen(plateCfg.staticIp) > 0)
+        {
+            if (ip.fromString(plateCfg.staticIp) && gateway.fromString(plateCfg.staticGateway) &&
+                subnet.fromString(plateCfg.staticSubnet) && dns.fromString(plateCfg.staticDns))
+            {
+                WiFi.config(ip, gateway, subnet, dns);
+            }
+            else
+            {
+                Serial.printf("[WIFI] Failed to parse static IP information %s/%s %s %s\n",
+                              plateCfg.staticIp, plateCfg.staticSubnet, plateCfg.staticGateway, plateCfg.staticDns);
+            }
+        }
+        // Use stored credentials from WiFiManager (no args)
+        WiFi.begin();
 
         unsigned long startAttemptTime = millis();
 
@@ -97,16 +108,6 @@ void wifiConnectTask()
         Serial.printf("[WIFI] WiFi Task Already running\n");
         return;
     }
-    // delete old config
-    WiFi.disconnect(true);
-
-#ifdef STATIC_IP
-    if (!ip.fromString(STATIC_IP) || !gateway.fromString(STATIC_GATEWAY) || !subnet.fromString(STATIC_SUBNET) || !dns.fromString(STATIC_DNS))
-    {
-        Serial.printf("[WIFI] Failed to parse static IP information %s/%s %s %s\n", STATIC_IP, STATIC_SUBNET, STATIC_GATEWAY, STATIC_DNS);
-        return;
-    }
-#endif
 
     WiFi.onEvent(WiFiStationConnected, ARDUINO_EVENT_WIFI_STA_CONNECTED);
     WiFi.onEvent(WiFiGotIP, ARDUINO_EVENT_WIFI_STA_GOT_IP);
@@ -190,13 +191,13 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
         Serial.println("[NET] Invalid URL: null or empty");
         return nullptr;
     }
-    
+
     // Basic URL format validation
     if (strncmp(url, "http://", 7) != 0 && strncmp(url, "https://", 8) != 0) {
         Serial.printf("[NET] Invalid URL protocol: %s\n", url);
         return nullptr;
     }
-    
+
     Serial.printf("[NET] downloading file at URL %s\n", url);
 
     bool sleep = WiFi.getSleep();
@@ -204,23 +205,13 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
 
     HTTPClient http;
     http.getStream().setNoDelay(true);
-    // Set connection timeout (for establishing the connection)
-    //http.setConnectTimeout(2000); // 2 seconds
-    //http.getStream().setTimeout(timeout_sec); // TODO this seems to have no effect..
     delaySleep(timeout_sec);
-
-    // const char* headersToCollect[] = {
-    //     "X-Next-Refresh",
-    // };
-    // const size_t numberOfHeaders = 1;
-    // http.collectHeaders(headersToCollect, numberOfHeaders);
 
     // Connect with HTTP
     http.begin(url);
 
     if (headers) {
         for (const auto& header : *headers) {
-            //Serial.printf("[NET][DEBUG] adding http header: %s: %s\n", header.first.c_str(), header.second.c_str());
             http.addHeader(header.first, header.second);
         }
     }
@@ -250,18 +241,6 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
         return nullptr;
     }
     uint8_t *buffPtr = buffer;
-
-    // if (http.hasHeader("X-Next-Refresh")) {
-    //     // Get the next refresh header value from the server.
-    //     // We use this to determine when to wake up next.
-    //     String headerVal = http.header("X-Next-Refresh");
-    //     *nextRefresh = headerVal.toInt();
-    //     // const char* headerValPtr = headerVal.c_str();
-    //     // strcpy(nextRefresh, headerValPtr);
-    //     logf(LOG_DEBUG, "received header X-Next-Refresh: %d", *nextRefresh);
-    // } else {
-    //     logf(LOG_WARNING, "header X-Next-Refresh not found in response");
-    // }
 
     int32_t total = http.getSize();
     int32_t len = total;

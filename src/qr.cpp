@@ -4,12 +4,15 @@
 void serialPrintQR(QRCode qrcode);
 void renderQR(QRCode qrcode, uint32_t x, uint32_t y, uint32_t size);
 
-#ifdef QR_WIFI_NAME
 void displayWiFiQR()
 {
+    if (strlen(plateCfg.qrWifiName) == 0) {
+        Serial.println("[QR] QR WiFi name not configured");
+        return;
+    }
     Serial.printf("Rendering wifi QR Code\n");
     char buf[1024];
-    snprintf(buf, 1024, "WIFI:S:%s;T:WPA;P:%s;;", QR_WIFI_NAME, QR_WIFI_PASSWORD);
+    snprintf(buf, 1024, "WIFI:S:%s;T:WPA;P:%s;;", plateCfg.qrWifiName, plateCfg.qrWifiPassword);
     // Create the QR code
     static uint8_t version = 5;
     QRCode qrcode;
@@ -37,11 +40,11 @@ void displayWiFiQR()
     y = y + 60;
 
     // do some math to resize the wifi information to fit in the bounding box
-    FontSizing font = findFontSizeFit(QR_WIFI_NAME, x-100, (E_INK_HEIGHT-y/2));
+    FontSizing font = findFontSizeFit(plateCfg.qrWifiName, x-100, (E_INK_HEIGHT-y/2));
     display.setFont(font.font);
-    h = centerTextX(QR_WIFI_NAME, 100, x - 100, y + h + 30);
-    font = findFontSizeFit(QR_WIFI_PASSWORD, x, (E_INK_HEIGHT-y));
-    h = centerTextX(QR_WIFI_PASSWORD, 100, x - 100, y + (h + 30) * 2);
+    h = centerTextX(plateCfg.qrWifiName, 100, x - 100, y + h + 30);
+    font = findFontSizeFit(plateCfg.qrWifiPassword, x, (E_INK_HEIGHT-y));
+    h = centerTextX(plateCfg.qrWifiPassword, 100, x - 100, y + (h + 30) * 2);
 
     i2cStart();
     displayStart();
@@ -49,10 +52,6 @@ void displayWiFiQR()
     displayEnd();
     i2cEnd();
 }
-#else
-// not used, just return
-void displayWiFiQR() { return; }
-#endif
 
 void renderQR(QRCode qrcode, uint32_t x, uint32_t y, uint32_t size)
 {

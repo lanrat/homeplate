@@ -5,8 +5,6 @@
 RTC_DATA_ATTR char current_filename[64] = "";
 
 // TRMNL Log support
-#if defined(TRMNL_ENABLE_LOG) && defined(TRMNL_TOKEN)
-#define TRMNL_LOG_ENABLED
 #define TRMNL_LOG_MAX_ENTRIES 8
 
 static JsonDocument trmnlLogDoc;
@@ -35,6 +33,7 @@ static void trmnlLogAddDeviceStatus(JsonObject entry) {
 }
 
 void trmnlLogAdd(const char *message) {
+    if (!plateCfg.trmnlEnableLog || strlen(plateCfg.trmnlToken) == 0) return;
     if (trmnlLogCount >= TRMNL_LOG_MAX_ENTRIES) {
         Serial.printf("[TRMNL_LOG] Log buffer full, dropping: %s\n", message);
         return;
@@ -47,14 +46,15 @@ void trmnlLogAdd(const char *message) {
 }
 
 void trmnlLogSend() {
+    if (!plateCfg.trmnlEnableLog || strlen(plateCfg.trmnlToken) == 0) return;
     if (trmnlLogCount == 0) return;
 
-    // derive log URL from TRMNL_URL: replace /display with /log
-    String logUrl = String(TRMNL_URL);
+    // derive log URL from trmnl URL: replace /display with /log
+    String logUrl = String(plateCfg.trmnlUrl);
     logUrl.replace("/display", "/log");
 
     std::map<String, String> headers = {
-        {"Access-Token", TRMNL_TOKEN},
+        {"Access-Token", plateCfg.trmnlToken},
         {"Content-Type", "application/json"},
     };
 
@@ -74,19 +74,14 @@ void trmnlLogSend() {
     trmnlLogCount = 0;
 }
 
-#else
-// no-op when logging is disabled
-void trmnlLogAdd(const char *message) { (void)message; }
-void trmnlLogSend() {}
-#endif
-
 // https://docs.trmnl.com/go/private-api/screens
 // https://trmnl.com/api-docs/index.html
 bool trmnlDisplay(const char *url)
 {
-#ifndef TRMNL_ID
-    return false;
-#else
+    if (strlen(plateCfg.trmnlId) == 0) {
+        Serial.println("[TRMNL] TRMNL_ID not configured");
+        return false;
+    }
     if (url == NULL) {
          Serial.println("[TRMNL] ERROR: got null url!");
          return false;
@@ -102,8 +97,8 @@ bool trmnlDisplay(const char *url)
 
     // set headers
     std::map<String, String> headers = {
-        {"ID", TRMNL_ID},
-        {"Access-Token", TRMNL_TOKEN},
+        {"ID", plateCfg.trmnlId},
+        {"Access-Token", plateCfg.trmnlToken},
         {"RSSI", String(WiFi.RSSI())},
         {"Refresh-Rate", String(getSleepDuration())},
         {"Accept", "application/json"},
@@ -237,5 +232,4 @@ bool trmnlDisplay(const char *url)
     }
     trmnlLogSend();
     return false;
-#endif
 }

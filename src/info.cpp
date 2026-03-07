@@ -132,7 +132,6 @@ void drawWiFi(uint32_t *yref, bool clean)
   *yref = y;
 }
 
-#ifdef MQTT_HOST
 void drawMQTT(uint32_t *yref, bool clean)
 {
   uint32_t y = *yref;
@@ -141,7 +140,7 @@ void drawMQTT(uint32_t *yref, bool clean)
   display.printf("MQTT Server:");
   if (clean) { cleanField(COL2_DATA_X, y); };
   display.setCursor(COL2_DATA_X, y);
-  display.printf(MQTT_HOST);
+  display.print(plateCfg.mqttHost);
   // MQTT status
   y += lineHeight;
   display.setCursor(COL2_NAME_X, y);
@@ -152,7 +151,6 @@ void drawMQTT(uint32_t *yref, bool clean)
 
   *yref = y;
 }
-#endif
 
 void displayInfoScreen()
 {
@@ -261,19 +259,19 @@ void displayInfoScreen()
   display.setCursor(COL1_DATA_X, y);
   display.printf("%dC (%dF)", temp, tempF);
 
-  #ifdef TRMNL_ID
+  if (strlen(plateCfg.trmnlId) > 0) {
   // TRMNL
   y += lineHeight * 2;
   display.setCursor(COL1_NAME_X, y);
   display.print("TRMNL ID:");
   display.setCursor(COL1_DATA_X, y);
-  display.print(TRMNL_ID);
+  display.print(plateCfg.trmnlId);
   y += lineHeight;
   display.setCursor(COL1_NAME_X, y);
   display.print("TRMNL URL:");
   display.setCursor(COL1_DATA_X, y);
-  display.print(TRMNL_URL);
-  #endif
+  display.print(plateCfg.trmnlUrl);
+  }
 
   // column 2
   y = 250;
@@ -287,17 +285,17 @@ void displayInfoScreen()
   bool stateWiFi = WiFi.isConnected();
   drawWiFi(&y, false);
 
-  #ifdef MQTT_HOST
+  bool stateMQTT = true;
+  uint32_t yMQTT = 0;
+  if (strlen(plateCfg.mqttHost) > 0) {
   // MQTT server
   y += lineHeight * 2;
-  uint32_t yMQTT = y;
-  bool stateMQTT = mqttConnected();
+  yMQTT = y;
+  stateMQTT = mqttConnected();
   drawMQTT(&y, false);
-  #else
-  bool stateMQTT = true;
-  #endif
+  }
 
-  #ifdef NTP_SERVER
+  if (strlen(plateCfg.ntpServer) > 0) {
   // time
   y += lineHeight * 2;
   display.setCursor(COL2_NAME_X, y);
@@ -309,7 +307,7 @@ void displayInfoScreen()
   display.setCursor(COL2_NAME_X, y);
   display.print("NTP Server:");
   display.setCursor(COL2_DATA_X, y);
-  display.print(NTP_SERVER);
+  display.print(plateCfg.ntpServer);
   // NTP status
   y += lineHeight;
   display.setCursor(COL2_NAME_X, y);
@@ -323,7 +321,7 @@ void displayInfoScreen()
   display.printf("Ext RTC:");
   display.setCursor(COL2_DATA_X, y);
   display.printf(display.rtcIsSet() ? "OK" : "Error");
-  #endif
+  }
 
   displayBoundaryBox();
   display.display();
@@ -346,9 +344,8 @@ void displayInfoScreen()
       }
     }
 
-    #ifdef MQTT_HOST
     // only check if MQTT was not connected already
-    if (!stateMQTT)
+    if (strlen(plateCfg.mqttHost) > 0 && !stateMQTT)
     {
       if (mqttConnected())
       {
@@ -357,7 +354,6 @@ void displayInfoScreen()
 	stateMQTT = true;
       }
     }
-    #endif
 
     // finish loop early if both are connected
     if (stateWiFi && stateMQTT)
@@ -393,14 +389,12 @@ void displayInfoScreen()
       Serial.println("[INFO] Partial update: WiFi");
       drawWiFi(&yWiFi, true);
     }
-    #ifdef MQTT_HOST
-    if (bitRead(needsRedraw, REDRAW_MQTT))
+    if (strlen(plateCfg.mqttHost) > 0 && bitRead(needsRedraw, REDRAW_MQTT))
     {
       // redraw mqtt
       Serial.println("[INFO] Partial update: MQTT");
       drawMQTT(&yMQTT, true);
     }
-    #endif
 
     // send to display
     display.partialUpdate(sleepBoot);

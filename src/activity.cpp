@@ -6,12 +6,38 @@ static bool resetActivity = false;
 static SemaphoreHandle_t resetActivityMutex = xSemaphoreCreateMutex();
 static SemaphoreHandle_t startActivityMutex = xSemaphoreCreateMutex();
 uint activityCount = 0;
-uint timeToSleep = TIME_TO_SLEEP_SEC;
+uint timeToSleep = 0;
 
 QueueHandle_t activityQueue = xQueueCreate(1, sizeof(Activity));
 
 static unsigned long lastActivityTime = 0;
 static Activity activityNext, activityCurrent = NONE;
+
+Activity activityFromString(const char *s)
+{
+    if (!s) return HomeAssistant;
+    if (strcmp(s, "HomeAssistant") == 0) return HomeAssistant;
+    if (strcmp(s, "Trmnl") == 0) return Trmnl;
+    if (strcmp(s, "GuestWifi") == 0) return GuestWifi;
+    if (strcmp(s, "Info") == 0) return Info;
+    if (strcmp(s, "Message") == 0) return Message;
+    if (strcmp(s, "IMG") == 0) return IMG;
+    return HomeAssistant;
+}
+
+const char *activityToString(Activity a)
+{
+    switch (a) {
+        case HomeAssistant: return "HomeAssistant";
+        case Trmnl: return "Trmnl";
+        case GuestWifi: return "GuestWifi";
+        case Info: return "Info";
+        case Message: return "Message";
+        case IMG: return "IMG";
+        case NONE: return "NONE";
+        default: return "HomeAssistant";
+    }
+}
 
 // Helper functions for thread-safe resetActivity access
 static void setResetActivity(bool value) {
@@ -32,10 +58,11 @@ static bool getResetActivity() {
 
 void startActivity(Activity activity)
 {
+    Activity defaultAct = activityFromString(plateCfg.defaultActivityStr);
     if (xSemaphoreTake(startActivityMutex, (SECOND) / portTICK_PERIOD_MS) == pdTRUE)
     {
         // dont re-queue main Activity is run within 60 sec and already running
-        if (activity == DEFAULT_ACTIVITY && activityCurrent == DEFAULT_ACTIVITY && ((millis() - lastActivityTime) / SECOND < 60))
+        if (activity == defaultAct && activityCurrent == defaultAct && ((millis() - lastActivityTime) / SECOND < 60))
         {
             Serial.printf("[ACTIVITY] startActivity(%d) main activity already running within time limit, skipping\n", activity);
             xSemaphoreGive(startActivityMutex);
@@ -70,6 +97,9 @@ void waitForWiFiOrActivityChange()
 
 void runActivities(void *params)
 {
+    uint32_t sleepSec = plateCfg.sleepMinutes * 60;
+    uint32_t quickSleepSec = plateCfg.quickSleepSec;
+
     while (true)
     {
         printDebug("[ACTIVITY] loop...");
@@ -78,7 +108,7 @@ void runActivities(void *params)
         if (xQueueReceive(activityQueue, &activityNext, portMAX_DELAY) != pdTRUE)
         {
             Serial.printf("[ACTIVITY][ERROR] runActivities() unable to read from activityQueue\n");
-            vTaskDelay(500 / portTICK_PERIOD_MS); // wait just to be safe
+            vTaskDelay(500 / portTICK_PERIOD_MS);
             continue;
         }
         waitForOTA();
@@ -86,7 +116,7 @@ void runActivities(void *params)
         printDebug("[ACTIVITY] runActivities ready...");
 
         if (activityNext != NONE)
-            delaySleep(10); // bump the sleep timer a little for any ongoing activity
+            delaySleep(10);
 
         // activity debounce
         if ((activityNext == activityCurrent) && ((millis() - lastActivityTime) / SECOND < MIN_ACTIVITY_RESTART_SECS))
@@ -107,40 +137,43 @@ void runActivities(void *params)
             .minute = getMinute(),
         };
         SleepDefaults defaults = {
-            .normalSleep = TIME_TO_SLEEP_SEC,
-            .quickSleep = TIME_TO_QUICK_SLEEP_SEC,
+            .normalSleep = sleepSec,
+            .quickSleep = quickSleepSec,
         };
         timeToSleep = getSleepDuration(sleepSchedule, sleepScheduleSize, time, defaults, doQuickSleep);
 #else
-        timeToSleep = doQuickSleep ? TIME_TO_QUICK_SLEEP_SEC : TIME_TO_SLEEP_SEC;
+        timeToSleep = doQuickSleep ? quickSleepSec : sleepSec;
 #endif
 
         switch (activityNext)
         {
         case NONE:
             break;
-#ifdef IMAGE_URL
         case HomeAssistant:
+            if (strlen(plateCfg.imageUrl) == 0)
+            {
+                Serial.println("[ACTIVITY] HomeAssistant: no IMAGE_URL configured");
+                break;
+            }
             delaySleep(15);
             setSleepDuration(timeToSleep);
-            // wait for wifi or reset activity
             waitForWiFiOrActivityChange();
             if (getResetActivity())
             {
                 Serial.printf("[ACTIVITY][ERROR] HomeAssistant Activity reset while waiting, aborting...\n");
                 continue;
             }
-            // get & render hass image
             delaySleep(20);
-            drawImageFromURL(IMAGE_URL);
-            // delaySleep(10);
+            drawImageFromURL(plateCfg.imageUrl);
             break;
-#endif
-#ifdef TRMNL_ID
         case Trmnl:
+            if (strlen(plateCfg.trmnlId) == 0)
+            {
+                Serial.println("[ACTIVITY] Trmnl: no TRMNL_ID configured");
+                break;
+            }
             delaySleep(15);
             setSleepDuration(timeToSleep);
-            // wait for wifi or reset activity
             waitForWiFiOrActivityChange();
             if (getResetActivity())
             {
@@ -148,10 +181,8 @@ void runActivities(void *params)
                 continue;
             }
             delaySleep(20);
-            trmnlDisplay(TRMNL_URL);
-            // delaySleep(10);
+            trmnlDisplay(plateCfg.trmnlUrl);
             break;
-# endif
         case GuestWifi:
             setSleepDuration(timeToSleep);
             displayWiFiQR();
@@ -172,32 +203,27 @@ void runActivities(void *params)
                 Serial.printf("[ACTIVITY][ERROR] IMG Activity reset while waiting, aborting...\n");
                 continue;
             }
-            // get & render image
             delaySleep(20);
             drawImageFromURL(getMessage());
             break;
         default:
             Serial.printf("[ACTIVITY][ERROR] runActivities() unhandled Activity: %d\n", activityNext);
         }
-        // check and display a low battery warning if needed
         displayBatteryWarning();
-
-        // send new MQTT status
         sendMQTTStatus();
     }
 }
 
 void startActivitiesTask()
 {
-    // start the main loop stuff
     startMQTTStatusTask();
 
     xTaskCreate(
         runActivities,
-        "ACTIVITY_TASK",        // Task name
-        8192,                   // Stack size
-        NULL,                   // Parameter
-        ACTIVITY_TASK_PRIORITY, // Task priority
-        NULL                    // Task handle
+        "ACTIVITY_TASK",
+        8192,
+        NULL,
+        ACTIVITY_TASK_PRIORITY,
+        NULL
     );
 }
