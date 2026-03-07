@@ -156,7 +156,6 @@ bool trmnlDisplay(const char *url)
     trmnl_display_filter["filename"] = true;
     trmnl_display_filter["image_url"] = true;
     trmnl_display_filter["refresh_rate"] = true;
-    trmnl_display_filter["special_function"] = true;
     trmnl_display_filter["status"] = true;
     trmnl_display_filter["error"] = true;
 

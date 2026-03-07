@@ -261,6 +261,20 @@ void displayInfoScreen()
   display.setCursor(COL1_DATA_X, y);
   display.printf("%dC (%dF)", temp, tempF);
 
+  #ifdef TRMNL_ID
+  // TRMNL
+  y += lineHeight * 2;
+  display.setCursor(COL1_NAME_X, y);
+  display.print("TRMNL ID:");
+  display.setCursor(COL1_DATA_X, y);
+  display.print(TRMNL_ID);
+  y += lineHeight;
+  display.setCursor(COL1_NAME_X, y);
+  display.print("TRMNL URL:");
+  display.setCursor(COL1_DATA_X, y);
+  display.print(TRMNL_URL);
+  #endif
+
   // column 2
   y = 250;
   // network
@@ -306,7 +320,7 @@ void displayInfoScreen()
   // RTC
   y += lineHeight;
   display.setCursor(COL2_NAME_X, y);
-  display.printf("RTC:");
+  display.printf("Ext RTC:");
   display.setCursor(COL2_DATA_X, y);
   display.printf(display.rtcIsSet() ? "OK" : "Error");
   #endif
