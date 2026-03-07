@@ -67,7 +67,7 @@
 </head>
 <body>
   <h1>HomePlate Web Installer</h1>
-  <p class="subtitle">Flash HomePlate firmware directly from your browser.</p>
+  <p class="subtitle">Flash HomePlate firmware directly from your browser. <span id="version"></span></p>
 
   <div class="board-select">
     <label for="board">Select your board:</label>
@@ -119,6 +119,10 @@
       document.getElementById('btn-inkplate10').classList.toggle('visible', board === 'inkplate10');
       document.getElementById('btn-inkplate10v2').classList.toggle('visible', board === 'inkplate10v2');
     }
+    fetch('manifest-inkplate10.json')
+      .then(r => r.json())
+      .then(m => { if (m.version) document.getElementById('version').textContent = 'Version: ' + m.version; })
+      .catch(() => {});
   </script>
 </body>
 </html>
