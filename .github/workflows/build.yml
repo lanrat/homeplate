@@ -55,6 +55,8 @@ jobs:
         run: pio pkg install
       - name: Build ${{ matrix.environment }}
         run: pio run -e ${{ matrix.environment }} -t ''
+      - name: Generate idedata
+        run: pio run -e ${{ matrix.environment }} -t idedata
       - name: Collect flash binaries
         run: |
           mkdir -p flash-package

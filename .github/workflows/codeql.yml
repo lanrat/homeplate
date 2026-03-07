@@ -3,9 +3,10 @@ name: "CodeQL"
 on:
   push:
     branches: [ "main" ]
+    paths: [ "src/**" ]
   pull_request:
-    # The branches below must be a subset of the branches above
     branches: [ "main" ]
+    paths: [ "src/**" ]
   workflow_dispatch: # allow manually calling the action
 
 jobs:
