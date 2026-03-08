@@ -86,23 +86,10 @@
   <div class="board-select">
     <label for="board">Select your board:</label>
     <select id="board" onchange="selectBoard(this.value)">
-      <option value="inkplate10">Inkplate 10 (original with touchpads)</option>
-      <option value="inkplate10v2">Inkplate 10v2 (without touchpads)</option>
     </select>
   </div>
 
-  <div class="install-container">
-    <esp-web-install-button id="btn-inkplate10" class="visible" manifest="manifest-inkplate10.json">
-      <button slot="activate">Install HomePlate</button>
-      <span slot="unsupported">Your browser does not support Web Serial. Use Chrome or Edge on desktop.</span>
-      <span slot="not-allowed">Serial access was denied. Please grant permission and try again.</span>
-    </esp-web-install-button>
-
-    <esp-web-install-button id="btn-inkplate10v2" manifest="manifest-inkplate10v2.json">
-      <button slot="activate">Install HomePlate</button>
-      <span slot="unsupported">Your browser does not support Web Serial. Use Chrome or Edge on desktop.</span>
-      <span slot="not-allowed">Serial access was denied. Please grant permission and try again.</span>
-    </esp-web-install-button>
+  <div class="install-container" id="install-container">
   </div>
 
   <div class="notes">
@@ -131,12 +118,36 @@
 
   <script>
     function selectBoard(board) {
-      document.getElementById('btn-inkplate10').classList.toggle('visible', board === 'inkplate10');
-      document.getElementById('btn-inkplate10v2').classList.toggle('visible', board === 'inkplate10v2');
+      document.querySelectorAll('#install-container esp-web-install-button').forEach(btn => {
+        btn.classList.toggle('visible', btn.id === 'btn-' + board);
+      });
     }
-    fetch('manifest-inkplate10.json')
+
+    fetch('boards.json')
       .then(r => r.json())
-      .then(m => { if (m.version) document.getElementById('version').textContent = 'Version: ' + m.version; })
+      .then(data => {
+        if (data.version) {
+          document.getElementById('version').textContent = 'Version: ' + data.version;
+        }
+        const select = document.getElementById('board');
+        const container = document.getElementById('install-container');
+        data.boards.forEach((board, i) => {
+          const option = document.createElement('option');
+          option.value = board;
+          option.textContent = board;
+          select.appendChild(option);
+
+          const btn = document.createElement('esp-web-install-button');
+          btn.id = 'btn-' + board;
+          btn.setAttribute('manifest', 'manifest-' + board + '.json');
+          if (i === 0) btn.classList.add('visible');
+          btn.innerHTML =
+            '<button slot="activate">Install HomePlate</button>' +
+            '<span slot="unsupported">Your browser does not support Web Serial. Use Chrome or Edge on desktop.</span>' +
+            '<span slot="not-allowed">Serial access was denied. Please grant permission and try again.</span>';
+          container.appendChild(btn);
+        });
+      })
       .catch(() => {});
   </script>
 </body>

@@ -52,6 +52,8 @@ jobs:
           cp web-installer/index.html site/
 
           # Discover and copy all firmware variants dynamically
+          BOARDS="["
+          FIRST=true
           for dir in firmware-*/; do
             env="${dir#firmware-}"
             env="${env%/}"
@@ -61,7 +63,15 @@ jobs:
             cp "firmware-${env}/boot_app0.bin" "site/${env}/"
             cp "firmware-${env}/firmware.bin" "site/${env}/"
             sed "s/VERSION_PLACEHOLDER/$VERSION/" "firmware-${env}/manifest.json" > "site/manifest-${env}.json"
+            if [ "$FIRST" = true ]; then
+              FIRST=false
+            else
+              BOARDS+=","
+            fi
+            BOARDS+="\"${env}\""
           done
+          BOARDS+="]"
+          echo "{\"version\":\"${VERSION}\",\"boards\":${BOARDS}}" > site/boards.json
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
