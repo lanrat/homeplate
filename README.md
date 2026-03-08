@@ -1,6 +1,16 @@
 # HomePlate
 
-A [Trmnl](https://trmnl.com/) and [Home Assistant](https://www.home-assistant.io/) E-Ink Dashboard for [Inkplate](https://soldered.com/categories/inkplate/) e-paper boards (Inkplate 10, 6, and 6 Plus)
+A [Trmnl](https://trmnl.com/) and [Home Assistant](https://www.home-assistant.io/) E-Ink Dashboard for [Inkplate](https://soldered.com/categories/inkplate/) e-paper boards.
+
+## Supported Boards
+
+* Inkplate 6
+* Inkplate 6v2
+* Inkplate 6 Plus
+* Inkplate 6 Plusv2
+* Inkplate 6 Flick
+* Inkplate 10
+* Inkplate 10v2
 
 ![Home Assistant](screenshots/hass.jpeg)
 

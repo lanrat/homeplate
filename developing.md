@@ -75,7 +75,7 @@ Sometimes running `pio run --target=clean` can resolve this before you build & f
 
 The touchpad sensitivity is set in hardware by resistors, but the touch sensors are calibrated on bootup when the device first gets power. I have found that USB power can mess with this calibration. If you are using battery power, restarting the HomePlate (by using the power switch on the side of the PCB) without USB power attached is enough to fix the sensitivity.
 
-Alternatively, the touchpads can be completely disabled by adding `#define TOUCHPAD_ENABLE false` in a `src/config.h` file (this is a compile-time only setting and cannot be changed via the WiFi portal). Touchpads are automatically disabled when building for boards without touchpads (Inkplate 10v2, 6v2, 6 Plus, 6 Plus v2).
+Alternatively, the touchpads can be completely disabled by adding `#define TOUCHPAD_ENABLE false` in a `src/config.h` file (this is a compile-time only setting and cannot be changed via the WiFi portal). Touchpads are automatically disabled when building for boards without touchpads.
 
 ### Waveform
 
@@ -108,10 +108,10 @@ For advanced users, you can optionally create a `src/config.h` file to set compi
 
 Some settings can only be changed at compile time:
 
-| Setting           | Description                                                  |
-|-------------------|--------------------------------------------------------------|
+| Setting           | Description                                                             |
+|-------------------|-------------------------------------------------------------------------|
 | `TOUCHPAD_ENABLE` | Enable/disable touchpads (must be `false` for boards without touchpads) |
-| `CONFIG_CPP`      | Enable custom sleep schedules via `config.cpp`               |
+| `CONFIG_CPP`      | Enable custom sleep schedules via `config.cpp`                          |
 
 ### Variable sleep intervals
 
