@@ -35,7 +35,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        environment: [inkplate10, inkplate10v2]
+        environment:
+          - inkplate10
+          - inkplate10v2
     steps:
       - uses: actions/checkout@v4
         with:
