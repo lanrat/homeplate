@@ -25,11 +25,28 @@ A [Trmnl](https://trmnl.com/) and [Home Assistant](https://www.home-assistant.io
 * Display any image from MQTT command
 * Supports PNG, BMP, and JPEG images
 
+## Installation
+
+### Web Installer (recommended)
+
+The easiest way to install HomePlate is using the [Web Installer](https://lanrat.github.io/homeplate/) — no development tools required, just a USB cable and Chrome or Edge. Pre-built firmware is also available on the [Releases](https://github.com/lanrat/homeplate/releases) page.
+
+1. Connect your Inkplate to your computer via USB.
+2. Visit the [Web Installer](https://lanrat.github.io/homeplate/) in Chrome or Edge.
+3. Select your board variant (Inkplate 10 or Inkplate 10v2).
+4. Click **Install HomePlate** and select the serial port.
+
+After flashing, the device will create a **HomePlate-Setup** WiFi network for configuration — see the [Setup Guide](setup.md) for next steps.
+
+### PlatformIO (for developers)
+
+If you prefer to build from source, see the [Development Guide](developing.md) for PlatformIO build and flash instructions.
+
 ## Setup
 
 ### [Quick Start Guide](setup.md)
 
-HomePlate is configured through a WiFi captive portal — no `config.h` file is required. Flash the firmware, connect to the **HomePlate-Setup** WiFi network, and configure your settings through the web interface.
+HomePlate is configured through a WiFi captive portal — no config files required. Flash the firmware, connect to the **HomePlate-Setup** WiFi network, and configure your settings through the web interface.
 
 See [setup.md](setup.md) for detailed setup instructions, settings reference, and timezone configuration.
 
@@ -51,75 +68,31 @@ Create a Home Assistant Dashboard you want to display. I recommend using the [ki
 
 Setup the [Screenshot Home Assistant using Puppeteer](https://github.com/balloob/home-assistant-addons/tree/main/puppet) service to create screenshots of the desired dashboards for the HomePlate. This also works with the Trmnl Alias plugin.
 
-### More information
-
 See [hass.md](hass.md) and [dashboard.md](dashboard.md) for additional details.
 
-### Flashing
+## Upgrading
 
-The easiest way to flash HomePlate is using the [web installer](https://lanrat.github.io/homeplate/) — no tools required, just a USB cable and Chrome or Edge.
+### Update via Web Installer (recommended)
 
-### Building (for development)
+The simplest way to upgrade is via the [Web Installer](https://lanrat.github.io/homeplate/):
 
-Install [PlatformIO](https://platformio.org/).
+1. Connect your Inkplate to your computer via USB.
+2. Visit the [Web Installer](https://lanrat.github.io/homeplate/) in Chrome or Edge.
+3. Flash the latest firmware — your settings will be preserved.
 
-```shell
-pio run -e inkplate10    # Inkplate 10 (original with touchpads)
-pio run -e inkplate10v2  # Inkplate 10v2 (without touchpads)
-```
+### WiFi Manager OTA
 
-The first flash/installation needs to be done over USB. Future updates can be done over USB or WiFi with:
+You can update the firmware over WiFi without a computer connected, using a firmware `.bin` file from the [Releases](https://github.com/lanrat/homeplate/releases) page:
 
-```shell
-pio run -e ota
-```
+1. Download the firmware `.bin` for your board from the [Releases](https://github.com/lanrat/homeplate/releases) page.
+2. Boot the device into setup mode by holding the **wake button** during boot.
+3. Connect to the **HomePlate-Setup** WiFi network.
+4. Upload the new firmware through the captive portal's firmware update page.
 
-To monitor serial output without re-flashing:
+### PlatformIO
 
-```shell
-pio device monitor
-```
+For developers building from source, HomePlate can also be flashed via PlatformIO over USB or OTA. See the [Development Guide](developing.md) for details.
 
-### Updating
+## Development
 
-```shell
-git pull
-pio upgrade
-pio pkg update
-pio run --target clean
-```
-
-### Debugging
-
-#### Touchpad Sensitivity
-
-On some devices, the touchpads can be overly sensitive. This can cause lots of phantom touch events preventing the Homeplate from going into sleep and using up a lot of power.
-
-Sometimes running `pio run --target=clean` can resolve this before you build & flash the firmware.
-
-The touchpad sensitivity is set in hardware by resistors, but the touch sensors are calibrated on bootup when the Device first gets power. I have found that USB power can mess with this calibration. If you are using battery power, restarting the Homeplate (by using the power switch on the side of the PCB) without USB power attached is enough to fix the sensitivity.
-
-Alternatively, the touchpads can be completely disabled by adding `#define TOUCHPAD_ENABLE false` in a `src/config.h` file (this is a compile-time only setting and cannot be changed via the WiFi portal). Touchpads are automatically disabled when building for the Inkplate 10v2.
-
-#### Waveform
-
-If you get the following error while booting your inkplate, run the [Inkplate_Wavefrom_EEPROM_Programming](https://github.com/SolderedElectronics/Inkplate-Arduino-library/tree/master/examples/Inkplate10/Diagnostics/Inkplate10_Wavefrom_EEPROM_Programming) example to update your Inkplate's waveform.
-
-```text
-Waveform load failed! Upload new waveform in EEPROM. Using default waveform.
-```
-
-Older Inkplates don't appear to ship with an updated waveform. I found waveform 3 looks the best for mine.
-
-### Tests
-
-The available unit tests use the 'native' environment and can be run by either:
-
-* running them manually
-
-```shell
-pio test -v
-```
-
-* in VSCode use Testing -> native -> Run Test
-* in VSCode use PlatformIO -> Project Tasks -> native -> Advanced -> Test
+See the [Development Guide](developing.md) for building from source, PlatformIO setup, debugging, tests, and advanced compile-time configuration.

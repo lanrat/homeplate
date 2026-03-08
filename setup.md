@@ -6,18 +6,13 @@ HomePlate uses a WiFi captive portal for configuration. No `config.h` file is re
 
 ### 1. Flash the firmware
 
-#### Option A: Web installer (recommended)
+#### Option A: Web Installer (recommended)
 
-Visit the [HomePlate Web Installer](https://lanrat.github.io/homeplate/) in Chrome or Edge on desktop. Select your board variant, connect your Inkplate via USB, and click **Install**. No development tools required.
+Visit the [HomePlate Web Installer](https://lanrat.github.io/homeplate/) in Chrome or Edge on desktop. Select your board variant, connect your Inkplate via USB, and click **Install**. No development tools required. Pre-built firmware is also available on the [Releases](https://github.com/lanrat/homeplate/releases) page.
 
-#### Option B: PlatformIO
+#### Option B: PlatformIO (for developers)
 
-Install [PlatformIO](https://platformio.org/) and flash via USB:
-
-```shell
-pio run -e inkplate10    # Inkplate 10 (original with touchpads)
-pio run -e inkplate10v2  # Inkplate 10v2 (without touchpads)
-```
+Install [PlatformIO](https://platformio.org/) and flash via USB. See the [Development Guide](developing.md) for full build and flash instructions.
 
 ### 2. Connect to the setup portal
 
@@ -50,12 +45,7 @@ You can also re-flash the firmware to trigger setup mode again — the config po
 
 ### Resetting all settings
 
-To clear all saved settings and start fresh, erase the flash before re-flashing:
-
-```shell
-pio run -e inkplate10 --target erase
-pio run -e inkplate10
-```
+To clear all saved settings and start fresh, use the [Web Installer](https://lanrat.github.io/homeplate/) and select the option to erase the device during installation. For PlatformIO users, see the [Development Guide](developing.md#resetting-all-settings).
 
 ## Settings Reference
 
@@ -148,17 +138,4 @@ For a full list, see [POSIX TZ database](https://github.com/nayarsystems/posix_t
 
 ## Advanced: Compile-Time Configuration
 
-For advanced users, you can optionally create a `src/config.h` file to set compile-time defaults. These values are used as fallbacks when NVS has no saved value. Any setting configured through the WiFi portal will override compile-time defaults.
-
-### Compile-time only settings
-
-Some settings can only be changed at compile time:
-
-| Setting           | Description                                                  |
-|-------------------|--------------------------------------------------------------|
-| `TOUCHPAD_ENABLE` | Enable/disable touchpads (must be `false` for Inkplate 10v2) |
-| `CONFIG_CPP`      | Enable custom sleep schedules via `config.cpp`               |
-
-### Variable sleep intervals
-
-If you want your Inkplate to sleep with different intervals based on time of day, create a `config.h` with `#define CONFIG_CPP` and implement `sleepSchedule[]` in `config.cpp` (see `config_example.cpp` for reference).
+For advanced users who build from source, compile-time defaults and additional settings are available. See the [Development Guide](developing.md#advanced-compile-time-configuration) for details.
