@@ -46,6 +46,8 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
 
+          mkdir -p site
+
           # Copy web installer page
           cp web-installer/index.html site/
 
