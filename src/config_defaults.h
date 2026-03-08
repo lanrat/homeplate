@@ -98,9 +98,9 @@
 // To override, create a config.h file (see homeplate.h for include order).
 
 // Disables touchpads if they are overly sensitive and result in phantom touch events.
-// Must be false if ARDUINO_INKPLATE10V2 is set (v2 has no touchpads).
+// Must be false for boards without touchpads.
 #ifndef TOUCHPAD_ENABLE
-  #if defined(ARDUINO_INKPLATE10V2)
+  #if defined(ARDUINO_INKPLATE10V2) || defined(ARDUINO_INKPLATE6V2) || defined(ARDUINO_INKPLATE6PLUS) || defined(ARDUINO_INKPLATE6PLUSV2)
     #define TOUCHPAD_ENABLE false
   #else
     #define TOUCHPAD_ENABLE true

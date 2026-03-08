@@ -4,25 +4,30 @@ This guide covers building, flashing, and debugging HomePlate using [PlatformIO]
 
 ## Building
 
-Install [PlatformIO](https://platformio.org/) and build for your board variant:
+Install [PlatformIO](https://platformio.org/) and build for your board variant. You must always specify `-e <board>`:
 
 ```shell
-pio run -e inkplate10    # Inkplate 10 (original with touchpads)
-pio run -e inkplate10v2  # Inkplate 10v2 (without touchpads)
+pio run -e inkplate10      # Inkplate 10 (original with touchpads)
+pio run -e inkplate10v2    # Inkplate 10v2 (without touchpads)
+pio run -e inkplate6       # Inkplate 6 (original with touchpads)
+pio run -e inkplate6v2     # Inkplate 6v2 (without touchpads)
+pio run -e inkplate6plus   # Inkplate 6 Plus
+pio run -e inkplate6plusv2 # Inkplate 6 Plus v2
 ```
+
+> **Note:** There is no default board. Running `pio run` without `-e` will attempt to build all environments.
 
 ## Flashing via USB
 
 The first flash must be done over USB. Connect your Inkplate via USB and run:
 
 ```shell
-pio run -e inkplate10    # flash Inkplate 10
-pio run -e inkplate10v2  # flash Inkplate 10v2
+pio run -e inkplate10  # flash Inkplate 10 (replace with your board variant)
 ```
 
 ## Flashing via OTA (PlatformIO)
 
-After the initial USB flash, you can update over WiFi using PlatformIO OTA:
+After the initial USB flash, you can update over WiFi using PlatformIO OTA. First, edit the `[env:ota]` section in `platformio.ini` to set your board variant and device hostname/IP, then run:
 
 ```shell
 pio run -e ota
@@ -54,8 +59,8 @@ pio run --target clean
 To clear all saved settings and start fresh, erase the flash before re-flashing:
 
 ```shell
-pio run -e inkplate10 --target erase
-pio run -e inkplate10
+pio run -e <board> --target erase
+pio run -e <board>
 ```
 
 > **Tip:** A first-time install via the [Web Installer](https://lanrat.github.io/homeplate/) also erases all settings.
@@ -70,7 +75,7 @@ Sometimes running `pio run --target=clean` can resolve this before you build & f
 
 The touchpad sensitivity is set in hardware by resistors, but the touch sensors are calibrated on bootup when the device first gets power. I have found that USB power can mess with this calibration. If you are using battery power, restarting the HomePlate (by using the power switch on the side of the PCB) without USB power attached is enough to fix the sensitivity.
 
-Alternatively, the touchpads can be completely disabled by adding `#define TOUCHPAD_ENABLE false` in a `src/config.h` file (this is a compile-time only setting and cannot be changed via the WiFi portal). Touchpads are automatically disabled when building for the Inkplate 10v2.
+Alternatively, the touchpads can be completely disabled by adding `#define TOUCHPAD_ENABLE false` in a `src/config.h` file (this is a compile-time only setting and cannot be changed via the WiFi portal). Touchpads are automatically disabled when building for boards without touchpads (Inkplate 10v2, 6v2, 6 Plus, 6 Plus v2).
 
 ### Waveform
 
@@ -105,7 +110,7 @@ Some settings can only be changed at compile time:
 
 | Setting           | Description                                                  |
 |-------------------|--------------------------------------------------------------|
-| `TOUCHPAD_ENABLE` | Enable/disable touchpads (must be `false` for Inkplate 10v2) |
+| `TOUCHPAD_ENABLE` | Enable/disable touchpads (must be `false` for boards without touchpads) |
 | `CONFIG_CPP`      | Enable custom sleep schedules via `config.cpp`               |
 
 ### Variable sleep intervals

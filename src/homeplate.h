@@ -33,7 +33,7 @@ extern uint bootCount, activityCount, timeToSleep;
 
 #define max(x, y) (((x) >= (y)) ? (x) : (y))
 
-#if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2)
+#if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2) || defined(ARDUINO_ESP32_DEV) || defined(ARDUINO_INKPLATE6V2) || defined(ARDUINO_INKPLATE6PLUS) || defined(ARDUINO_INKPLATE6PLUSV2)
 #define WAKE_BUTTON GPIO_NUM_36
 #endif
 

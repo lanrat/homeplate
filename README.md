@@ -1,6 +1,6 @@
 # HomePlate
 
-A [Trmnl](https://trmnl.com/) and [Home Assistant](https://www.home-assistant.io/) E-Ink Dashboard on the [Inkplate 10](https://soldered.com/product/inkplate-10-9-7-e-paper-board-copy/)
+A [Trmnl](https://trmnl.com/) and [Home Assistant](https://www.home-assistant.io/) E-Ink Dashboard for [Inkplate](https://soldered.com/categories/inkplate/) e-paper boards (Inkplate 10, 6, and 6 Plus)
 
 ![Home Assistant](screenshots/hass.jpeg)
 
@@ -33,7 +33,7 @@ The easiest way to install HomePlate is using the [Web Installer](https://lanrat
 
 1. Connect your Inkplate to your computer via USB.
 2. Visit the [Web Installer](https://lanrat.github.io/homeplate/) in Chrome or Edge.
-3. Select your board variant (Inkplate 10 or Inkplate 10v2).
+3. Select your board variant.
 4. Click **Install HomePlate** and select the serial port.
 
 After flashing, the device will create a **HomePlate-Setup** WiFi network for configuration — see the [Setup Guide](setup.md) for next steps.

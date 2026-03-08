@@ -1,10 +1,6 @@
-// Next 3 lines are a precaution, you can ignore those, and the example would also work without them
-#if !defined(ARDUINO_INKPLATE10) && !defined(ARDUINO_INKPLATE10V2)
-#error "Wrong board selection for this example, please select Inkplate 10 in the boards menu."
-#endif
-
-#if defined(ARDUINO_INKPLATE10) && defined(ARDUINO_INKPLATE10V2)
-#error "You can only define ARDUINO_INKPLATE10 or ARDUINO_INKPLATE10V2, not both"
+// Ensure a supported board is selected
+#if !defined(ARDUINO_INKPLATE10) && !defined(ARDUINO_INKPLATE10V2) && !defined(ARDUINO_ESP32_DEV) && !defined(ARDUINO_INKPLATE6V2) && !defined(ARDUINO_INKPLATE6PLUS) && !defined(ARDUINO_INKPLATE6PLUSV2)
+#error "Unsupported board selection, please select a supported Inkplate board."
 #endif
 
 #include <driver/rtc_io.h> //ESP32 library used for deep sleep and RTC wake up pins
@@ -25,7 +21,9 @@ void setup()
     Serial.printf("\n\n[SETUP] starting, version(%s) boot: %u\n", VERSION, bootCount);
     ++bootCount;
     // reset GPIOs used for wake interrupt
-    rtc_gpio_deinit(GPIO_NUM_34);
+    #if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2) || defined(ARDUINO_ESP32_DEV) || defined(ARDUINO_INKPLATE6V2)
+        rtc_gpio_deinit(GPIO_NUM_34); // touchpad wake mask pin
+    #endif
     #ifdef WAKE_BUTTON
         rtc_gpio_deinit(WAKE_BUTTON);
     #endif

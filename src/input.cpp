@@ -1,13 +1,13 @@
 #include "homeplate.h"
 
-#if defined(ARDUINO_INKPLATE10V2) && TOUCHPAD_ENABLE
-#error "TOUCHPAD_ENABLE is not supported with ARDUINO_INKPLATE10V2"
+#if (defined(ARDUINO_INKPLATE10V2) || defined(ARDUINO_INKPLATE6V2) || defined(ARDUINO_INKPLATE6PLUS) || defined(ARDUINO_INKPLATE6PLUSV2)) && TOUCHPAD_ENABLE
+#error "TOUCHPAD_ENABLE is not supported on this board"
 #endif
 
 #define INPUT_TASK_PRIORITY 10
 
-// only supported on the Inkplate10 (not v2)
-#if defined(ARDUINO_INKPLATE10)
+// only supported on boards with touchpads (Inkplate 10 v1, Inkplate 6 v1)
+#if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_ESP32_DEV)
 
 #define INT_PAD1 (1 << (PAD1 - 8)) // 0x04
 #define INT_PAD2 (1 << (PAD2 - 8)) // 0x08
@@ -98,11 +98,11 @@ void checkButtons(void *params)
     }
 }
 
-#endif // defined(ARDUINO_INKPLATE10)
+#endif // defined(ARDUINO_INKPLATE10) || defined(ARDUINO_ESP32_DEV)
 
 void startMonitoringButtonsTask()
 {
-    #if defined(ARDUINO_INKPLATE10)
+    #if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_ESP32_DEV)
         // inkplate code needs to be on arduino core or may get i2c errors
         // use mutex for all inkplate code
         xTaskCreatePinnedToCore(
@@ -120,7 +120,7 @@ void startMonitoringButtonsTask()
 
 void checkBootPads()
 {
-    #if defined(ARDUINO_INKPLATE10)
+    #if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_ESP32_DEV)
         unsigned int key = 0;
         i2cStart();
         key = readMCPRegister(MCP23017_INTFB);
@@ -169,7 +169,7 @@ void checkBootPads()
 
 void setupWakePins()
 {
-    #if TOUCHPAD_ENABLE && defined(ARDUINO_INKPLATE10)
+    #if TOUCHPAD_ENABLE && (defined(ARDUINO_INKPLATE10) || defined(ARDUINO_ESP32_DEV))
         // set which pads can allow wakeup
         display.setIntPin(PAD1, RISING, IO_INT_ADDR);
         display.setIntPin(PAD2, RISING, IO_INT_ADDR);

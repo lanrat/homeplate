@@ -40,7 +40,7 @@ void gotoSleepNow()
     mqttStopTask(); // prevent i2c lock in main thread
     wifiStopTask(); // prevent i2c lock in main thread
 
-    #if TOUCHPAD_ENABLE && defined(ARDUINO_INKPLATE10)
+    #if TOUCHPAD_ENABLE && (defined(ARDUINO_INKPLATE10) || defined(ARDUINO_ESP32_DEV))
         // set MCP interrupts
         display.setIntOutput(1, false, false, HIGH, IO_INT_ADDR);
     #endif
@@ -60,7 +60,7 @@ void gotoSleepNow()
         esp_sleep_enable_ext0_wakeup(WAKE_BUTTON, LOW);
     #endif
 
-    #if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2)
+    #if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2) || defined(ARDUINO_ESP32_DEV) || defined(ARDUINO_INKPLATE6V2)
         // enable wake from MCP port expander
         if (TOUCHPAD_ENABLE)
             esp_sleep_enable_ext1_wakeup(TOUCHPAD_WAKE_MASK, ESP_EXT1_WAKEUP_ANY_HIGH);
