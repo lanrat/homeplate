@@ -36,12 +36,14 @@ jobs:
     strategy:
       matrix:
         environment:
-          - inkplate10
-          - inkplate10v2
           - inkplate6
           - inkplate6v2
+          - inkplate6flick
           - inkplate6plus
           - inkplate6plusv2
+          - inkplate10
+          - inkplate10v2
+
     steps:
       - uses: actions/checkout@v4
         with:

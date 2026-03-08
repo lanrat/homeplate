@@ -1,6 +1,6 @@
 #include "homeplate.h"
 
-#if (defined(ARDUINO_INKPLATE10V2) || defined(ARDUINO_INKPLATE6V2) || defined(ARDUINO_INKPLATE6PLUS) || defined(ARDUINO_INKPLATE6PLUSV2)) && TOUCHPAD_ENABLE
+#if (defined(ARDUINO_INKPLATE10V2) || defined(ARDUINO_INKPLATE6V2) || defined(ARDUINO_INKPLATE6PLUS) || defined(ARDUINO_INKPLATE6PLUSV2) || defined(ARDUINO_INKPLATE6FLICK)) && TOUCHPAD_ENABLE
 #error "TOUCHPAD_ENABLE is not supported on this board"
 #endif
 
