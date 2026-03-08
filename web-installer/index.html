@@ -63,10 +63,24 @@
     .notes h3 { margin-top: 0; }
     .notes ul { padding-left: 1.2rem; }
     a { color: #1a73e8; }
+
+    @media (prefers-color-scheme: dark) {
+      body { background: #1a1a1a; color: #e0e0e0; }
+      .subtitle { color: #aaa; }
+      .notes { background: #2a2a2a; }
+      a { color: #6db3f2; }
+      .board-select select {
+        background: #2a2a2a;
+        color: #e0e0e0;
+        border-color: #555;
+      }
+      esp-web-install-button button { background: #2979e8; }
+      esp-web-install-button button:hover { background: #1a5bbf; }
+    }
   </style>
 </head>
 <body>
-  <h1>HomePlate Web Installer</h1>
+  <h1><a href="https://github.com/lanrat/homeplate">HomePlate</a> Web Installer</h1>
   <p class="subtitle">Flash HomePlate firmware directly from your browser. <span id="version"></span></p>
 
   <div class="board-select">
