@@ -180,7 +180,7 @@ bool startWiFiManager(bool forcePortal)
     char menuHtml[256];
     snprintf(menuHtml, sizeof(menuHtml),
         "<br/><a href='https://github.com/lanrat/homeplate' target='_blank'>HomePlate on GitHub</a>"
-        "<br/><small>Version: %s</small>", VERSION);
+        "<br/><small>Version: %s | %s (%s)</small>", VERSION, DEVICE_MODEL, CONFIG_IDF_TARGET);
     wm.setCustomMenuHTML(menuHtml);
 
     // Show config screen when AP starts

@@ -213,27 +213,35 @@ void delaySleep(uint seconds);
 #define MAX_REFRESH_SEC 60*60*24 // 1 day
 
 
-// Device Models (from Inkplate-Arduino-library/src/include/defines.h)
-#ifdef ARDUINO_ESP32_DEV
-#define DEVICE_MODEL "Inkplate 6"
-#elif ARDUINO_INKPLATE6V2
-#define DEVICE_MODEL "Inkplate 6v2"
-#elif ARDUINO_INKPLATE5
-#define DEVICE_MODEL "Inkplate 5"
-#elif ARDUINO_INKPLATE10
-#define DEVICE_MODEL "Inkplate 10"
-#elif ARDUINO_INKPLATE10V2
-#define DEVICE_MODEL "Inkplate 10v2"
-#elif ARDUINO_INKPLATE6PLUS
-#define DEVICE_MODEL "Inkplate 6 PLUS"
-#elif ARDUINO_INKPLATE6PLUSV2
-#define DEVICE_MODEL "Inkplate 6 PLUSv2"
-#elif ARDUINO_INKPLATECOLOR
-#define DEVICE_MODEL "Inkplate 6COLOR"
-#elif ARDUINO_INKPLATE4
-#define DEVICE_MODEL "Inkplate 4"
-#elif ARDUINO_INKPLATE2
+// Device Models (board defines from Inkplate-Arduino-library/src/include/defines.h)
+#if defined(ARDUINO_INKPLATE2)
 #define DEVICE_MODEL "Inkplate 2"
+#elif defined(ARDUINO_INKPLATE4)
+#define DEVICE_MODEL "Inkplate 4"
+#elif defined(ARDUINO_INKPLATE4TEMPERA)
+#define DEVICE_MODEL "Inkplate 4 Tempera"
+#elif defined(ARDUINO_INKPLATE5)
+#define DEVICE_MODEL "Inkplate 5"
+#elif defined(ARDUINO_INKPLATE5V2)
+#define DEVICE_MODEL "Inkplate 5v2"
+#elif defined(ARDUINO_ESP32_DEV)
+#define DEVICE_MODEL "Inkplate 6"
+#elif defined(ARDUINO_INKPLATE6V2)
+#define DEVICE_MODEL "Inkplate 6v2"
+#elif defined(ARDUINO_INKPLATE6PLUS)
+#define DEVICE_MODEL "Inkplate 6 Plus"
+#elif defined(ARDUINO_INKPLATE6PLUSV2)
+#define DEVICE_MODEL "Inkplate 6 Plusv2"
+#elif defined(ARDUINO_INKPLATECOLOR)
+#define DEVICE_MODEL "Inkplate 6 Color"
+#elif defined(ARDUINO_INKPLATE6FLICK)
+#define DEVICE_MODEL "Inkplate 6 Flick"
+#elif defined(ARDUINO_INKPLATE7)
+#define DEVICE_MODEL "Inkplate 7"
+#elif defined(ARDUINO_INKPLATE10)
+#define DEVICE_MODEL "Inkplate 10"
+#elif defined(ARDUINO_INKPLATE10V2)
+#define DEVICE_MODEL "Inkplate 10v2"
 #else
 #define DEVICE_MODEL "Inkplate (other)"
 #endif

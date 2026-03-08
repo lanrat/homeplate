@@ -175,12 +175,12 @@ void displayInfoScreen()
   y = centerTextX(buff, 0, E_INK_WIDTH, y + 110, false);
 
   // column 1
-  // HW
+  // Model
   y = 250;
   display.setCursor(COL1_NAME_X, y);
-  display.print("Hardware:");
+  display.print("Model:");
   display.setCursor(COL1_DATA_X, y);
-  display.print(CONFIG_IDF_TARGET);
+  display.print(DEVICE_MODEL);
   // CPU
   y += lineHeight;
   display.setCursor(COL1_NAME_X, y);
