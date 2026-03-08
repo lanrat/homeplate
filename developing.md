@@ -13,6 +13,7 @@ pio run -e inkplate6       # Inkplate 6 (original with touchpads)
 pio run -e inkplate6v2     # Inkplate 6v2 (without touchpads)
 pio run -e inkplate6plus   # Inkplate 6 Plus
 pio run -e inkplate6plusv2 # Inkplate 6 Plus v2
+pio run -e inkplate6flick  # Inkplate 6 Flick
 ```
 
 > **Note:** There is no default board. Running `pio run` without `-e` will attempt to build all environments.
