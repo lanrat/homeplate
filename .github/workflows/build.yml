@@ -3,8 +3,10 @@ name: PlatformIO CI
 on:
   push:
     branches: [ "main" ]
+    paths: [ "src/**", "test/**", "platformio.ini", ".github/workflows/build.yml" ]
   pull_request:
     branches: [ "main" ]
+    paths: [ "src/**", "test/**", "platformio.ini", ".github/workflows/build.yml" ]
   workflow_call: # allow calling from other workflows
   workflow_dispatch: # allow manually calling the action
 
