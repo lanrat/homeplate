@@ -62,6 +62,9 @@ void saveConfig();
 // Check if config has been saved to NVS at least once
 bool isConfigured();
 
+// Log all config values to Serial (sensitive fields are masked)
+void logConfig();
+
 // Run WiFiManager for initial connection and config portal
 // If forcePortal is true, always opens the config portal (even if WiFi connects)
 // Returns true if WiFi connected, false on timeout

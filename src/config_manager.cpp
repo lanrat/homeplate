@@ -23,6 +23,68 @@ static void saveString(const char *key, const char *value)
     preferences.putString(key, value);
 }
 
+// ---- Config logging ----
+
+static const char *maskValue(const char *value)
+{
+    static char masked[8];
+    if (strlen(value) == 0)
+        return "(empty)";
+    snprintf(masked, sizeof(masked), "***(%d)", (int)strlen(value));
+    return masked;
+}
+
+void logConfig()
+{
+    Serial.println("[CONFIG] === Current Configuration ===");
+
+    // Network
+    Serial.printf("[CONFIG]   hostname          = %s\n", plateCfg.hostname);
+    Serial.printf("[CONFIG]   staticIp          = %s\n", plateCfg.staticIp);
+    Serial.printf("[CONFIG]   staticSubnet      = %s\n", plateCfg.staticSubnet);
+    Serial.printf("[CONFIG]   staticGateway     = %s\n", plateCfg.staticGateway);
+    Serial.printf("[CONFIG]   staticDns         = %s\n", plateCfg.staticDns);
+
+    // NTP & Time
+    Serial.printf("[CONFIG]   ntpServer         = %s\n", plateCfg.ntpServer);
+    Serial.printf("[CONFIG]   timezone          = %s\n", plateCfg.timezone);
+
+    // Sleep
+    Serial.printf("[CONFIG]   sleepMinutes      = %d\n", plateCfg.sleepMinutes);
+    Serial.printf("[CONFIG]   quickSleepSec     = %d\n", plateCfg.quickSleepSec);
+
+    // Content
+    Serial.printf("[CONFIG]   imageUrl          = %s\n", plateCfg.imageUrl);
+    Serial.printf("[CONFIG]   defaultActivity   = %s\n", plateCfg.defaultActivityStr);
+
+    // TRMNL
+    Serial.printf("[CONFIG]   trmnlUrl          = %s\n", plateCfg.trmnlUrl);
+    Serial.printf("[CONFIG]   trmnlId           = %s\n", plateCfg.trmnlId);
+    Serial.printf("[CONFIG]   trmnlToken        = %s\n", maskValue(plateCfg.trmnlToken));
+    Serial.printf("[CONFIG]   trmnlEnableLog    = %s\n", plateCfg.trmnlEnableLog ? "true" : "false");
+
+    // Guest WiFi QR
+    Serial.printf("[CONFIG]   qrWifiName        = %s\n", plateCfg.qrWifiName);
+    Serial.printf("[CONFIG]   qrWifiPassword    = %s\n", maskValue(plateCfg.qrWifiPassword));
+
+    // MQTT
+    Serial.printf("[CONFIG]   mqttHost          = %s\n", plateCfg.mqttHost);
+    Serial.printf("[CONFIG]   mqttPort          = %d\n", plateCfg.mqttPort);
+    Serial.printf("[CONFIG]   mqttUser          = %s\n", plateCfg.mqttUser);
+    Serial.printf("[CONFIG]   mqttPassword      = %s\n", maskValue(plateCfg.mqttPassword));
+    Serial.printf("[CONFIG]   mqttNodeId        = %s\n", plateCfg.mqttNodeId);
+    Serial.printf("[CONFIG]   mqttDeviceName    = %s\n", plateCfg.mqttDeviceName);
+    Serial.printf("[CONFIG]   mqttExpireAfterSec= %u\n", plateCfg.mqttExpireAfterSec);
+
+    // Display & OTA
+    Serial.printf("[CONFIG]   displayLastUpdate = %s\n", plateCfg.displayLastUpdateTime ? "true" : "false");
+    Serial.printf("[CONFIG]   enableOta         = %s\n", plateCfg.enableOta ? "true" : "false");
+
+    // Internal
+    Serial.printf("[CONFIG]   configured        = %s\n", plateCfg.configured ? "true" : "false");
+    Serial.println("[CONFIG] === End Configuration ===");
+}
+
 // ---- Config load/save ----
 
 void loadConfig()
@@ -109,10 +171,19 @@ void loadConfig()
 
     Serial.printf("[CONFIG] Loaded config: hostname=%s, tz=%s, sleep=%dmin\n",
                   plateCfg.hostname, plateCfg.timezone, plateCfg.sleepMinutes);
+
+    if (!sleepBoot)
+    {
+        Serial.println("[CONFIG] Fresh boot detected, logging full config:");
+        logConfig();
+    }
 }
 
 void saveConfig()
 {
+    Serial.println("[CONFIG] Saving config to NVS:");
+    logConfig();
+
     preferences.begin(NVS_NAMESPACE, false); // read-write
 
     saveString("hostname", plateCfg.hostname);
