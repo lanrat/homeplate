@@ -262,11 +262,12 @@ bool startWiFiManager(bool forcePortal)
 
     // Section: Network
     WiFiManagerParameter h_net("<hr><h3>Network</h3>");
-    WiFiManagerParameter p_hostname("hostname", "Hostname", plateCfg.hostname, sizeof(plateCfg.hostname) - 1);
-    WiFiManagerParameter p_sip("static_ip", "Static IP (blank=DHCP)", plateCfg.staticIp, sizeof(plateCfg.staticIp) - 1);
-    WiFiManagerParameter p_ssub("static_sub", "Static Subnet", plateCfg.staticSubnet, sizeof(plateCfg.staticSubnet) - 1);
-    WiFiManagerParameter p_sgw("static_gw", "Static Gateway", plateCfg.staticGateway, sizeof(plateCfg.staticGateway) - 1);
-    WiFiManagerParameter p_sdns("static_dns", "Static DNS", plateCfg.staticDns, sizeof(plateCfg.staticDns) - 1);
+    const char *ipPattern = "pattern='((25[0-5]|(2[0-4]|1\\d|[1-9]?)\\d)\\.){3}(25[0-5]|(2[0-4]|1\\d|[1-9]?)\\d)'";
+    WiFiManagerParameter p_hostname("hostname", "Hostname", plateCfg.hostname, sizeof(plateCfg.hostname) - 1, "pattern='[a-zA-Z0-9]([a-zA-Z0-9\\-]*[a-zA-Z0-9])?'");
+    WiFiManagerParameter p_sip("static_ip", "Static IP (blank=DHCP)", plateCfg.staticIp, sizeof(plateCfg.staticIp) - 1, ipPattern);
+    WiFiManagerParameter p_ssub("static_sub", "Static Subnet", plateCfg.staticSubnet, sizeof(plateCfg.staticSubnet) - 1, ipPattern);
+    WiFiManagerParameter p_sgw("static_gw", "Static Gateway", plateCfg.staticGateway, sizeof(plateCfg.staticGateway) - 1, ipPattern);
+    WiFiManagerParameter p_sdns("static_dns", "Static DNS", plateCfg.staticDns, sizeof(plateCfg.staticDns) - 1, ipPattern);
 
     // Section: Time
     WiFiManagerParameter h_time("<hr><h3>Time</h3>");
@@ -277,15 +278,31 @@ bool startWiFiManager(bool forcePortal)
     WiFiManagerParameter h_sleep("<hr><h3>Sleep</h3>");
     char sleepMinStr[8];
     snprintf(sleepMinStr, sizeof(sleepMinStr), "%d", plateCfg.sleepMinutes);
-    WiFiManagerParameter p_sleep("sleep_min", "Sleep Minutes", sleepMinStr, 7);
+    WiFiManagerParameter p_sleep("sleep_min", "Sleep Minutes", sleepMinStr, 7, "type=\"number\" min=\"1\" max=\"1440\"");
     char quickSleepStr[8];
     snprintf(quickSleepStr, sizeof(quickSleepStr), "%d", plateCfg.quickSleepSec);
-    WiFiManagerParameter p_qsleep("quick_sleep", "Quick Sleep Seconds", quickSleepStr, 7);
+    WiFiManagerParameter p_qsleep("quick_sleep", "Quick Sleep Seconds", quickSleepStr, 7, "type=\"number\" min=\"0\" max=\"86400\"");
 
     // Section: Content
     WiFiManagerParameter h_content("<hr><h3>Content</h3>");
     WiFiManagerParameter p_imgurl("image_url", "Image URL", plateCfg.imageUrl, sizeof(plateCfg.imageUrl) - 1);
-    WiFiManagerParameter p_activity("def_activity", "Default Activity (HomeAssistant/Trmnl/Info/GuestWifi)", plateCfg.defaultActivityStr, sizeof(plateCfg.defaultActivityStr) - 1);
+
+    // Activity dropdown (custom HTML injection since WiFiManager only supports <input> natively)
+    char activityHtml[512];
+    snprintf(activityHtml, sizeof(activityHtml),
+        "<br/><label for='def_activity'>Default Activity</label>"
+        "<select name='def_activity' id='def_activity' class='button'>"
+        "<option value='HomeAssistant'%s>HomeAssistant</option>"
+        "<option value='Trmnl'%s>Trmnl</option>"
+        "<option value='Info'%s>Info</option>"
+        "<option value='GuestWifi'%s>GuestWifi</option>"
+        "</select>",
+        strcmp(plateCfg.defaultActivityStr, "HomeAssistant") == 0 ? " selected" : "",
+        strcmp(plateCfg.defaultActivityStr, "Trmnl") == 0 ? " selected" : "",
+        strcmp(plateCfg.defaultActivityStr, "Info") == 0 ? " selected" : "",
+        strcmp(plateCfg.defaultActivityStr, "GuestWifi") == 0 ? " selected" : ""
+    );
+    WiFiManagerParameter p_activity(activityHtml);
 
     // Section: TRMNL
     WiFiManagerParameter h_trmnl("<hr><h3>TRMNL</h3>");
@@ -304,14 +321,14 @@ bool startWiFiManager(bool forcePortal)
     WiFiManagerParameter p_mqhost("mqtt_host", "MQTT Host (blank=disabled)", plateCfg.mqttHost, sizeof(plateCfg.mqttHost) - 1);
     char mqttPortStr[8];
     snprintf(mqttPortStr, sizeof(mqttPortStr), "%d", plateCfg.mqttPort);
-    WiFiManagerParameter p_mqport("mqtt_port", "MQTT Port", mqttPortStr, 7);
+    WiFiManagerParameter p_mqport("mqtt_port", "MQTT Port", mqttPortStr, 7, "type=\"number\" min=\"1\" max=\"65535\"");
     WiFiManagerParameter p_mquser("mqtt_user", "MQTT User", plateCfg.mqttUser, sizeof(plateCfg.mqttUser) - 1);
     WiFiManagerParameter p_mqpass("mqtt_pass", "MQTT Password", plateCfg.mqttPassword, sizeof(plateCfg.mqttPassword) - 1);
     WiFiManagerParameter p_mqnid("mqtt_nodeid", "MQTT Node ID (blank=hostname)", plateCfg.mqttNodeId, sizeof(plateCfg.mqttNodeId) - 1);
     WiFiManagerParameter p_mqdn("mqtt_devname", "MQTT Device Name", plateCfg.mqttDeviceName, sizeof(plateCfg.mqttDeviceName) - 1);
     char mqttExpStr[12];
     snprintf(mqttExpStr, sizeof(mqttExpStr), "%u", plateCfg.mqttExpireAfterSec);
-    WiFiManagerParameter p_mqexp("mqtt_expire", "MQTT Expire After Sec (0=auto)", mqttExpStr, 11);
+    WiFiManagerParameter p_mqexp("mqtt_expire", "MQTT Expire After Sec (0=auto)", mqttExpStr, 11, "type=\"number\" min=\"0\"");
 
     // Section: Display & OTA
     WiFiManagerParameter h_disp("<hr><h3>Display &amp; OTA</h3>");
@@ -377,7 +394,7 @@ bool startWiFiManager(bool forcePortal)
         plateCfg.quickSleepSec = atoi(p_qsleep.getValue());
 
         strlcpy(plateCfg.imageUrl, p_imgurl.getValue(), sizeof(plateCfg.imageUrl));
-        strlcpy(plateCfg.defaultActivityStr, p_activity.getValue(), sizeof(plateCfg.defaultActivityStr));
+        strlcpy(plateCfg.defaultActivityStr, wm.server->arg("def_activity").c_str(), sizeof(plateCfg.defaultActivityStr));
         strlcpy(plateCfg.trmnlUrl, p_turl.getValue(), sizeof(plateCfg.trmnlUrl));
         strlcpy(plateCfg.trmnlId, p_tid.getValue(), sizeof(plateCfg.trmnlId));
         strlcpy(plateCfg.trmnlToken, p_ttoken.getValue(), sizeof(plateCfg.trmnlToken));
