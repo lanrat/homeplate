@@ -62,6 +62,11 @@ void setup()
     display.rtcClearAlarmFlag(); // Clear alarm flag from any previous alarm
     setupWakePins();
 
+    // Read wake button state now, before SD card SPI init may reconfigure the pin
+#ifdef WAKE_BUTTON
+    bool wakeButtonHeld = (digitalRead(WAKE_BUTTON) == LOW);
+#endif
+
     // setup display
     if (sleepBoot)
         display.preloadScreen(); // copy saved screen state to buffer
@@ -106,7 +111,7 @@ void setup()
     // or if the wake button is held during boot
     bool forcePortal = !isConfigured();
 #ifdef WAKE_BUTTON
-    if (!forcePortal && digitalRead(WAKE_BUTTON) == LOW)
+    if (!forcePortal && wakeButtonHeld)
     {
         Serial.println("[SETUP] Wake button held at boot, forcing config portal");
         forcePortal = true;

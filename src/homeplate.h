@@ -33,8 +33,19 @@ extern uint bootCount, activityCount, timeToSleep;
 
 #define max(x, y) (((x) >= (y)) ? (x) : (y))
 
-#if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2) || defined(ARDUINO_ESP32_DEV) || defined(ARDUINO_INKPLATE6V2) || defined(ARDUINO_INKPLATE6PLUS) || defined(ARDUINO_INKPLATE6PLUSV2) || defined(ARDUINO_INKPLATE6FLICK)
+#if defined(ARDUINO_INKPLATE10) \
+    || defined(ARDUINO_INKPLATE10V2) \
+    || defined(ARDUINO_INKPLATE6V2) \
+    || defined(ARDUINO_INKPLATE6PLUS) \
+    || defined(ARDUINO_INKPLATE6PLUSV2) \
+    || defined(ARDUINO_INKPLATE6FLICK) \
+    || defined(ARDUINO_INKPLATECOLOR) \
+    || defined(ARDUINO_INKPLATE5) \
+    || defined(ARDUINO_INKPLATE5V2)
 #define WAKE_BUTTON GPIO_NUM_36
+// the original Inkplate 6 does not have a wake button
+#elif defined(ARDUINO_ESP32_DEV)
+#define WAKE_BUTTON GPIO_NUM_13
 #endif
 
 #ifndef VERSION

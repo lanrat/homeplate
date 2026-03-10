@@ -14,7 +14,7 @@ Configure the following settings in the WiFi setup portal (see [setup.md](setup.
 
 The TRMNL URL defaults to `https://trmnl.app/api/display`. If you are running [BYOS](https://docs.trmnl.com/go/diy/byos), change it to your server URL.
 
-You should also set the _Device Model_ to `Inkplate 10 - 1200x820` on the TRMNL website.
+You should also set the _Device Model_ to the correct Inkplate device on the TRMNL website. If its not listed, you may need to contact their support to request it to be added.
 It is also a good idea to update the _MAC Address_ to your device's MAC Address as well.
 
 ## Sensors

@@ -68,7 +68,7 @@ HomePlate is configured through a WiFi captive portal — no config files requir
 
 See [setup.md](setup.md) for detailed setup instructions, settings reference, and timezone configuration.
 
-To change settings later, hold the **wake button** during boot to re-open the config portal.
+To change settings later, hold the **wake button** during boot to re-open the config portal. On the original Inkplate 6, short **GPIO 13** to **GND** during boot instead.
 
 ### [Hardware](hardware.md)
 
@@ -105,7 +105,7 @@ The simplest way to upgrade is via the [Web Installer](https://lanrat.github.io/
 You can update the firmware over WiFi without a computer connected, using a firmware `.bin` file from the [Releases](https://github.com/lanrat/homeplate/releases) page:
 
 1. Download the firmware `.bin` for your board from the [Releases](https://github.com/lanrat/homeplate/releases) page.
-2. Boot the device into setup mode by holding the **wake button** during boot.
+2. Boot the device into setup mode by holding the **wake button** during boot (on the original Inkplate 6, short **GPIO 13** to **GND**).
 3. Connect to the **HomePlate-Setup** WiFi network.
 4. Upload the new firmware through the captive portal's firmware update page.
 
