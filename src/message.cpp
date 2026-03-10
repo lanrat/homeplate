@@ -20,7 +20,7 @@ FontSizing findFontSizeFit(const char *m, uint16_t max_width, uint16_t max_heigh
 
     // display.setTextWrap(false);
 
-    for (size_t i = 0; i < sizeof(fonts) / sizeof(fonts[0]); i++)
+    for (size_t i = 0; i < fontsCount; i++)
     {
         font.font = fonts[i];
         display.setFont(font.font);

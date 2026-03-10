@@ -9,7 +9,8 @@
 #define REDRAW_WIFI    1
 #define REDRAW_MQTT    2
 
-const static int lineHeight = 20;
+// Use font's yAdvance to prevent line overlap on smaller displays
+const static int lineHeight = (int)FONT_BODY.yAdvance + 2;
 
 const char *wl_status_to_string(wl_status_t status)
 {
@@ -37,10 +38,11 @@ const char *wl_status_to_string(wl_status_t status)
 
 void displayBoundaryBox()
 {
-  display.fillRect(0, 0, 10, E_INK_HEIGHT, BLACK);                // left
-  display.fillRect(E_INK_WIDTH - 10, 0, 10, E_INK_HEIGHT, BLACK); // right
-  display.fillRect(0, 0, E_INK_WIDTH, 10, BLACK);                 // top
-  display.fillRect(0, E_INK_HEIGHT - 10, E_INK_WIDTH, 10, BLACK); // bottom
+  int bw = max(scaleX(10), 2);
+  display.fillRect(0, 0, bw, E_INK_HEIGHT, BLACK);                // left
+  display.fillRect(E_INK_WIDTH - bw, 0, bw, E_INK_HEIGHT, BLACK); // right
+  display.fillRect(0, 0, E_INK_WIDTH, bw, BLACK);                 // top
+  display.fillRect(0, E_INK_HEIGHT - bw, E_INK_WIDTH, bw, BLACK); // bottom
 }
 
 void cleanField(uint32_t x, uint32_t y)
@@ -166,17 +168,17 @@ void displayInfoScreen()
   display.clearDisplay();
 
   // Title
-  display.setFont(&Roboto_32);
+  display.setFont(&FONT_HEADING);
   display.setTextSize(1);
-  uint32_t y = centerTextX("HomePlate Info", 0, E_INK_WIDTH, 100, false);
-  display.setFont(&Roboto_16);
+  uint32_t y = centerTextX("HomePlate Info", 0, E_INK_WIDTH, scaleY(100), false);
+  display.setFont(&FONT_BODY);
   // version
   snprintf(buff, 1024, "Version: [%s]", VERSION);
-  y = centerTextX(buff, 0, E_INK_WIDTH, y + 110, false);
+  y = centerTextX(buff, 0, E_INK_WIDTH, y + scaleY(110), false);
 
   // column 1
   // Model
-  y = 250;
+  y = scaleY(250);
   display.setCursor(COL1_NAME_X, y);
   display.print("Model:");
   display.setCursor(COL1_DATA_X, y);
@@ -274,7 +276,7 @@ void displayInfoScreen()
   }
 
   // column 2
-  y = 250;
+  y = scaleY(250);
   // network
   uint32_t yNetwork = y;
   drawNetwork(&y, false);
@@ -374,7 +376,7 @@ void displayInfoScreen()
     display.selectDisplayMode(INKPLATE_1BIT);
     display.setTextColor(BLACK, WHITE);
     display.setTextSize(1);
-    display.setFont(&Roboto_16);
+    display.setFont(&FONT_BODY);
     display.partialUpdate(sleepBoot);
 
     if (bitRead(needsRedraw, REDRAW_NETWORK))

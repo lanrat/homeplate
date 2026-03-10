@@ -89,13 +89,18 @@ void displayStats()
 {
     displayStart();
     display.setTextColor(C_BLACK, C_WHITE); // Set text color to black on white
-    display.setFont(&Roboto_12);
+    display.setFont(&FONT_SMALL);
     display.setTextSize(1);
-    // display status message
-    display.setCursor(1155, 820);
 
-    // text to print over box
-    display.printf("[%s]", timeString().c_str());
+    // measure the time string to position from right edge
+    char timeBuf[16];
+    snprintf(timeBuf, sizeof(timeBuf), "[%s]", timeString().c_str());
+    int16_t x1, y1;
+    uint16_t w, h;
+    display.getTextBounds(timeBuf, 0, 0, &x1, &y1, &w, &h);
+    display.setCursor(E_INK_WIDTH - w - 5, E_INK_HEIGHT - 5);
+
+    display.print(timeBuf);
     displayEnd();
 }
 
@@ -319,12 +324,12 @@ void displayStatusMessage(const char *format, ...)
     displayStart();
     display.selectDisplayMode(INKPLATE_1BIT);
     display.setTextColor(BLACK, WHITE);       // Set text color to black on white
-    display.setFont(&Roboto_16);
+    display.setFont(&FONT_BODY);
     display.setTextSize(1);
 
     const int16_t pad = 3;           // padding
     const int16_t mar = 5;           // margin
-    const int16_t statusWidth = 400; // extra space to clear for text
+    const int16_t statusWidth = scaleX(400); // extra space to clear for text
     const int16_t x = mar;
     const int16_t y = E_INK_HEIGHT - mar;
 
@@ -352,31 +357,20 @@ void splashScreen()
 {
     static const char *splashName = "HomePlate";
     displayStart();
-    display.selectDisplayMode(INKPLATE_1BIT); // testing
-    display.setTextColor(BLACK, WHITE);       // Set text color to black on white
-    display.setFont(&Roboto_128);
+    display.selectDisplayMode(INKPLATE_1BIT);
+    display.setTextColor(BLACK, WHITE);
+
+    FontSizing font = findFontSizeFit(splashName, E_INK_WIDTH, E_INK_HEIGHT);
+    display.setFont(font.font);
     display.setTextSize(1);
 
-    // Roboto_64, size: 1, center (439, 437)
-    // Roboto_64, size: 2, center (279, 461)
-    // Roboto_128, size: 1, center (285, 461)
-    int16_t x = 285;
-    int16_t y = 461;
-    bool dynamicPlacement = false;
-    if (dynamicPlacement)
-    {
-        //get text size for box
-        int16_t x1, y1;
-        uint16_t w, h;
-        display.getTextBounds(splashName, 100, 100, &x1, &y1, &w, &h);
-        x = (E_INK_WIDTH - w) / 2;
-        y = (E_INK_HEIGHT - h) / 2 + h;
-        Serial.printf("SplashScreen location (%d, %d)\n", x, y);
-    }
+    int16_t x1, y1;
+    uint16_t w, h;
+    display.getTextBounds(splashName, 100, 100, &x1, &y1, &w, &h);
+    int16_t x = (E_INK_WIDTH - w) / 2;
+    int16_t y = (E_INK_HEIGHT - h) / 2 + h;
 
     display.setCursor(x, y);
-
-    // text to print over box
     display.print(splashName);
     displayEnd();
     i2cStart();

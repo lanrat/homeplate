@@ -10,6 +10,10 @@
 Inkplate display(INKPLATE_1BIT);
 SemaphoreHandle_t mutexI2C, mutexSPI, mutexDisplay;
 
+// Font array for findFontSizeFit() — largest to smallest
+const GFXfont *fonts[] = {&FONT_SPLASH, &FONT_TITLE, &FONT_HEADING, &FONT_BODY, &FONT_SMALL};
+const size_t fontsCount = sizeof(fonts) / sizeof(fonts[0]);
+
 bool sleepBoot = false;
 
 // Store int in rtc data, to remain persistent during deep sleep, reset on power up.

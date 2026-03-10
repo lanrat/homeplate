@@ -2,11 +2,7 @@
 
 #include <Inkplate.h>
 #include <map>
-#include "fonts/Roboto_12.h"
-#include "fonts/Roboto_16.h"
-#include "fonts/Roboto_32.h"
-#include "fonts/Roboto_64.h"
-#include "fonts/Roboto_128.h"
+// Font includes are per-device tier (below)
 #include "sleep_duration.h"
 
 // Config: include user's config.h if it exists, then defaults
@@ -32,6 +28,56 @@ extern uint bootCount, activityCount, timeToSleep;
 #define displayEnd() xSemaphoreGive(mutexDisplay)
 
 #define max(x, y) (((x) >= (y)) ? (x) : (y))
+
+// Reference resolution (Inkplate 10) for proportional scaling
+#define REF_WIDTH 1200
+#define REF_HEIGHT 825
+
+// Compile-time proportional scaling macros
+#define scaleX(px) ((int32_t)(px) * E_INK_WIDTH / REF_WIDTH)
+#define scaleY(px) ((int32_t)(px) * E_INK_HEIGHT / REF_HEIGHT)
+
+// Font roles and tier-specific font includes
+#if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2) \
+ || defined(ARDUINO_INKPLATE6PLUS) || defined(ARDUINO_INKPLATE6PLUSV2) \
+ || defined(ARDUINO_INKPLATE6FLICK) || defined(ARDUINO_INKPLATE5V2)
+  // Large tier: 720-825px height
+  #include "fonts/Roboto_12.h"
+  #include "fonts/Roboto_16.h"
+  #include "fonts/Roboto_32.h"
+  #include "fonts/Roboto_48.h"
+  #include "fonts/Roboto_64.h"
+  #define FONT_SPLASH  Roboto_64
+  #define FONT_TITLE   Roboto_48
+  #define FONT_HEADING Roboto_32
+  #define FONT_BODY    Roboto_16
+  #define FONT_SMALL   Roboto_12
+#elif defined(ARDUINO_INKPLATE5) || defined(ARDUINO_ESP32_DEV) || defined(ARDUINO_INKPLATE6V2)
+  // Medium tier: 540-600px height
+  #include "fonts/Roboto_8.h"
+  #include "fonts/Roboto_12.h"
+  #include "fonts/Roboto_16.h"
+  #include "fonts/Roboto_24.h"
+  #include "fonts/Roboto_48.h"
+  #include "fonts/Roboto_64.h"
+  #define FONT_SPLASH  Roboto_64
+  #define FONT_TITLE   Roboto_48
+  #define FONT_HEADING Roboto_24
+  #define FONT_BODY    Roboto_12
+  #define FONT_SMALL   Roboto_8
+#else
+  // Small tier: IP6Color (448px) and fallback
+  #include "fonts/Roboto_8.h"
+  #include "fonts/Roboto_12.h"
+  #include "fonts/Roboto_16.h"
+  #include "fonts/Roboto_32.h"
+  #include "fonts/Roboto_64.h"
+  #define FONT_SPLASH  Roboto_64
+  #define FONT_TITLE   Roboto_32
+  #define FONT_HEADING Roboto_16
+  #define FONT_BODY    Roboto_12
+  #define FONT_SMALL   Roboto_8
+#endif
 
 #if defined(ARDUINO_INKPLATE10) \
     || defined(ARDUINO_INKPLATE10V2) \
@@ -146,7 +192,9 @@ uint8_t* httpGetRetry(uint32_t trys, const char* url, std::map<String, String> *
 int httpPost(const char* url, std::map<String, String> *headers, const char* body);
 
 // message
-static const GFXfont *fonts[] = {&Roboto_128, &Roboto_64, &Roboto_32, &Roboto_16, &Roboto_12};
+// Font array for findFontSizeFit() — defined in main.cpp (largest to smallest)
+extern const GFXfont *fonts[];
+extern const size_t fontsCount;
 struct FontSizing
 {
     const GFXfont *font;

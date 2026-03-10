@@ -143,7 +143,7 @@ void displayBatteryWarning()
     displayStart();
     display.selectDisplayMode(INKPLATE_1BIT);
     display.setTextColor(BLACK, WHITE);
-    display.setFont(&Roboto_16);
+    display.setFont(&FONT_BODY);
     display.setTextSize(1);
 
     const int16_t pad = 3; // padding

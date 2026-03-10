@@ -18,33 +18,35 @@ void displayWiFiQR()
     QRCode qrcode;
     uint8_t qrcodeData[qrcode_getBufferSize(version)];
     qrcode_initText(&qrcode, qrcodeData, version, ECC_MEDIUM, buf);
-    uint32_t size = 15;
+    uint32_t size = max(scaleY(15), 8);
+    uint32_t padRight = scaleX(100);
+    uint32_t padText = scaleX(100);
 
     uint32_t y = (E_INK_HEIGHT - (qrcode.size * size)) / 2;  // center QR code vertically
-    uint32_t x = (E_INK_WIDTH - (qrcode.size * size) - 100); // 100 px padding on right side
+    uint32_t x = (E_INK_WIDTH - (qrcode.size * size) - padRight); // proportional padding on right side
 
     // serialPrintQR(qrcode);  // for testing
     displayStart();
     display.selectDisplayMode(INKPLATE_1BIT);
     display.setTextColor(BLACK, WHITE); // Set text color to black on white
-    display.setFont(&Roboto_64);
+    display.setFont(&FONT_TITLE);
     display.setTextSize(1);
     display.clearDisplay();
     displayEnd();
 
     renderQR(qrcode, x, y, size);
 
-    y = y + 100; // lower text a little
-    // 100px padding on each size, 20px padding between text
-    uint16_t h = centerTextX("WiFi", 100, x - 100, y);
-    y = y + 60;
+    y = y + scaleY(100); // lower text a little
+    // proportional padding on each side
+    uint16_t h = centerTextX("WiFi", padText, x - padText, y);
+    y = y + scaleY(60);
 
     // do some math to resize the wifi information to fit in the bounding box
-    FontSizing font = findFontSizeFit(plateCfg.qrWifiName, x-100, (E_INK_HEIGHT-y/2));
+    FontSizing font = findFontSizeFit(plateCfg.qrWifiName, x-padText, (E_INK_HEIGHT-y/2));
     display.setFont(font.font);
-    h = centerTextX(plateCfg.qrWifiName, 100, x - 100, y + h + 30);
-    font = findFontSizeFit(plateCfg.qrWifiPassword, x, (E_INK_HEIGHT-y));
-    h = centerTextX(plateCfg.qrWifiPassword, 100, x - 100, y + (h + 30) * 2);
+    h = centerTextX(plateCfg.qrWifiName, padText, x - padText, y + h + scaleY(30));
+    font = findFontSizeFit(plateCfg.qrWifiPassword, x - padText, (E_INK_HEIGHT-y));
+    h = centerTextX(plateCfg.qrWifiPassword, padText, x - padText, y + (h + scaleY(30)) * 2);
 
     i2cStart();
     displayStart();

@@ -1,4 +1,4 @@
-// Created by http://oleddisplay.squix.ch/ Consider a donation
+// Created by https://oleddisplay.squix.ch/ Consider a donation
 // In case of problems make sure that you are using the font file with the correct version!
 const uint8_t Roboto_16Bitmaps[] PROGMEM = {
 
@@ -100,7 +100,7 @@ const uint8_t Roboto_16Bitmaps[] PROGMEM = {
 };
 const GFXglyph Roboto_16Glyphs[] PROGMEM = {
 // bitmapOffset, width, height, xAdvance, xOffset, yOffset
-	  {     0,   1,   1,   5,    0,    0 }, // ' '
+	  {     0,   2,   1,   5,    0,   -1 }, // ' '
 	  {     1,   3,  12,   5,    1,  -12 }, // '!'
 	  {     6,   4,   4,   6,    1,  -12 }, // '"'
 	  {     8,  10,  12,  11,    1,  -12 }, // '#'

@@ -475,10 +475,12 @@ void displayConfigModeScreen(const char *apSsid)
     QRCode qrcode;
     uint8_t qrcodeData[qrcode_getBufferSize(version)];
     qrcode_initText(&qrcode, qrcodeData, version, ECC_MEDIUM, qrBuf);
-    uint32_t qrSize = 12;
+    uint32_t qrSize = max(scaleY(12), 8);
+    uint32_t qrPadRight = scaleX(100);
+    uint32_t qrTextGap = scaleX(50);
 
     uint32_t qrY = (E_INK_HEIGHT - (qrcode.size * qrSize)) / 2;
-    uint32_t qrX = E_INK_WIDTH - (qrcode.size * qrSize) - 100;
+    uint32_t qrX = E_INK_WIDTH - (qrcode.size * qrSize) - qrPadRight;
 
     i2cStart();
     displayStart();
@@ -487,24 +489,24 @@ void displayConfigModeScreen(const char *apSsid)
     display.clearDisplay();
 
     // Title
-    display.setFont(&Roboto_64);
+    display.setFont(&FONT_TITLE);
     display.setTextSize(1);
-    centerTextX("HomePlate Setup", 0, E_INK_WIDTH, 100, false);
+    centerTextX("HomePlate Setup", 0, E_INK_WIDTH, scaleY(100), false);
 
     // Instructions
-    display.setFont(&Roboto_32);
-    centerTextX("Connect to WiFi network:", 0, qrX - 50, 250, false);
+    display.setFont(&FONT_HEADING);
+    centerTextX("Connect to WiFi network:", 0, qrX - qrTextGap, scaleY(250), false);
 
     // AP SSID
-    display.setFont(&Roboto_32);
-    centerTextX(apSsid, 0, qrX - 50, 350, false);
+    display.setFont(&FONT_HEADING);
+    centerTextX(apSsid, 0, qrX - qrTextGap, scaleY(350), false);
 
     // Additional instructions
-    display.setFont(&Roboto_16);
-    centerTextX("Then open the configuration page", 0, qrX - 50, 450, false);
-    centerTextX("to set up your HomePlate.", 0, qrX - 50, 480, false);
-    centerTextX("Will sleep after 15 minutes", 0, qrX - 50, 540, false);
-    centerTextX("if not configured.", 0, qrX - 50, 570, false);
+    display.setFont(&FONT_BODY);
+    centerTextX("Then open the configuration page", 0, qrX - qrTextGap, scaleY(450), false);
+    centerTextX("to set up your HomePlate.", 0, qrX - qrTextGap, scaleY(480), false);
+    centerTextX("Will sleep after 15 minutes", 0, qrX - qrTextGap, scaleY(540), false);
+    centerTextX("if not configured.", 0, qrX - qrTextGap, scaleY(570), false);
 
     displayEnd();
 
@@ -526,15 +528,15 @@ void displayUnconfiguredScreen()
     display.setTextColor(BLACK, WHITE);
     display.clearDisplay();
 
-    display.setFont(&Roboto_64);
+    display.setFont(&FONT_TITLE);
     display.setTextSize(1);
-    centerTextX("HomePlate", 0, E_INK_WIDTH, 300, false);
+    centerTextX("HomePlate", 0, E_INK_WIDTH, scaleY(300), false);
 
-    display.setFont(&Roboto_32);
-    centerTextX("Unconfigured - Sleeping", 0, E_INK_WIDTH, 420, false);
+    display.setFont(&FONT_HEADING);
+    centerTextX("Unconfigured - Sleeping", 0, E_INK_WIDTH, scaleY(420), false);
 
-    display.setFont(&Roboto_16);
-    centerTextX("Will retry on next wake cycle.", 0, E_INK_WIDTH, 500, false);
+    display.setFont(&FONT_BODY);
+    centerTextX("Will retry on next wake cycle.", 0, E_INK_WIDTH, scaleY(500), false);
 
     display.display();
     displayEnd();
