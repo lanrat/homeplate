@@ -14,7 +14,15 @@ A [Trmnl](https://trmnl.com/) and [Home Assistant](https://www.home-assistant.io
 
 ![Home Assistant](screenshots/hass.jpeg)
 
-## [Activities Screenshots](activities.md)
+## Activities
+
+HomePlate supports multiple display modes called activities. See [activities.md](activities.md) for screenshots of each.
+
+* **Home Assistant** — Display a Home Assistant dashboard screenshot
+* **Trmnl** — Display a [Trmnl](https://trmnl.com) mashup
+* **Guest WiFi** — Show a QR code for guests to join your WiFi
+* **Info** — Device info screen (battery, IP, version, etc.)
+* **Message** — Display text messages sent via MQTT
 
 ## Features
 
@@ -63,6 +71,8 @@ See [setup.md](setup.md) for detailed setup instructions, settings reference, an
 To change settings later, hold the **wake button** during boot to re-open the config portal.
 
 ### [Hardware](hardware.md)
+
+Tips for mounting your Inkplate in a picture frame, including adding an external USB-C port.
 
 ### [Trmnl](trmnl.md)
 
