@@ -40,9 +40,6 @@ jobs:
       run: pip install platformio==6.1.19
     - name: Install PlatformIO Libs
       run: pio pkg install
-    # - name: PlatformIO static check
-    #   # empty target to prevent upload
-    #   run: pio check
 
     - name: Run PlatformIO
       # empty target to prevent upload, single env is sufficient for analysis
