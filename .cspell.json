@@ -95,7 +95,8 @@
         "wrover",
         "zpvk",
         "Inkplates",
-        "Wavefrom"
+        "Wavefrom",
+        "waveform"
     ],
     // ignorePaths -   a list of globs to specify which files are to be ignored.
     "ignorePaths": [

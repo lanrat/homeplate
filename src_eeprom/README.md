@@ -5,7 +5,7 @@ Copied from: [Inkplate10_Wavefrom_EEPROM_Programming](https://github.com/Soldere
 Updated for PlatformIO build
 
 ```shell
-pio run -e Wavefrom_EEPROM
+pio run -e waveform_eeprom
 ```
 
 ## Custom Test Image
