@@ -87,7 +87,7 @@
 #define MQTT_EXPIRE_AFTER_SEC 0
 #endif
 #ifndef DISPLAY_LAST_UPDATE_TIME
-#define DISPLAY_LAST_UPDATE_TIME true
+#define DISPLAY_LAST_UPDATE_TIME false
 #endif
 #ifndef ENABLE_OTA
 #define ENABLE_OTA false
