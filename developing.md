@@ -7,6 +7,8 @@ This guide covers building, flashing, and debugging HomePlate using [PlatformIO]
 Install [PlatformIO](https://platformio.org/) and build for your board variant. You must always specify `-e <board>`:
 
 ```shell
+pio run -e inkplate5       # Inkplate 5
+pio run -e inkplate5v2     # Inkplate 5v2
 pio run -e inkplate10      # Inkplate 10 (original with touchpads)
 pio run -e inkplate10v2    # Inkplate 10v2 (without touchpads)
 pio run -e inkplate6       # Inkplate 6 (original with touchpads)

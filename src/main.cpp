@@ -1,5 +1,5 @@
 // Ensure a supported board is selected
-#if !defined(ARDUINO_INKPLATE10) && !defined(ARDUINO_INKPLATE10V2) && !defined(ARDUINO_ESP32_DEV) && !defined(ARDUINO_INKPLATE6V2) && !defined(ARDUINO_INKPLATE6PLUS) && !defined(ARDUINO_INKPLATE6PLUSV2) && !defined(ARDUINO_INKPLATE6FLICK)
+#if !defined(ARDUINO_INKPLATE5) && !defined(ARDUINO_INKPLATE5V2) && !defined(ARDUINO_INKPLATE10) && !defined(ARDUINO_INKPLATE10V2) && !defined(ARDUINO_ESP32_DEV) && !defined(ARDUINO_INKPLATE6V2) && !defined(ARDUINO_INKPLATE6PLUS) && !defined(ARDUINO_INKPLATE6PLUSV2) && !defined(ARDUINO_INKPLATE6FLICK)
 #error "Unsupported board selection, please select a supported Inkplate board."
 #endif
 

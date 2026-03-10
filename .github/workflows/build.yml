@@ -38,6 +38,8 @@ jobs:
     strategy:
       matrix:
         environment:
+          - inkplate5
+          - inkplate5v2
           - inkplate6
           - inkplate6v2
           - inkplate6flick

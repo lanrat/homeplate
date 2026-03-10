@@ -4,6 +4,8 @@ A [Trmnl](https://trmnl.com/) and [Home Assistant](https://www.home-assistant.io
 
 ## Supported Boards
 
+* Inkplate 5
+* Inkplate 5v2
 * Inkplate 6
 * Inkplate 6v2
 * Inkplate 6 Plus
