@@ -86,7 +86,7 @@ If you get the following error while booting your Inkplate, run the [Inkplate_Wa
 Waveform load failed! Upload new waveform in EEPROM. Using default waveform.
 ```
 
-Older Inkplates don't appear to ship with an updated waveform. I found waveform 3 looks the best for mine.
+Older Inkplates don't appear to ship with an updated waveform. I found waveform 5 looks the best for mine.
 
 ## Tests
 
