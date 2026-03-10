@@ -379,8 +379,10 @@ bool startWiFiManager(bool forcePortal)
     wm.addParameter(&p_ota);
 
     // ---- Save callback ----
+    bool configSaved = false;
     wm.setSaveParamsCallback([&]()
                              {
+        configSaved = true;
         strlcpy(plateCfg.hostname, p_hostname.getValue(), sizeof(plateCfg.hostname));
         strlcpy(plateCfg.staticIp, p_sip.getValue(), sizeof(plateCfg.staticIp));
         strlcpy(plateCfg.staticSubnet, p_ssub.getValue(), sizeof(plateCfg.staticSubnet));
@@ -421,17 +423,13 @@ bool startWiFiManager(bool forcePortal)
         tzset();
 
         saveConfig();
-        Serial.println("[CONFIG] Configuration saved via WiFiManager, rebooting...");
-        vTaskDelay(500 / portTICK_PERIOD_MS); // let serial flush
-        ESP.restart(); });
+        Serial.println("[CONFIG] Configuration saved via WiFiManager"); });
 
     // ---- Try to connect ----
     bool connected;
     if (forcePortal)
     {
         Serial.println("[CONFIG] Forcing config portal...");
-        // Connect WiFi first, then open portal for configuration
-        WiFi.begin();
         connected = wm.startConfigPortal("HomePlate-Setup");
     }
     else
@@ -442,11 +440,22 @@ bool startWiFiManager(bool forcePortal)
 
     if (connected)
     {
-        Serial.println("[CONFIG] WiFi connected via WiFiManager");
+        Serial.printf("[CONFIG] WiFi connected via WiFiManager, SSID: %s\n", WiFi.SSID().c_str());
     }
     else
     {
         Serial.println("[CONFIG] WiFiManager timeout - no connection");
+    }
+    Serial.printf("[CONFIG] WiFi saved: %s\n", wm.getWiFiIsSaved() ? "yes" : "no");
+
+    // Reboot if config was saved so settings take effect cleanly.
+    // This must happen after WiFiManager returns, not in the save callback,
+    // because WiFiManager persists WiFi credentials after the callback runs.
+    if (configSaved)
+    {
+        Serial.println("[CONFIG] Rebooting to apply new settings...");
+        vTaskDelay(500 / portTICK_PERIOD_MS); // let serial flush
+        ESP.restart();
     }
 
     return connected;
