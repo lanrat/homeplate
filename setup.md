@@ -31,6 +31,10 @@ The portal has two pages:
 - **WiFi Configuration** — Select your WiFi network and enter the password
 - **Setup** — Configure all HomePlate settings (see [Settings Reference](#settings-reference) below)
 
+| WiFi & Network | Network, Time & Sleep | Content, TRMNL & QR | MQTT, Display & OTA |
+|:-:|:-:|:-:|:-:|
+| ![WiFi & Network](screenshots/config/wifi-network.png) | ![Network, Time & Sleep](screenshots/config/network-time-sleep.png) | ![Content, TRMNL & QR](screenshots/config/content-trmnl-qr.png) | ![MQTT, Display & OTA](screenshots/config/mqtt-display-ota.png) |
+
 After saving, the device will reboot and connect to your WiFi network with the new settings.
 
 ## Changing Settings
