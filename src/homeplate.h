@@ -48,6 +48,11 @@ extern uint bootCount, activityCount, timeToSleep;
 #define WAKE_BUTTON GPIO_NUM_13
 #endif
 
+// Boards with capacitive touchpads (PAD1, PAD2, PAD3)
+#if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_ESP32_DEV)
+#define HAS_TOUCHPADS
+#endif
+
 #ifndef VERSION
 #define VERSION "dev"
 #endif

@@ -40,7 +40,7 @@ void gotoSleepNow()
     mqttStopTask(); // prevent i2c lock in main thread
     wifiStopTask(); // prevent i2c lock in main thread
 
-    #if TOUCHPAD_ENABLE && (defined(ARDUINO_INKPLATE10) || defined(ARDUINO_ESP32_DEV))
+    #if TOUCHPAD_ENABLE && defined(HAS_TOUCHPADS)
         // set MCP interrupts
         display.setIntOutput(1, false, false, HIGH, IO_INT_ADDR);
     #endif
