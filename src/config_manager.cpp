@@ -309,7 +309,7 @@ bool startWiFiManager(bool forcePortal)
     WiFiManagerParameter p_turl("trmnl_url", "TRMNL URL", plateCfg.trmnlUrl, sizeof(plateCfg.trmnlUrl) - 1);
     WiFiManagerParameter p_tid("trmnl_id", "TRMNL ID", plateCfg.trmnlId, sizeof(plateCfg.trmnlId) - 1);
     WiFiManagerParameter p_ttoken("trmnl_token", "TRMNL Token", plateCfg.trmnlToken, sizeof(plateCfg.trmnlToken) - 1);
-    WiFiManagerParameter p_tlog("trmnl_log", "TRMNL Logging", "T", 2, plateCfg.trmnlEnableLog ? "type=\"checkbox\" checked" : "type=\"checkbox\"");
+    WiFiManagerParameter p_tlog("trmnl_log", "TRMNL Logging", "T", 2, plateCfg.trmnlEnableLog ? "type=\"checkbox\" style=\"margin-top:0.5em\" checked" : "type=\"checkbox\" style=\"margin-top:0.5em\"", WFM_LABEL_AFTER);
 
     // Section: QR WiFi
     WiFiManagerParameter h_qr("<hr><h3>Guest WiFi QR Code</h3>");
@@ -332,8 +332,8 @@ bool startWiFiManager(bool forcePortal)
 
     // Section: Display & OTA
     WiFiManagerParameter h_disp("<hr><h3>Display &amp; OTA</h3>");
-    WiFiManagerParameter p_dtime("disp_time", "Show Update Time", "T", 2, plateCfg.displayLastUpdateTime ? "type=\"checkbox\" checked" : "type=\"checkbox\"");
-    WiFiManagerParameter p_ota("enable_ota", "Enable OTA", "T", 2, plateCfg.enableOta ? "type=\"checkbox\" checked" : "type=\"checkbox\"");
+    WiFiManagerParameter p_dtime("disp_time", "Show Update Time", "T", 2, plateCfg.displayLastUpdateTime ? "type=\"checkbox\" style=\"margin-top:0.5em\" checked" : "type=\"checkbox\" style=\"margin-top:0.5em\"", WFM_LABEL_AFTER);
+    WiFiManagerParameter p_ota("enable_ota", "Enable OTA", "T", 2, plateCfg.enableOta ? "type=\"checkbox\" style=\"margin-top:0.5em\" checked" : "type=\"checkbox\" style=\"margin-top:0.5em\"", WFM_LABEL_AFTER);
 
     // ---- Add all parameters ----
     wm.addParameter(&h_net);
