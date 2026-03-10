@@ -73,6 +73,7 @@ void keepWiFiAlive(void *parameter)
             }
         }
         // Use stored credentials from WiFiManager (no args)
+        Serial.printf("[WIFI] Connecting to SSID: %s\n", WiFi.SSID().c_str());
         WiFi.begin();
 
         unsigned long startAttemptTime = millis();
@@ -96,7 +97,7 @@ void keepWiFiAlive(void *parameter)
             continue;
         }
 
-        Serial.println("[WIFI] Connected: " + WiFi.localIP().toString());
+        Serial.printf("[WIFI] Connected: %s BSSID: %s\n", WiFi.localIP().toString().c_str(), WiFi.BSSIDstr().c_str());
         printDebugStackSpace();
     }
 }
