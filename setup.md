@@ -43,7 +43,7 @@ After saving, the device will reboot and connect to your WiFi network with the n
 
 Hold the **wake button** while the device boots (press reset or wait for a sleep wake cycle) to force the config portal to open. The device will connect to your saved WiFi and open the **HomePlate-Setup** AP simultaneously, allowing you to reconfigure any settings.
 
-> **Inkplate 6 (original):** This board does not have a dedicated wake button. Instead, short **GPIO 13** to **GND** during boot to enter config mode.
+> **Inkplate 6 (original):** This board does not have a dedicated wake button. Instead, short **GPIO 13** to **GND** during boot to enter config mode. (a paperclip should to the trick)
 
 ### Re-flash method
 
