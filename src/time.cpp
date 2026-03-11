@@ -136,6 +136,10 @@ String fullDateString() {
     return rtc.getTimeDate(true);
 }
 
+String shortDateTimeString() {
+    return rtc.getTime("%Y-%m-%d %H:%M");
+}
+
 String timeString() {
     return rtc.getTime("%H:%M");
 }

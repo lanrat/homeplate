@@ -303,7 +303,7 @@ void displayInfoScreen()
   display.setCursor(COL2_NAME_X, y);
   display.print("Time:");
   display.setCursor(COL2_DATA_X, y);
-  display.print(fullDateString());
+  display.print(shortDateTimeString());
   // NTP
   y += lineHeight;
   display.setCursor(COL2_NAME_X, y);

@@ -156,6 +156,7 @@ void gotoSleepNow();
 void setupTimeAndSyncTask();
 bool getNTPSynced();
 String timeString();
+String shortDateTimeString();
 String fullDateString();
 int getDayOfWeek(bool weekStartsOnMonday = false);
 int getHour();
