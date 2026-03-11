@@ -146,6 +146,30 @@ bool trmnlDisplay(const char *url)
         return false;
     }
 
+    // Handle chunked encoding: strip chunk size prefix and trailing markers
+    uint8_t *jsonStart = buff;
+    int jsonLen = defaultLen;
+
+    // Skip chunk size line (format: "<hex>\r\n")
+    if (defaultLen > 4 && buff[0] >= '0' && buff[0] <= 'f') {
+        // Find end of chunk size line (CRLF)
+        char *crlf = (char*)strstr((char*)buff, "\r\n");
+        if (crlf) {
+            jsonStart = (uint8_t*)(crlf + 2);  // Skip "\r\n"
+            jsonLen = defaultLen - (jsonStart - buff);
+            Serial.printf("[TRMNL][DEBUG] Skipped chunk size prefix\n");
+        }
+    }
+
+    // Remove trailing chunk marker (usually just "0\r\n")
+    if (jsonLen > 4) {
+        // Check for trailing "0\r\n" or "0\r\n\r\n"
+        if (jsonStart[jsonLen-1] == '\n' && jsonStart[jsonLen-4] == '0') {
+            jsonLen -= 4;  // Remove "\r\n0\r\n"
+            Serial.printf("[TRMNL][DEBUG] Removed chunk trailer\n");
+        }
+    }
+
     // filter here
     JsonDocument trmnl_display_filter;
     trmnl_display_filter["filename"] = true;
@@ -155,7 +179,7 @@ bool trmnlDisplay(const char *url)
     trmnl_display_filter["error"] = true;
 
     JsonDocument doc;
-    DeserializationError error = deserializeJson(doc, buff, defaultLen, DeserializationOption::Filter(trmnl_display_filter));
+    DeserializationError error = deserializeJson(doc, jsonStart, jsonLen, DeserializationOption::Filter(trmnl_display_filter));
     if (error)
     {
       Serial.printf("[TRMNL][ERROR] JSON Deserialize error: %s\n", error.c_str());

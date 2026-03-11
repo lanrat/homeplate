@@ -192,24 +192,33 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
         Serial.println("[NET] Invalid URL: null or empty");
         return nullptr;
     }
-
+    
     // Basic URL format validation
     if (strncmp(url, "http://", 7) != 0 && strncmp(url, "https://", 8) != 0) {
         Serial.printf("[NET] Invalid URL protocol: %s\n", url);
         return nullptr;
     }
-
+    
     Serial.printf("[NET] downloading file at URL %s\n", url);
 
+    // Wait for WiFi to be stable
+    waitForWiFi();
+    
     bool sleep = WiFi.getSleep();
     WiFi.setSleep(false);
 
     HTTPClient http;
-    http.getStream().setNoDelay(true);
+    // Set longer timeouts (in milliseconds)
+    http.setConnectTimeout(10000); // 10 seconds for connection
+    http.setTimeout(30000); // 30 seconds for overall timeout
     delaySleep(timeout_sec);
 
     // Connect with HTTP
-    http.begin(url);
+    if (!http.begin(url)) {
+        Serial.println("[NET] Failed to begin HTTP connection");
+        WiFi.setSleep(sleep);
+        return nullptr;
+    }
 
     if (headers) {
         for (const auto& header : *headers) {
@@ -219,11 +228,50 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
 
     int httpCode = http.GET();
 
+    if (httpCode < 0) {
+        Serial.printf("[NET] HTTP error: %d\n", httpCode);
+        // Common error codes:
+        // -1: Connection refused
+        // -2: Send header failed
+        // -3: Send payload failed
+        // -4: Not connected
+        // -5: Connection lost
+        // -6: No stream
+        // -7: No HTTP server
+        // -8: Too large response
+        // -9: 3xx redirect (not followed)
+        // -10: 4xx client error (not success)
+        // -11: Connection failed / Connection refused
+        switch (httpCode) {
+            case -1: Serial.println("[NET] Error: Connection refused"); break;
+            case -2: Serial.println("[NET] Error: Send header failed"); break;
+            case -3: Serial.println("[NET] Error: Send payload failed"); break;
+            case -4: Serial.println("[NET] Error: Not connected"); break;
+            case -5: Serial.println("[NET] Error: Connection lost"); break;
+            case -6: Serial.println("[NET] Error: No stream"); break;
+            case -7: Serial.println("[NET] Error: No HTTP server"); break;
+            case -11: Serial.println("[NET] Error: Connection failed / refused - check server is running"); break;
+            default: Serial.println("[NET] Error: Unknown"); break;
+        }
+        http.end();
+        WiFi.setSleep(sleep);
+        return nullptr;
+    }
+
     int32_t size = http.getSize();
-    if (size == -1)
+    Serial.printf("[NET] Content-Length: %d\n", size);
+
+    // Handle chunked encoding (size == -1)
+    if (size == -1) {
+        Serial.println("[NET] Chunked encoding detected, will read until end");
+    }
+
+    // For chunked encoding or invalid size, use defaultLen
+    if (size == -1) {
         size = *defaultLen;
-    else
+    } else {
         *defaultLen = size;
+    }
 
     // Validate size to prevent buffer overflow attacks
     const int32_t MAX_HTTP_BUFFER_SIZE = 1024 * 1024; // 1MB limit
@@ -241,36 +289,54 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
         WiFi.setSleep(sleep);
         return nullptr;
     }
+    memset(buffer, 0, size); // Zero out buffer
     uint8_t *buffPtr = buffer;
 
     int32_t total = http.getSize();
     int32_t len = total;
+    int32_t bytesRead = 0;
 
     uint8_t buff[512] = {0};
 
     WiFiClient* stream = http.getStreamPtr();
     while (http.connected() && (len > 0 || len == -1)) {
-        size_t size = stream->available();
+        size_t available = stream->available();
 
-        if (size) {
-            int c = stream->readBytes(
-                buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
-            memcpy(buffPtr, buff, c);
+        if (available) {
+            int c = stream->readBytes(buff, ((available > sizeof(buff)) ? sizeof(buff) : available));
+            if (c > 0 && bytesRead < size) {
+                int toCopy = min(c, size - bytesRead);
+                memcpy(buffPtr, buff, toCopy);
+                buffPtr += toCopy;
+                bytesRead += toCopy;
+            }
 
             if (len > 0) len -= c;
-            buffPtr += c;
         } else if (len == -1) {
-            len = 0;
+            // For chunked encoding, break when no more data available
+            vTaskDelay(10 / portTICK_PERIOD_MS);
+            if (!stream->available()) {
+                break;
+            }
         }
     }
 
+    Serial.printf("[NET] Bytes read: %d\n", bytesRead);
+
     if (httpCode != HTTP_CODE_OK) {
         Serial.printf("[NET] Non-200 response: %d from URL %s\n", httpCode, url);
-        if (size) {
-            Serial.printf("[NET] HTTP response buffer: \n\n%s\n\n", buffer);
+        if (bytesRead > 0) {
+            Serial.printf("[NET] HTTP response buffer (%d bytes): \n", bytesRead);
+            // Print first 256 bytes as hex for debugging
+            for (int i = 0; i < min(bytesRead, 256); i++) {
+                Serial.printf("%02x ", buffer[i]);
+                if ((i + 1) % 16 == 0) Serial.println();
+            }
+            Serial.println();
         }
         free(buffer);
-        buffer = 0;
+        WiFi.setSleep(sleep);
+        return nullptr;
     }
 
     http.end();
