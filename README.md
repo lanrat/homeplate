@@ -39,6 +39,7 @@ HomePlate supports multiple display modes called activities. See [activities.md]
 * Touch-pad buttons can start activities and wake from sleep
 * 1 month+ battery life!
 * Low battery warning displayed and sent over MQTT
+* Test display output directly from the config portal (message, WiFi QR, info screen)
 * OTA updates over WiFi
 * Partial screen updates in grayscale mode.
 * Power saving sleep mode.

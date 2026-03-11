@@ -26,10 +26,12 @@ Connect to the **HomePlate-Setup** WiFi network from your phone or computer. A c
 
 ### 3. Configure WiFi and settings
 
-The portal has two pages:
+The portal has several pages:
 
-- **WiFi Configuration** — Select your WiFi network and enter the password
-- **Setup** — Configure all HomePlate settings (see [Settings Reference](#settings-reference) below)
+- **Configure WiFi** — Select your WiFi network, enter the password, and configure all HomePlate settings (see [Settings Reference](#settings-reference) below)
+- **Display Message** — Send a custom text message to the e-ink display for testing
+- **Show WiFi QR** — Display the Guest WiFi QR code on the screen
+- **Show Info Screen** — Display the device info screen (battery, IP, version, etc.)
 
 |WiFi & Network|Network, Time & Sleep|Content, TRMNL & QR|MQTT, Display & OTA|
 |:-:|:-:|:-:|:-:|
