@@ -247,16 +247,104 @@ bool startWiFiManager(bool forcePortal)
     wm.setConnectTimeout(20);
     wm.setConfigPortalTimeout(15 * 60); // 15 minutes
 
-    // Custom menu: GitHub link and version
-    char menuHtml[256];
+    // Menu layout: include "custom" so setCustomMenuHTML content appears
+    // Omit "param" so config fields stay on the wifi page (combined view)
+    std::vector<const char *> menu = {"wifi", "info", "custom", "sep", "update", "exit"};
+    wm.setMenu(menu);
+
+    // Custom menu: message/qr page links, GitHub link and version
+    char menuHtml[512];
     snprintf(menuHtml, sizeof(menuHtml),
-        "<br/><a href='https://github.com/lanrat/homeplate' target='_blank'>HomePlate on GitHub</a>"
-        "<br/><small>Version: %s | %s (%s)</small>", VERSION, DEVICE_MODEL, CONFIG_IDF_TARGET);
+        "<form action='/message' method='get'><button>Display Message</button></form><br/>"
+        "<form action='/showqr' method='get'><button>Show WiFi QR</button></form><br/>"
+        "<form action='/showinfo' method='get'><button>Show Info Screen</button></form><br/>"
+        "<div style='text-align:center'>"
+        "<a href='https://github.com/lanrat/homeplate' target='_blank' style='color:#1fa3ec'>HomePlate on GitHub</a>"
+        "<br/><small>Version: %s | %s (%s)</small>"
+        "</div>", VERSION, DEVICE_MODEL, CONFIG_IDF_TARGET);
     wm.setCustomMenuHTML(menuHtml);
 
     // Show config screen when AP starts
     wm.setAPCallback([](WiFiManager *myWm)
                      { displayConfigModeScreen(myWm->getConfigPortalSSID().c_str()); });
+
+    // Add message display page after web server starts
+    wm.setWebServerCallback([&wm]()
+    {
+        wm.server->on("/message", HTTP_GET, [&wm]()
+        {
+            String page = FPSTR(HTTP_HEAD_START);
+            page.replace("{v}", "HomePlate Message");
+            page += FPSTR(HTTP_STYLE);
+            page += "<style>textarea{width:100%;height:100px;padding:5px;font-size:1em;margin:5px 0;box-sizing:border-box;border-radius:.3rem}</style>";
+            page += FPSTR(HTTP_HEAD_END);
+            page += "<h2>Display Message</h2>"
+                "<form action='/message' method='POST'>"
+                "<label for='msg'>Message to display:</label><br/><br/>"
+                "<textarea name='msg' id='msg' maxlength='2047' placeholder='Enter a message...'></textarea><br/>"
+                "<br/><button type='submit'>Display Message</button>"
+                "</form>";
+            page += FPSTR(HTTP_BACKBTN);
+            page += FPSTR(HTTP_END);
+            wm.server->send(200, "text/html", page);
+        });
+
+        wm.server->on("/showqr", HTTP_GET, [&wm]()
+        {
+            Serial.println("[CONFIG] Showing WiFi QR on display");
+            displayWiFiQR();
+
+            String page = FPSTR(HTTP_HEAD_START);
+            page.replace("{v}", "HomePlate WiFi QR");
+            page += FPSTR(HTTP_STYLE);
+            page += FPSTR(HTTP_HEAD_END);
+            page += "<div class='msg S'>WiFi QR code sent to display</div>";
+            page += FPSTR(HTTP_BACKBTN);
+            page += FPSTR(HTTP_END);
+            wm.server->send(200, "text/html", page);
+        });
+
+        wm.server->on("/showinfo", HTTP_GET, [&wm]()
+        {
+            Serial.println("[CONFIG] Showing info screen on display");
+            displayInfoScreen();
+
+            String page = FPSTR(HTTP_HEAD_START);
+            page.replace("{v}", "HomePlate Info");
+            page += FPSTR(HTTP_STYLE);
+            page += FPSTR(HTTP_HEAD_END);
+            page += "<div class='msg S'>Info screen sent to display</div>";
+            page += FPSTR(HTTP_BACKBTN);
+            page += FPSTR(HTTP_END);
+            wm.server->send(200, "text/html", page);
+        });
+
+        wm.server->on("/message", HTTP_POST, [&wm]()
+        {
+            if (wm.server->hasArg("msg") && wm.server->arg("msg").length() > 0)
+            {
+                String msg = wm.server->arg("msg");
+                Serial.printf("[CONFIG] Display message: %s\n", msg.c_str());
+                setMessage(msg.c_str());
+                displayMessage(NULL);
+
+                String page = FPSTR(HTTP_HEAD_START);
+                page.replace("{v}", "HomePlate Message");
+                page += FPSTR(HTTP_STYLE);
+                page += FPSTR(HTTP_HEAD_END);
+                page += "<div class='msg S'>Message sent to display</div>";
+                page += "<form action='/message' method='get'><button>Send Another</button></form><br/>";
+                page += FPSTR(HTTP_BACKBTN);
+                page += FPSTR(HTTP_END);
+                wm.server->send(200, "text/html", page);
+            }
+            else
+            {
+                wm.server->sendHeader("Location", "/message", true);
+                wm.server->send(302, "text/plain", "");
+            }
+        });
+    });
 
     // ---- Create custom parameters ----
 
