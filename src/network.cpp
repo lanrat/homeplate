@@ -1,6 +1,7 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include "homeplate.h"
+#include "bufferstream.h"
 
 #define WIFI_TASK_PRIORITY 2
 
@@ -205,7 +206,6 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
     WiFi.setSleep(false);
 
     HTTPClient http;
-    http.getStream().setNoDelay(true);
     delaySleep(timeout_sec);
 
     // Connect with HTTP
@@ -241,36 +241,17 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
         WiFi.setSleep(sleep);
         return nullptr;
     }
-    uint8_t *buffPtr = buffer;
-    const int32_t bufCapacity = size;
+    BufferStream bs(buffer, size);
+    int written = http.writeToStream(&bs);
 
-    int32_t total = http.getSize();
-    int32_t len = total;
-
-    uint8_t buff[512] = {0};
-
-    WiFiClient* stream = http.getStreamPtr();
-    while (http.connected() && (len > 0 || len == -1)) {
-        size_t avail = stream->available();
-
-        if (avail) {
-            int32_t remaining = bufCapacity - (int32_t)(buffPtr - buffer);
-            if (remaining <= 0) {
-                Serial.println("[NET] Buffer full, truncating response");
-                break;
-            }
-            size_t maxRead = ((size_t)remaining < sizeof(buff)) ? (size_t)remaining : sizeof(buff);
-            int c = stream->readBytes(
-                buff, ((avail > maxRead) ? maxRead : avail));
-            memcpy(buffPtr, buff, c);
-
-            if (len > 0) len -= c;
-            buffPtr += c;
-        } else if (len == -1) {
-            len = 0;
-        }
+    if (written < 0) {
+        Serial.printf("[NET] writeToStream error: %d\n", written);
+        free(buffer);
+        http.end();
+        WiFi.setSleep(sleep);
+        return nullptr;
     }
-    *defaultLen = (int32_t)(buffPtr - buffer);
+    *defaultLen = (int32_t)bs.bytesWritten();
 
     if (httpCode != HTTP_CODE_OK) {
         Serial.printf("[NET] Non-200 response: %d from URL %s\n", httpCode, url);
