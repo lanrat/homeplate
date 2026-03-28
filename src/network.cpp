@@ -242,6 +242,7 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
         return nullptr;
     }
     uint8_t *buffPtr = buffer;
+    const int32_t bufCapacity = size;
 
     int32_t total = http.getSize();
     int32_t len = total;
@@ -250,11 +251,17 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
 
     WiFiClient* stream = http.getStreamPtr();
     while (http.connected() && (len > 0 || len == -1)) {
-        size_t size = stream->available();
+        size_t avail = stream->available();
 
-        if (size) {
+        if (avail) {
+            int32_t remaining = bufCapacity - (int32_t)(buffPtr - buffer);
+            if (remaining <= 0) {
+                Serial.println("[NET] Buffer full, truncating response");
+                break;
+            }
+            size_t maxRead = ((size_t)remaining < sizeof(buff)) ? (size_t)remaining : sizeof(buff);
             int c = stream->readBytes(
-                buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
+                buff, ((avail > maxRead) ? maxRead : avail));
             memcpy(buffPtr, buff, c);
 
             if (len > 0) len -= c;
@@ -263,10 +270,11 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
             len = 0;
         }
     }
+    *defaultLen = (int32_t)(buffPtr - buffer);
 
     if (httpCode != HTTP_CODE_OK) {
         Serial.printf("[NET] Non-200 response: %d from URL %s\n", httpCode, url);
-        if (size) {
+        if (*defaultLen > 0) {
             Serial.printf("[NET] HTTP response buffer: \n\n%s\n\n", buffer);
         }
         free(buffer);
