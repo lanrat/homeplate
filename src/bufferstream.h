@@ -1,7 +1,9 @@
 #ifndef BUFFERSTREAM_H
 #define BUFFERSTREAM_H
 
+#ifdef ARDUINO
 #include <Stream.h>
+#endif
 #include <string.h>
 
 // Minimal Stream wrapper around a pre-allocated buffer.

@@ -1,9 +1,8 @@
 #include <unity.h>
 #include <stdint.h>
 #include <stddef.h>
-#include <string.h>
 
-// Minimal Stream stub for native testing (avoids broken ArduinoFake Stream mock)
+// Minimal Stream stub for native builds (Arduino's Stream.h is not available)
 class Stream {
 public:
     virtual ~Stream() {}
@@ -15,37 +14,7 @@ public:
     virtual void flush() = 0;
 };
 
-// Inline the BufferStream class directly to avoid ArduinoFake header conflicts
-class BufferStream : public Stream {
-public:
-    BufferStream(uint8_t* buf, size_t capacity)
-        : _buf(buf), _cap(capacity), _pos(0) {}
-
-    size_t write(uint8_t b) override {
-        if (_pos >= _cap) return 0;
-        _buf[_pos++] = b;
-        return 1;
-    }
-
-    size_t write(const uint8_t* buf, size_t size) override {
-        size_t n = size < (_cap - _pos) ? size : (_cap - _pos);
-        memcpy(_buf + _pos, buf, n);
-        _pos += n;
-        return n;
-    }
-
-    size_t bytesWritten() const { return _pos; }
-
-    int available() override { return 0; }
-    int read() override { return -1; }
-    int peek() override { return -1; }
-    void flush() override {}
-
-private:
-    uint8_t* _buf;
-    size_t _cap;
-    size_t _pos;
-};
+#include "bufferstream.h"
 
 void setUp(void) {}
 void tearDown(void) {}
