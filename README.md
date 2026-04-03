@@ -1,6 +1,6 @@
 # HomePlate
 
-A [Trmnl](https://trmnl.com/) and [Home Assistant](https://www.home-assistant.io/) E-Ink Dashboard for [Inkplate](https://soldered.com/categories/inkplate/) e-paper boards.
+A [Trmnl](https://trmnl.com/?ref=mrlanrat) and [Home Assistant](https://www.home-assistant.io/) E-Ink Dashboard for [Inkplate](https://soldered.com/categories/inkplate/) e-paper boards.
 
 ## Supported Boards
 
@@ -21,14 +21,14 @@ A [Trmnl](https://trmnl.com/) and [Home Assistant](https://www.home-assistant.io
 HomePlate supports multiple display modes called activities. See [activities.md](activities.md) for screenshots of each.
 
 * **Home Assistant** — Display a Home Assistant dashboard screenshot
-* **Trmnl** — Display a [Trmnl](https://trmnl.com) mashup
+* **Trmnl** — Display a [Trmnl](https://trmnl.com/?ref=mrlanrat) mashup
 * **Guest WiFi** — Show a QR code for guests to join your WiFi
 * **Info** — Device info screen (battery, IP, version, etc.)
 * **Message** — Display text messages sent via MQTT
 
 ## Features
 
-* [Trmnl](https://trmnl.com) support
+* [Trmnl](https://trmnl.com/?ref=mrlanrat) support
 * Display Home Assistant dashboards on a beautiful e-ink display
 * Display WiFi QR Codes for guests/friends to connect to home/guest wifi
 * Display messages directly from Home Assistant over MQTT
@@ -81,7 +81,7 @@ Tips for mounting your Inkplate in a picture frame, including adding an external
 
 Set the `TRMNL ID` and `TRMNL Token` in the WiFi setup portal, and set the Default Activity to `Trmnl`.
 
-The [Alias Plugin](https://help.trmnl.com/en/articles/10701448-alias-plugin) can be used to display images from your local network, such as a Home Assistant Dashboard.
+The [Alias Plugin](https://help.trmnl.com/en/articles/10701448-alias-plugin?ref=mrlanrat) can be used to display images from your local network, such as a Home Assistant Dashboard.
 
 See [trmnl.md](trmnl.md) for more information.
 

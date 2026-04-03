@@ -92,12 +92,12 @@ All settings below can be configured through the WiFi portal. They are saved to 
 
 ### TRMNL
 
-| Setting       | Description                                                    | Default                         |
-|---------------|----------------------------------------------------------------|---------------------------------|
-| TRMNL URL     | TRMNL API endpoint                                             | `https://trmnl.app/api/display` |
-| TRMNL ID      | Device ID from [trmnl.com/devices](https://trmnl.com/devices/) | blank                           |
-| TRMNL Token   | API Key from TRMNL Device Credentials                          | blank                           |
-| TRMNL Logging | Send device logs to TRMNL (`true`/`false`)                     | `true`                          |
+| Setting       | Description                                                                  | Default                         |
+|---------------|------------------------------------------------------------------------------|---------------------------------|
+| TRMNL URL     | TRMNL API endpoint                                                           | `https://trmnl.app/api/display` |
+| TRMNL ID      | Device ID from [trmnl.com/devices](https://trmnl.com/devices?ref=mrlanrat)   | blank                           |
+| TRMNL Token   | API Key from TRMNL Device Credentials                                        | blank                           |
+| TRMNL Logging | Send device logs to TRMNL (`true`/`false`)                                   | `true`                          |
 
 ### Guest WiFi QR Code
 

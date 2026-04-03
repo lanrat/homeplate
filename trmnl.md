@@ -1,18 +1,18 @@
 # TRMNL Setup
 
-In order to use Homeplate with Trmnl you will either need [BYOD](https://docs.trmnl.com/go/diy/byod), [BYOS](https://docs.trmnl.com/go/diy/byos), or [both](https://docs.trmnl.com/go/diy/byod-s).
+In order to use Homeplate with Trmnl you will either need [BYOD](https://docs.trmnl.com/go/diy/byod?ref=mrlanrat), [BYOS](https://docs.trmnl.com/go/diy/byos?ref=mrlanrat), or [both](https://docs.trmnl.com/go/diy/byod-s?ref=mrlanrat).
 
 ## Homeplate Config
 
 Configure the following settings in the WiFi setup portal (see [setup.md](setup.md)):
 
 | Setting | Value |
-|---------|-------|
+| ------- | ----- |
 | Default Activity | `Trmnl` |
-| TRMNL ID | Your Device ID from [trmnl.com/devices](https://trmnl.com/devices/) |
+| TRMNL ID | Your Device ID from [trmnl.com/devices](https://trmnl.com/devices?ref=mrlanrat) |
 | TRMNL Token | Your API Key from the Device Credentials section |
 
-The TRMNL URL defaults to `https://trmnl.app/api/display`. If you are running [BYOS](https://docs.trmnl.com/go/diy/byos), change it to your server URL.
+The TRMNL URL defaults to `https://trmnl.app/api/display`. If you are running [BYOS](https://docs.trmnl.com/go/diy/byos?ref=mrlanrat), change it to your server URL.
 
 You should also set the _Device Model_ to the correct Inkplate device on the TRMNL website. If its not listed, you may need to contact their support to request it to be added.
 It is also a good idea to update the _MAC Address_ to your device's MAC Address as well.
@@ -29,6 +29,6 @@ When enabled, logs are batched and sent once per wake cycle at the end of each d
 
 ## Home Assistant Config
 
-The [Trmnl Alias Plugin](https://trmnl.com/integrations/alias) can be used to display a screenshot directly from your Home Assistant instance. You most likely want to set "Enable Cache" to `No` to ensure you always display a fresh image.
+The [Trmnl Alias Plugin](https://trmnl.com/integrations/alias?ref=mrlanrat) can be used to display a screenshot directly from your Home Assistant instance. You most likely want to set "Enable Cache" to `No` to ensure you always display a fresh image.
 
 See the [Home Assistant](hass.md) documentation for more information on setting up Home Assistant screenshots.
