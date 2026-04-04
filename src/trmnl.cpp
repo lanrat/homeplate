@@ -133,7 +133,7 @@ bool trmnlDisplay(const char *url)
 
     // set version
     char ver_buffer[50];
-    snprintf(ver_buffer, 50, "Homeplate %s", VERSION);
+    snprintf(ver_buffer, 50, "%s", VERSION);
     headers["FW-Version"] = ver_buffer;
 
     uint8_t *buff = httpGet(url, &headers, &defaultLen);
