@@ -66,7 +66,7 @@ jobs:
       - name: Install PlatformIO Libs
         run: pio pkg install
       - name: Build ${{ matrix.environment }}
-        run: pio run -e ${{ matrix.environment }} -t ''
+        run: pio run -e ${{ matrix.environment }}
       - name: Generate idedata
         run: pio run -e ${{ matrix.environment }} -t idedata
       - name: Collect flash binaries

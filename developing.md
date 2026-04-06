@@ -18,15 +18,17 @@ pio run -e inkplate6plusv2 # Inkplate 6 Plus v2
 pio run -e inkplate6flick  # Inkplate 6 Flick
 ```
 
-> **Note:** There is no default board. Running `pio run` without `-e` will attempt to build all environments.
+> **Note:** There is no default board. Running `pio run` without `-e` will build all environments. `pio run` only compiles — it will not upload to a connected device. To flash, see the next section.
 
 ## Flashing via USB
 
 The first flash must be done over USB. Connect your Inkplate via USB and run:
 
 ```shell
-pio run -e inkplate10  # flash Inkplate 10 (replace with your board variant)
+pio run -e inkplate10 -t upload -t monitor  # build, flash, and open serial monitor
 ```
+
+Replace `inkplate10` with your board variant. The `-t upload -t monitor` flags chain the upload and serial monitor steps so they run together in one command. Drop `-t monitor` if you don't want to attach the serial monitor afterward.
 
 ## Flashing via OTA (PlatformIO)
 

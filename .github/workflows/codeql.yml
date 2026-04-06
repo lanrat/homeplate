@@ -42,8 +42,8 @@ jobs:
       run: pio pkg install
 
     - name: Run PlatformIO
-      # empty target to prevent upload, single env is sufficient for analysis
-      run: pio run -e inkplate10 -t ''
+      # single env is sufficient for analysis
+      run: pio run -e inkplate10
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
