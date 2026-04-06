@@ -86,7 +86,6 @@ bool trmnlDisplay(const char *url)
          Serial.println("[TRMNL] ERROR: got null url!");
          return false;
     }
-    displayStatusMessage("Loading next image...");
     Serial.printf("[TRMNL] API: %s\n", url);
     static int32_t defaultLen = 5000;
 
@@ -212,6 +211,7 @@ bool trmnlDisplay(const char *url)
     {
         // grab the image and display it
         String image_url = doc["image_url"].as<String>();
+        displayStatusMessage("Loading next image...");
         bool ret = drawImageFromURL(image_url.c_str());
         if (!ret) {
             char error_msg[256];
