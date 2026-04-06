@@ -14,6 +14,7 @@ ESP32Time rtc;
 long tzOffset(time_t epoch) {
     struct tm utc;
     gmtime_r(&epoch, &utc);
+    utc.tm_isdst = -1; // let mktime auto-detect DST from the active TZ rule
     // mktime interprets its argument as local time, so the difference
     // between epoch (UTC) and mktime(utc_components) gives the TZ offset
     return (long)difftime(epoch, mktime(&utc));
@@ -74,9 +75,11 @@ void ntpSync(void *parameter)
         Serial.printf("[TIME] Internal RTC was adjusted by %ld seconds\n", (ntp_et - rtcEpoch));
 
         ntpSynced = true;
-        // rtc.offset is unsigned, but it is used as a signed long for negative offsets
+        // TZ env (set in config_manager via setenv/tzset) drives localtime
+        // conversion inside ESP32Time; rtc.offset must stay 0 to avoid
+        // double-applying the offset. tzOffset() is computed only for the
+        // informational log line below.
         long offset = tzOffset(ntp_et);
-        rtc.offset = offset;
         localTime = rtc.getLocalEpoch();
         Serial.printf("[TIME] NTP UNIX time Epoch(%ld)\n", ntp_et);
         Serial.printf("[TIME] Timezone offset: (%ld) %ld hours\n", offset, (offset/60/60));
@@ -98,17 +101,28 @@ void ntpSync(void *parameter)
 void setupTimeAndSyncTask()
 {
     unsigned long localTime = rtc.getLocalEpoch();
+    uint32_t rtcEpoch = 0;
     i2cStart();
     rtcSet = display.rtcIsSet();
     if (rtcSet) {
-        uint32_t rtcEpoch = display.rtcGetEpoch();
-        rtc.offset = tzOffset(rtcEpoch);
+        rtcEpoch = display.rtcGetEpoch();
         Serial.printf("[TIME] Internal Clock and RTC differ by %ld seconds. local(%ld) RTC(%ld)\n", (localTime - rtcEpoch), localTime, rtcEpoch);
     }
     i2cEnd();
+
+    // On cold boot the ESP32 system clock starts at 0; ESP-IDF preserves it
+    // across deep sleep but not across power-on. If the hardware RTC has a
+    // sane value, seed the system clock from it so user-facing time is right
+    // before NTP sync completes.
+    if (rtcSet && rtcEpoch >= JAN_1_2000 && localTime < JAN_1_2000) {
+        rtc.setTime(rtcEpoch);
+        localTime = rtc.getLocalEpoch();
+        Serial.printf("[TIME] Seeded system clock from hardware RTC: %lu\n", localTime);
+    }
+
     Serial.printf("[TIME] local time (%lu) %s\n", localTime, fullDateString().c_str());
 
-    if (rtcSet && localTime < JAN_1_2000) {
+    if (rtcSet && rtcEpoch < JAN_1_2000) {
         Serial.printf("[TIME] ERROR: RTC time is too far in past. RTC likely has wrong value!\n");
         rtcSet = false;
     }
