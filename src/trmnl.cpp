@@ -63,7 +63,7 @@ void trmnlLogSend() {
     Serial.printf("[TRMNL_LOG] Sending %d log(s) to %s: %s\n", trmnlLogCount, logUrl.c_str(), buff);
 
     int code = httpPost(logUrl.c_str(), &headers, buff);
-    if (code == 204) {
+    if (code >= 200 && code < 300) {
         Serial.println("[TRMNL_LOG] Logs sent successfully");
     } else {
         Serial.printf("[TRMNL_LOG] Failed to send logs, HTTP %d\n", code);
