@@ -9,6 +9,10 @@ on:
     paths: [ "src/**" ]
   workflow_dispatch: # allow manually calling the action
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   analyze:
     name: Analyze
