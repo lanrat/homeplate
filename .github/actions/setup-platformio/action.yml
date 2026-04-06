@@ -1,0 +1,20 @@
+name: Set up PlatformIO
+description: Cache, install Python + PlatformIO, and install project libs
+runs:
+  using: composite
+  steps:
+    - name: Cache PlatformIO
+      uses: actions/cache@v4
+      with:
+        path: ~/.platformio
+        key: ${{ runner.os }}-pio-${{ hashFiles('platformio.ini') }}
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+    - name: Install PlatformIO
+      shell: bash
+      run: pip install platformio==6.1.19
+    - name: Install PlatformIO Libs
+      shell: bash
+      run: pio pkg install

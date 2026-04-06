@@ -3,10 +3,10 @@ name: "CodeQL"
 on:
   push:
     branches: [ "main" ]
-    paths: [ "src/**" ]
+    paths: [ "src/**", ".github/workflows/codeql.yml", ".github/actions/setup-platformio/**" ]
   pull_request:
     branches: [ "main" ]
-    paths: [ "src/**" ]
+    paths: [ "src/**", ".github/workflows/codeql.yml", ".github/actions/setup-platformio/**" ]
   workflow_dispatch: # allow manually calling the action
 
 concurrency:
@@ -31,19 +31,8 @@ jobs:
       with:
         languages: cpp
 
-    - name: Cache PlatformIO
-      uses: actions/cache@v4
-      with:
-        path: ~/.platformio
-        key: ${{ runner.os }}-pio-${{ hashFiles('platformio.ini') }}
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.13'
-    - name: Install PlatformIO
-      run: pip install platformio==6.1.19
-    - name: Install PlatformIO Libs
-      run: pio pkg install
+    - name: Set up PlatformIO
+      uses: ./.github/actions/setup-platformio
 
     - name: Run PlatformIO
       # single env is sufficient for analysis
