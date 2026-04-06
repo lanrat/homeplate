@@ -32,13 +32,43 @@ Replace `inkplate10` with your board variant. The `-t upload -t monitor` flags c
 
 ## Flashing via OTA (PlatformIO)
 
-After the initial USB flash, you can update over WiFi using PlatformIO OTA. First, edit the `[env:ota]` section in `platformio.ini` to set your board variant and device hostname/IP, then run:
+After the initial USB flash, you can update over WiFi using PlatformIO OTA. First, set your board in the `[user]` section of `platformio.ini` (see [Selecting your board for special-purpose envs](#selecting-your-board-for-special-purpose-envs) below) and edit `[env:ota]` to set your device hostname/IP, then run:
 
 ```shell
 pio run -e ota
 ```
 
 > **Note:** OTA must be enabled on the device (see the **Enable OTA** setting in [setup.md](setup.md#display--ota)), and the device must be awake (not sleeping) when you initiate the OTA flash.
+
+## Selecting your board for special-purpose envs
+
+The default board envs (`[env:inkplate5]`, `[env:inkplate10]`, etc.) are self-contained and need no configuration — just pick the one matching your hardware: `pio run -e inkplate10 -t upload -t monitor`.
+
+The **special-purpose envs** — `debug`, `ota`, `vcom`, and `waveform_eeprom` — are board-agnostic and read their target board from a `[user]` section near the top of [platformio.ini](platformio.ini). If you only ever build the regular `inkplate*` envs, you can ignore this section entirely. If you want to use any of the special-purpose envs, set both lines to match your hardware:
+
+```ini
+[user]
+board_flag = -DARDUINO_INKPLATE10
+board_unflags = -DARDUINO_ESP32_DEV
+```
+
+`board_flag` values for each variant:
+
+| Board             | `board_flag`                  |
+|-------------------|-------------------------------|
+| `inkplate5`       | `-DARDUINO_INKPLATE5`         |
+| `inkplate5v2`     | `-DARDUINO_INKPLATE5V2`       |
+| `inkplate6`       | *(leave empty)*               |
+| `inkplate6v2`     | `-DARDUINO_INKPLATE6V2`       |
+| `inkplate6plus`   | `-DARDUINO_INKPLATE6PLUS`     |
+| `inkplate6plusv2` | `-DARDUINO_INKPLATE6PLUSV2`   |
+| `inkplate6flick`  | `-DARDUINO_INKPLATE6FLICK`    |
+| `inkplate10`      | `-DARDUINO_INKPLATE10`        |
+| `inkplate10v2`    | `-DARDUINO_INKPLATE10V2`      |
+
+`board_unflags` is `-DARDUINO_ESP32_DEV` for every board **except** the original `inkplate6`, which needs `ARDUINO_ESP32_DEV` to remain defined. For `inkplate6` (original) only, set `board_unflags =` (empty).
+
+This setting only affects the four special-purpose envs above. The default board envs and CI builds are unaffected.
 
 ## Serial Monitoring
 
