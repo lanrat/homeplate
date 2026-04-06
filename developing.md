@@ -18,7 +18,7 @@ pio run -e inkplate6plusv2 # Inkplate 6 Plus v2
 pio run -e inkplate6flick  # Inkplate 6 Flick
 ```
 
-> **Note:** There is no default board. Running `pio run` without `-e` will build all environments. `pio run` only compiles — it will not upload to a connected device. To flash, see the next section.
+> **Note:** Running `pio run` without `-e` builds all supported Inkplate board variants (the special-purpose `ota`, `debug`, `vcom`, `waveform_eeprom`, and `native` envs are excluded from the default set and must be invoked explicitly with `-e <env>`). `pio run` only compiles — it will not upload to a connected device. To flash, see the next section.
 
 ## Flashing via USB
 
