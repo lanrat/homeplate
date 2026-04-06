@@ -33,20 +33,29 @@ jobs:
       - name: Run PlatformIO Tests
         run: pio test -e native
 
+  discover-envs:
+    runs-on: ubuntu-latest
+    outputs:
+      envs: ${{ steps.parse.outputs.envs }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse default_envs from platformio.ini
+        id: parse
+        run: |
+          python3 - <<'EOF' >> "$GITHUB_OUTPUT"
+          import configparser, json
+          c = configparser.ConfigParser()
+          c.read('platformio.ini')
+          envs = c['platformio']['default_envs'].split()
+          print('envs=' + json.dumps(envs))
+          EOF
+
   build:
+    needs: discover-envs
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        environment:
-          - inkplate5
-          - inkplate5v2
-          - inkplate6
-          - inkplate6v2
-          - inkplate6flick
-          - inkplate6plus
-          - inkplate6plusv2
-          - inkplate10
-          - inkplate10v2
+        environment: ${{ fromJSON(needs.discover-envs.outputs.envs) }}
 
     steps:
       - uses: actions/checkout@v4
