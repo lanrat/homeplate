@@ -117,6 +117,10 @@ You can update the firmware over WiFi without a computer connected, using a firm
 
 For developers building from source, HomePlate can also be flashed via PlatformIO over USB or OTA. See the [Development Guide](developing.md) for details.
 
+## Acknowledgments
+
+Thanks to [Soldered Electronics](https://soldered.com/) for donating hardware that helped expand board support.
+
 ## Development
 
 See the [Development Guide](developing.md) for building from source, PlatformIO setup, debugging, tests, and advanced compile-time configuration.
