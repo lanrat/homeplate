@@ -1,5 +1,5 @@
 // Ensure a supported board is selected
-#if !defined(ARDUINO_INKPLATE5) && !defined(ARDUINO_INKPLATE5V2) && !defined(ARDUINO_INKPLATE10) && !defined(ARDUINO_INKPLATE10V2) && !defined(ARDUINO_ESP32_DEV) && !defined(ARDUINO_INKPLATE6V2) && !defined(ARDUINO_INKPLATE6PLUS) && !defined(ARDUINO_INKPLATE6PLUSV2) && !defined(ARDUINO_INKPLATE6FLICK)
+#if !defined(ARDUINO_INKPLATE5) && !defined(ARDUINO_INKPLATE5V2) && !defined(ARDUINO_INKPLATE10) && !defined(ARDUINO_INKPLATE10V2) && !defined(ARDUINO_INKPLATE6) && !defined(ARDUINO_INKPLATE6V2) && !defined(ARDUINO_INKPLATE6PLUS) && !defined(ARDUINO_INKPLATE6PLUSV2) && !defined(ARDUINO_INKPLATE6FLICK)
 #error "Unsupported board selection, please select a supported Inkplate board."
 #endif
 
@@ -25,7 +25,7 @@ void setup()
     Serial.printf("\n\n[SETUP] starting, version(%s) boot: %u\n", VERSION, bootCount);
     ++bootCount;
     // reset GPIOs used for wake interrupt
-    #if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2) || defined(ARDUINO_ESP32_DEV) || defined(ARDUINO_INKPLATE6V2)
+    #if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2) || defined(ARDUINO_INKPLATE6) || defined(ARDUINO_INKPLATE6V2)
         rtc_gpio_deinit(GPIO_NUM_34); // touchpad wake mask pin
     #endif
     #ifdef WAKE_BUTTON
@@ -52,18 +52,31 @@ void setup()
     // must be called before checkPads() so buttons can override pre-boot activity
     startActivity(activityFromString(plateCfg.defaultActivityStr));
 
-    // check touchpads for wake event, must be done before display.begin()
-    if (sleepBoot && TOUCHPAD_ENABLE)
-    {
-        Wire.begin(); // this is called again in display.begin(), but it does not appear to be an issue...
-        checkBootPads();
-    }
-
     // Take the mutex
     displayStart();
     i2cStart();
     display.begin();             // Init Inkplate library (you should call this function ONLY ONCE)
-    display.rtcClearAlarmFlag(); // Clear alarm flag from any previous alarm
+    display.rtc.clearAlarmFlag(); // Clear alarm flag from any previous alarm
+    i2cEnd();
+    displayEnd();
+
+    // Check which touchpad triggered the wake. Reads cached INTF / INTCAP
+    // values that the patched library snapshotted during display.begin()
+    // before clearing the MCP's INTF latch — no I2C performed here, just
+    // member-variable reads. See soldered-inkplate-v11-issue.md Issue 4.
+    if (sleepBoot && TOUCHPAD_ENABLE)
+    {
+        checkBootPads();
+    }
+
+    // ditherKernel: 0 = None, 1-7 = Image::DitherKernel enum shifted by +1
+    if (plateCfg.ditherKernel > 0)
+    {
+        display.image.setDitherKernel((Image::DitherKernel)(plateCfg.ditherKernel - 1));
+    }
+
+    displayStart();
+    i2cStart();
     setupWakePins();
 
     // Read wake button state now, before SD card SPI init may reconfigure the pin

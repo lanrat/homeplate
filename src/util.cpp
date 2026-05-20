@@ -1,4 +1,5 @@
 #include "homeplate.h"
+#include <esp_chip_info.h>
 
 uint getBatteryPercent(double voltage)
 {
@@ -48,7 +49,7 @@ void printChipInfo()
 
     Serial.printf("silicon revision %u, ", chip_info.revision);
 
-    Serial.printf("%dMB %s flash\n", spi_flash_get_chip_size() / (1024 * 1024),
+    Serial.printf("%dMB %s flash\n", ESP.getFlashChipSize() / (1024 * 1024),
                   (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
 
     Serial.printf("Minimum free heap size: %u bytes\n", esp_get_minimum_free_heap_size());

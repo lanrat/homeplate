@@ -10,6 +10,26 @@ HomePlateConfig plateCfg;
 static Preferences preferences;
 static const char *NVS_NAMESPACE = "homeplate";
 
+// Display names for Image::DitherKernel values, indexed by enum value (0..N-1).
+// The DITHER_KERNELS array in the Inkplate library does not expose names, so
+// we maintain this table locally. The static_assert below catches drift: if a
+// future library version adds or removes a kernel, the build will fail and
+// this table must be updated to match.
+static const char *const DITHER_KERNEL_NAMES[] = {
+    "Floyd-Steinberg",      // 0 FloydSteinberg
+    "Jarvis-Judice-Ninke",  // 1 JarvisJudiceNinke
+    "Atkinson",             // 2 Atkinson
+    "Burkes",               // 3 Burkes
+    "Stucki",               // 4 Stucki
+    "Sierra Lite",          // 5 SierraLite
+    "Reduced Diffusion",    // 6 ReducedDiffusion
+};
+static const uint8_t DITHER_KERNEL_NAMES_COUNT =
+    sizeof(DITHER_KERNEL_NAMES) / sizeof(DITHER_KERNEL_NAMES[0]);
+static_assert(DITHER_KERNEL_NAMES_COUNT == DITHER_KERNEL_COUNT,
+    "DITHER_KERNEL_NAMES is out of sync with Inkplate library DITHER_KERNELS — "
+    "update DITHER_KERNEL_NAMES in config_manager.cpp to match the library.");
+
 // ---- NVS helpers ----
 
 static void loadString(const char *key, char *dest, size_t destSize, const char *defaultVal)
@@ -78,6 +98,7 @@ void logConfig()
 
     // Display & OTA
     Serial.printf("[CONFIG]   displayLastUpdate = %s\n", plateCfg.displayLastUpdateTime ? "true" : "false");
+    Serial.printf("[CONFIG]   ditherKernel      = %d\n", plateCfg.ditherKernel);
     Serial.printf("[CONFIG]   enableOta         = %s\n", plateCfg.enableOta ? "true" : "false");
 
     // Internal
@@ -115,6 +136,7 @@ void loadConfig()
     strlcpy(plateCfg.mqttDeviceName, MQTT_DEVICE_NAME, sizeof(plateCfg.mqttDeviceName));
     plateCfg.mqttExpireAfterSec = MQTT_EXPIRE_AFTER_SEC;
     plateCfg.displayLastUpdateTime = DISPLAY_LAST_UPDATE_TIME;
+    plateCfg.ditherKernel = DITHER_KERNEL;
     plateCfg.enableOta = ENABLE_OTA;
 
     // Load from NVS (overrides compile-time defaults)
@@ -145,6 +167,7 @@ void loadConfig()
     loadString("mqtt_devname", plateCfg.mqttDeviceName, sizeof(plateCfg.mqttDeviceName), plateCfg.mqttDeviceName);
     plateCfg.mqttExpireAfterSec = preferences.getUInt("mqtt_expire", plateCfg.mqttExpireAfterSec);
     plateCfg.displayLastUpdateTime = preferences.getBool("disp_time", plateCfg.displayLastUpdateTime);
+    plateCfg.ditherKernel = preferences.getUChar("dither_kern", plateCfg.ditherKernel);
     plateCfg.enableOta = preferences.getBool("enable_ota", plateCfg.enableOta);
 
     plateCfg.configured = preferences.getBool("configured", false);
@@ -211,6 +234,7 @@ void saveConfig()
     saveString("mqtt_devname", plateCfg.mqttDeviceName);
     preferences.putUInt("mqtt_expire", plateCfg.mqttExpireAfterSec);
     preferences.putBool("disp_time", plateCfg.displayLastUpdateTime);
+    preferences.putUChar("dither_kern", plateCfg.ditherKernel);
     preferences.putBool("enable_ota", plateCfg.enableOta);
     preferences.putBool("configured", true);
 
@@ -421,6 +445,36 @@ bool startWiFiManager(bool forcePortal)
     // Section: Display & OTA
     WiFiManagerParameter h_disp("<hr><h3>Display &amp; OTA</h3>");
     WiFiManagerParameter p_dtime("disp_time", "Show Update Time", "T", 2, plateCfg.displayLastUpdateTime ? "type=\"checkbox\" style=\"margin-top:0.5em\" checked" : "type=\"checkbox\" style=\"margin-top:0.5em\"", WFM_LABEL_AFTER);
+
+    // Dither kernel dropdown. ditherKernel == 0 means "None" (no dithering);
+    // values 1..DITHER_KERNEL_COUNT map to Image::DitherKernel + 1. Options are
+    // built from DITHER_KERNEL_NAMES so adding a kernel only requires updating
+    // that one table.
+    char ditherKernelHtml[768];
+    char *dp = ditherKernelHtml;
+    size_t dremaining = sizeof(ditherKernelHtml);
+    int dn = snprintf(dp, dremaining,
+        "<br/><label for='dither_kern'>Dither Kernel</label>"
+        "<select name='dither_kern' id='dither_kern' class='button'>"
+        "<option value='0'%s>None</option>",
+        plateCfg.ditherKernel == 0 ? " selected" : "");
+    dp += dn; dremaining -= dn;
+    for (uint8_t i = 0; i < DITHER_KERNEL_COUNT; i++)
+    {
+        const char *name = (i < DITHER_KERNEL_NAMES_COUNT)
+            ? DITHER_KERNEL_NAMES[i]
+            : "(unknown)";
+        uint8_t cfgVal = i + 1; // config values are library enum + 1
+        dn = snprintf(dp, dremaining,
+            "<option value='%u'%s>%s</option>",
+            cfgVal,
+            plateCfg.ditherKernel == cfgVal ? " selected" : "",
+            name);
+        dp += dn; dremaining -= dn;
+    }
+    snprintf(dp, dremaining, "</select>");
+    WiFiManagerParameter p_dkern(ditherKernelHtml);
+
     WiFiManagerParameter p_ota("enable_ota", "Enable OTA", "T", 2, plateCfg.enableOta ? "type=\"checkbox\" style=\"margin-top:0.5em\" checked" : "type=\"checkbox\" style=\"margin-top:0.5em\"", WFM_LABEL_AFTER);
 
     // ---- Add all parameters ----
@@ -464,6 +518,7 @@ bool startWiFiManager(bool forcePortal)
 
     wm.addParameter(&h_disp);
     wm.addParameter(&p_dtime);
+    wm.addParameter(&p_dkern);
     wm.addParameter(&p_ota);
 
     // ---- Save callback ----
@@ -500,6 +555,8 @@ bool startWiFiManager(bool forcePortal)
         strlcpy(plateCfg.mqttDeviceName, p_mqdn.getValue(), sizeof(plateCfg.mqttDeviceName));
         plateCfg.mqttExpireAfterSec = atoi(p_mqexp.getValue());
         plateCfg.displayLastUpdateTime = (strncmp(p_dtime.getValue(), "T", 1) == 0);
+        int dk = atoi(wm.server->arg("dither_kern").c_str());
+        plateCfg.ditherKernel = (dk >= 0 && dk <= DITHER_KERNEL_COUNT) ? (uint8_t)dk : 0;
         plateCfg.enableOta = (strncmp(p_ota.getValue(), "T", 1) == 0);
 
         // Compute derived

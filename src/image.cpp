@@ -1,5 +1,4 @@
 #include "homeplate.h"
-#include <libs/pngle/pngle.h>
 
 #define IMAGE_HTTP_REQUEST_TIMEOUT 15
 
@@ -235,13 +234,13 @@ bool drawImageFromBuffer(uint8_t *buff, size_t size, bool center) {
         displayStart();
         switch(img.type) {
             case ImageType::PNG:
-                good = drawPngFromBuffer(buff, size, xLoc, yLoc, USE_DITHERING, false);
+                good = display.image.drawPngFromBuffer(buff, size, xLoc, yLoc, (plateCfg.ditherKernel != 0), false);
                 break;
             case ImageType::BMP:
-                good = display.drawBitmapFromBuffer(buff, xLoc, yLoc, USE_DITHERING, false);
+                good = display.image.drawBitmapFromBuffer(buff, xLoc, yLoc, (plateCfg.ditherKernel != 0), false);
                 break;
             case ImageType::JPEG:
-                good = display.drawJpegFromBuffer(buff, size, xLoc, yLoc, USE_DITHERING, false);
+                good = display.image.drawJpegFromBuffer(buff, size, xLoc, yLoc, (plateCfg.ditherKernel != 0), false);
                 break;
             default:
                 good = false;

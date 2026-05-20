@@ -89,6 +89,11 @@
 #ifndef DISPLAY_LAST_UPDATE_TIME
 #define DISPLAY_LAST_UPDATE_TIME false
 #endif
+#ifndef DITHER_KERNEL
+// 0=None (default, no dithering), 1=FloydSteinberg, 2=JarvisJudiceNinke,
+// 3=Atkinson, 4=Burkes, 5=Stucki, 6=SierraLite, 7=ReducedDiffusion
+#define DITHER_KERNEL 0
+#endif
 #ifndef ENABLE_OTA
 #define ENABLE_OTA false
 #endif

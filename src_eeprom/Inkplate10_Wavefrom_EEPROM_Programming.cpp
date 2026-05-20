@@ -1,255 +1,156 @@
-/*
-   Inkplate10_Wavefrom_EEPROM_Programming example for e-radionica.com Inkplate 10
-   For this example you will need only USB cable and Inkplate 10.
-   Select "e-radionica Inkplate10" or "Soldered Inkplate10" from Tools -> Board menu.
-   Don't have "e-radionica Inkplate10" or "Soldered Inkplate10" option? Follow our tutorial and add it:
-   https://soldered.com/learn/add-inkplate-6-board-definition-to-arduino-ide/
+// Waveform selection utility for Inkplate 10.
+//
+// Lets you preview each of the available 3-bit grayscale waveforms and burn
+// the chosen one into ESP32 EEPROM. Useful if the factory waveform was
+// accidentally overwritten or you need a different look on your panel.
+//
+// The Inkplate v11.0.0 library now provides setWaveform(num, burnToEEPROM)
+// which both previews and persists, replacing the manual changeWaveform /
+// burnWaveformToEEPROM bit-banging this file used to do.
+//
+// Usage (via Serial monitor @ 115200):
+//   1..5  preview that waveform (renders the gradient)
+//   test  render the demo image with the currently-selected waveform
+//   ok    burn the currently-selected waveform into EEPROM and exit
 
-   This example will program a new waveform in ESP32 EEPROM if the waveform has been accidentally overwritten.
-   Upload code and open Serial Monitor. Send numbers form 1 to 4 to display selected waveform.
-   They should go from dark to light. Select the one that looks the best to you.
-   Send "ok" to select waveform and burn it into ESP32 EEPROM or send "test" to display a an test image.
-   CAUTION! Changing EEPROM size can wipe waveform data.
-   Waveform data is stored in EEPROM on address range form address 0 to address 75.
-
-   Want to learn more about Inkplate? Visit www.inkplate.io
-   Looking to get support? Write on our forums: https://forum.soldered.com/
-   18 January 2023 by Soldered
-*/
-
-// Next 3 lines are a precaution, you can ignore those, and the example would also work without them
 #if !defined(ARDUINO_INKPLATE10) && !defined(ARDUINO_INKPLATE10V2)
-#error                                                                                                                 \
-    "Wrong board selection for this example, please select e-radionica Inkplate10 or Soldered Inkplate10 in the boards menu."
+#error "Wrong board selection for this example, please select Soldered Inkplate10 in platformio.ini [user] section."
 #endif
 
-#include "EEPROM.h"   // Include ESP32 EEPROM library
-#include "Inkplate.h" // Include Inkplate library to the sketch
-#include "image.h"    // Include the demo image for test
+#include <Inkplate.h>
+#include "image.h"
 
-// added definitions to compile with platformio
-void showGradient(int _selected);
-int getWaveformNumer();
+Inkplate display(INKPLATE_3BIT);
 
+static const uint8_t WAVEFORM_COUNT = 5;
+static uint8_t currentWaveform = 1; // 1-indexed to match library API
 
-Inkplate display(INKPLATE_3BIT); // Create object on Inkplate library and set library to work in grayscale mode
-
-// All waveforms for Inkplate 10 board
-uint8_t waveform1[8][9] = {{0, 0, 0, 0, 0, 0, 0, 1, 0}, {0, 0, 0, 2, 2, 2, 1, 1, 0}, {0, 0, 2, 1, 1, 2, 2, 1, 0},
-                           {0, 1, 2, 2, 1, 2, 2, 1, 0}, {0, 0, 2, 1, 2, 2, 2, 1, 0}, {0, 2, 2, 2, 2, 2, 2, 1, 0},
-                           {0, 0, 0, 0, 0, 2, 1, 2, 0}, {0, 0, 0, 2, 2, 2, 2, 2, 0}};
-uint8_t waveform2[8][9] = {{0, 0, 0, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 2, 1, 2, 1, 1, 0}, {0, 0, 0, 2, 2, 1, 2, 1, 0},
-                           {0, 0, 2, 2, 1, 2, 2, 1, 0}, {0, 0, 0, 2, 1, 1, 1, 2, 0}, {0, 0, 2, 2, 2, 1, 1, 2, 0},
-                           {0, 0, 0, 0, 0, 1, 2, 2, 0}, {0, 0, 0, 0, 2, 2, 2, 2, 0}};
-uint8_t waveform3[8][9] = {{0, 3, 3, 3, 3, 3, 3, 3, 0}, {0, 1, 2, 1, 1, 2, 2, 1, 0}, {0, 2, 2, 2, 1, 2, 2, 1, 0},
-                           {0, 0, 2, 2, 2, 2, 2, 1, 0}, {0, 3, 3, 2, 1, 1, 1, 2, 0}, {0, 3, 3, 2, 2, 1, 1, 2, 0},
-                           {0, 2, 1, 2, 1, 2, 1, 2, 0}, {0, 3, 3, 3, 2, 2, 2, 2, 0}};
-uint8_t waveform4[8][9] = {{0, 0, 0, 0, 0, 0, 0, 1, 0}, {0, 0, 0, 2, 2, 2, 1, 1, 0}, {0, 0, 2, 1, 1, 2, 2, 1, 0},
-                           {1, 1, 2, 2, 1, 2, 2, 1, 0}, {0, 0, 2, 1, 2, 2, 2, 1, 0}, {0, 1, 2, 2, 2, 2, 2, 1, 0},
-                           {0, 0, 0, 2, 2, 2, 1, 2, 0}, {0, 0, 0, 2, 2, 2, 2, 2, 0}};
-uint8_t waveform5[8][9] = {{0, 0, 0, 0, 0, 0, 0, 1, 0}, {0, 0, 0, 2, 2, 2, 1, 1, 0}, {2, 2, 2, 1, 0, 2, 1, 0, 0},
-                           {2, 1, 1, 2, 1, 1, 1, 2, 0}, {2, 2, 2, 1, 1, 1, 0, 2, 0}, {2, 2, 2, 1, 1, 2, 1, 2, 0},
-                           {0, 0, 0, 0, 2, 1, 2, 2, 0}, {0, 0, 0, 0, 2, 2, 2, 2, 0}};
-uint8_t *waveformList[] = {&waveform1[0][0], &waveform2[0][0], &waveform3[0][0], &waveform4[0][0], &waveform5[0][0]};
-
-// Calculate number of possible waveforms
-uint8_t waveformListSize = (sizeof(waveformList) / sizeof(uint8_t *));
-
-// Struct for reading waveform from EEPROM memory of ESP32
-struct waveformData waveformEEPROM;
-
-int currentWaveform = 0;
+static void showGradient(uint8_t waveform);
+static void showTestImage(uint8_t waveform);
+static int readSerialCommand();
 
 void setup()
 {
-    // Start up a Serial monitor @ 115200 bauds.
     Serial.begin(115200);
+    delay(500);
+    Serial.println("\n[WAVEFORM] Inkplate 10 waveform selection utility");
 
-    display.begin();   // Init library (you should call this function ONLY ONCE)
-    EEPROM.begin(512); // Init EEPROM library with 512 of EEPROM size.
+    display.begin();
 
-    // Display all shades of gray on e-paper with first waveform
+    // Preview the initial waveform
+    display.setWaveform(currentWaveform, false);
     showGradient(currentWaveform);
 
-    // Flag for programming
-    int progFlag = 0;
+    Serial.printf("Current waveform: %d\n", currentWaveform);
+    Serial.println("Send waveform [1-5], \"test\" for image, \"ok\" to burn:");
 
-    // Flag for data receive
-    int uartFlag = 0;
-
-    Serial.printf("Current waveform: %d\n", currentWaveform+1);
-    Serial.printf("Send wavefrom [1-5], \"ok\" to burn it, \"test\" for image: ");
-
-    // Until "ok" is not send, user can select one of the waveforms
-    while (uartFlag != 255)
+    int cmd = 0;
+    while (cmd != 255)
     {
-        // Check if user send waveform number (or request for waveform programming).
-        uartFlag = getWaveformNumer();
+        cmd = readSerialCommand();
 
-        // Got waveform number? Show it!
-        if (uartFlag > 0 && uartFlag <= waveformListSize)
+        if (cmd >= 1 && cmd <= WAVEFORM_COUNT)
         {
-            currentWaveform = uartFlag - 1;
-            Serial.printf("Showing Gradient using waveform: %d\n", currentWaveform+1);
+            currentWaveform = cmd;
+            Serial.printf("Previewing waveform: %d\n", currentWaveform);
+            display.setWaveform(currentWaveform, false);
             showGradient(currentWaveform);
-
-            Serial.printf("Current waveform: %d\n", currentWaveform+1);
-            Serial.printf("Send wavefrom [1-5], \"ok\" to burn it, \"test\" for image: ");
+            Serial.printf("Current waveform: %d\n", currentWaveform);
+            Serial.println("Send waveform [1-5], \"test\" for image, \"ok\" to burn:");
         }
-
-        // If function returns 254, show test image
-        if (uartFlag == 254)
+        else if (cmd == 254)
         {
-            Serial.printf("Showing Test Image using waveform: %d\n", currentWaveform+1);
-            display.clearDisplay();
-            display.drawBitmap3Bit(0, 0, demo_image, demo_image_w, demo_image_h);
-
-            display.fillRect(0, 0, 300, 40, 7);
-            display.setTextSize(4);
-            display.setTextColor(0);
-            display.setCursor(10, 10);
-            display.printf("WAVEFORM: %d", currentWaveform + 1);
-
-            display.display();
-
-            Serial.printf("Current waveform: %d\n", currentWaveform+1);
-            Serial.printf("Send wavefrom [1-5], \"ok\" to burn it, \"test\" for image: ");
+            Serial.printf("Showing test image with waveform: %d\n", currentWaveform);
+            showTestImage(currentWaveform);
+            Serial.printf("Current waveform: %d\n", currentWaveform);
+            Serial.println("Send waveform [1-5], \"test\" for image, \"ok\" to burn:");
         }
     }
 
-    Serial.printf("Burning waveform: %d\n", currentWaveform+1);
+    Serial.printf("Burning waveform: %d to EEPROM\n", currentWaveform);
+    display.setWaveform(currentWaveform, true);
 
-    // Load waveform in EEPROM memory of ESP32
-    waveformEEPROM.waveformId = INKPLATE10_WAVEFORM1 + currentWaveform;
-    memcpy(&waveformEEPROM.waveform, waveformList[currentWaveform], sizeof(waveformEEPROM.waveform));
-    waveformEEPROM.checksum = display.calculateChecksum(waveformEEPROM);
-    display.burnWaveformToEEPROM(waveformEEPROM);
-
-    // Show message on the display
     display.clearDisplay();
     display.setCursor(10, 100);
-    display.print("Waveform");
-    display.print(currentWaveform + 1, DEC);
-    display.print(" selected & programmed into ESP32 EEPROM");
+    display.setTextSize(4);
+    display.setTextColor(0);
+    display.printf("Waveform %d programmed into ESP32 EEPROM", currentWaveform);
     display.display();
 
-    Serial.printf("Done, please reboot & program Inkplate\n");
+    Serial.println("Done. Please reboot and flash your normal firmware.");
 }
 
 void loop()
 {
-    // Empty...
+    // Empty
 }
 
-// Prints gradient lines and currently selected waveform
-void showGradient(int _selected)
+static void showGradient(uint8_t waveform)
 {
     display.clearDisplay();
 
     int w = display.width() / 8;
     int h = display.height() - 100;
 
-    display.changeWaveform(waveformList[currentWaveform]);
-
-    display.fillRect(0, 725, 1200, 100, 7);
-
-    display.setTextSize(4);
-    display.setTextColor(0);
-    display.setCursor(10, 743);
-    display.print("Waveform select: ");
-
-    display.setCursor(432, 743);
-    // Display waveform numbers.
-    for (int i = 1; i <= waveformListSize; i++)
-    {
-        display.print(i, DEC);
-        display.print(' ');
-    }
-    display.drawRect((_selected * 6 * 4 * 2) + 432 - 3, 740, (6 * 4) + 2, (8 * 4) + 2, 0);
-
     for (int i = 0; i < 8; i++)
     {
         display.fillRect(i * w, 0, w, h, i);
     }
 
-    display.setTextSize(3);
-    display.setCursor(10, 792);
-    display.print("Send wavefrom number, or send \"ok\" to burn it, \"test\" for image");
-
+    display.fillRect(0, 725, 1200, 100, 7);
+    display.setTextSize(4);
+    display.setTextColor(0);
+    display.setCursor(10, 743);
+    display.printf("Waveform: %d", waveform);
     display.display();
 }
 
-/**
- * @brief       Get the command from the serial.
- *
- * @return      Returns 0 for no captured data on serial, 255 for wavefrom programming, 254 for test image show.
- */
-int getWaveformNumer()
+static void showTestImage(uint8_t waveform)
 {
-    // Buffer for the serial data.
-    char _buffer[20];
+    display.clearDisplay();
+    display.image.drawBitmap3Bit(0, 0, demo_image, demo_image_w, demo_image_h);
 
-    // Variable for array indexing (serial buffer).
-    int _n = 0;
+    display.fillRect(0, 0, 300, 40, 7);
+    display.setTextSize(4);
+    display.setTextColor(0);
+    display.setCursor(10, 10);
+    display.printf("WAVEFORM: %d", waveform);
+    display.display();
+}
 
-    // Number for storing current waveform.
-    int _waveform = 0;
+// Read a line from Serial. Returns:
+//   1..5  waveform number selected
+//   254   "test" command
+//   255   "ok" command (exit loop and burn)
+//   0     no command yet or invalid input
+static int readSerialCommand()
+{
+    static char buf[16];
+    static uint8_t idx = 0;
 
-    // Check if something has been sent to the Inkplate.
-    if (Serial.available())
+    while (Serial.available())
     {
-        // Capture the time!
-        unsigned long _timeout = millis();
-
-        // Wait until 250 milliseconds have passed from last received char from UART.
-        while ((unsigned long)(millis() - _timeout) < 250)
+        char c = Serial.read();
+        if (c == '\n' || c == '\r')
         {
-            // Got some space in the buffer? Get the chars!
-            if (Serial.available() && _n < 19)
-            {
-                _buffer[_n++] = Serial.read();
-                Serial.write(_buffer[_n-1]); // echo back response
-            }
-            else
-            {
-                // Drop the data from the UART (buffer is full).
-                Serial.read();
-            }
+            if (idx == 0)
+                continue;
+            buf[idx] = '\0';
+            idx = 0;
+
+            if (strcmp(buf, "ok") == 0)
+                return 255;
+            if (strcmp(buf, "test") == 0)
+                return 254;
+            int n = atoi(buf);
+            if (n >= 1 && n <= WAVEFORM_COUNT)
+                return n;
+            Serial.printf("Unknown command: %s\n", buf);
+            return 0;
         }
-
-        // Add null-terminating character at the end.
-        _buffer[_n] = '\0';
-    }
-
-    // Convert whole string to the lowercase
-    for (int i = 0; _buffer[i] != '\0'; i++)
-    {
-        _buffer[i] = tolower(_buffer[i]);
-    }
-
-    // Check if you got something.
-    if (_n != 0)
-    {
-        // print newline
-        Serial.printf("\n");
-        // Try to parse it.
-
-        // First check for the keyword for programming or show test image.
-        if (strstr("ok\r\n", _buffer) != NULL)
+        else if (idx < sizeof(buf) - 1)
         {
-            return 255;
-        }
-        else if (strstr("test\r\n", _buffer))
-        {
-            return 254;
-        }
-        else if (sscanf(_buffer, "%d", &_waveform))
-        {
-            // Check bounds.
-            if ((_waveform > 0) && _waveform <= (waveformListSize))
-            {
-                return _waveform;
-            }
+            buf[idx++] = c;
         }
     }
     return 0;

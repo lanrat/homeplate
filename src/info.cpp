@@ -1,4 +1,5 @@
 #include "homeplate.h"
+#include <esp_chip_info.h>
 
 #define COL1_NAME_X 1 * (E_INK_WIDTH / 8)
 #define COL1_DATA_X 2 * (E_INK_WIDTH / 8)
@@ -206,7 +207,7 @@ void displayInfoScreen()
   display.setCursor(COL1_NAME_X, y);
   display.print("Flash:");
   display.setCursor(COL1_DATA_X, y);
-  display.printf("%dMB %s", spi_flash_get_chip_size() / (1024 * 1024), (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
+  display.printf("%dMB %s", ESP.getFlashChipSize() / (1024 * 1024), (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
   // Heap
   y += lineHeight;
   display.setCursor(COL1_NAME_X, y);
@@ -322,7 +323,7 @@ void displayInfoScreen()
   display.setCursor(COL2_NAME_X, y);
   display.printf("Ext RTC:");
   display.setCursor(COL2_DATA_X, y);
-  display.printf(display.rtcIsSet() ? "OK" : "Error");
+  display.printf(display.rtc.isSet() ? "OK" : "Error");
   }
 
   displayBoundaryBox();

@@ -44,12 +44,11 @@ pio run -e ota
 
 The default board envs (`[env:inkplate5]`, `[env:inkplate10]`, etc.) are self-contained and need no configuration — just pick the one matching your hardware: `pio run -e inkplate10 -t upload -t monitor`.
 
-The **special-purpose envs** — `debug`, `ota`, `vcom`, and `waveform_eeprom` — are board-agnostic and read their target board from a `[user]` section near the top of [platformio.ini](platformio.ini). If you only ever build the regular `inkplate*` envs, you can ignore this section entirely. If you want to use any of the special-purpose envs, set both lines to match your hardware:
+The **special-purpose envs** — `debug`, `ota`, `vcom`, and `waveform_eeprom` — are board-agnostic and read their target board from a `[user]` section near the top of [platformio.ini](platformio.ini). If you only ever build the regular `inkplate*` envs, you can ignore this section entirely. If you want to use any of the special-purpose envs, set `board_flag` to match your hardware:
 
 ```ini
 [user]
 board_flag = -DARDUINO_INKPLATE10
-board_unflags = -DARDUINO_ESP32_DEV
 ```
 
 `board_flag` values for each variant:
@@ -58,15 +57,13 @@ board_unflags = -DARDUINO_ESP32_DEV
 |-------------------|-------------------------------|
 | `inkplate5`       | `-DARDUINO_INKPLATE5`         |
 | `inkplate5v2`     | `-DARDUINO_INKPLATE5V2`       |
-| `inkplate6`       | *(leave empty)*               |
+| `inkplate6`       | `-DARDUINO_INKPLATE6`         |
 | `inkplate6v2`     | `-DARDUINO_INKPLATE6V2`       |
 | `inkplate6plus`   | `-DARDUINO_INKPLATE6PLUS`     |
 | `inkplate6plusv2` | `-DARDUINO_INKPLATE6PLUSV2`   |
 | `inkplate6flick`  | `-DARDUINO_INKPLATE6FLICK`    |
 | `inkplate10`      | `-DARDUINO_INKPLATE10`        |
 | `inkplate10v2`    | `-DARDUINO_INKPLATE10V2`      |
-
-`board_unflags` is `-DARDUINO_ESP32_DEV` for every board **except** the original `inkplate6`, which needs `ARDUINO_ESP32_DEV` to remain defined. For `inkplate6` (original) only, set `board_unflags =` (empty).
 
 This setting only affects the four special-purpose envs above. The default board envs and CI builds are unaffected.
 

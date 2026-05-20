@@ -63,9 +63,9 @@ void ntpSync(void *parameter)
 
         /* RTC */
         i2cStart();
-        uint32_t rtcEpoch = display.rtcGetEpoch();
+        uint32_t rtcEpoch = display.rtc.getEpoch();
         time_t ntp_et = timeClient.getEpochTime();
-        display.rtcSetEpoch(ntp_et);
+        display.rtc.setEpoch(ntp_et);
         rtc.setTime(ntp_et);
         i2cEnd();
 
@@ -86,7 +86,7 @@ void ntpSync(void *parameter)
         Serial.printf("[TIME] synced local UNIX time Epoch(%ld) %s \n", localTime, fullDateString().c_str());
 
         i2cStart();
-        rtcSet = display.rtcIsSet();
+        rtcSet = display.rtc.isSet();
         i2cEnd();
         if (!rtcSet) {
             Serial.printf("[TIME] ERROR: Failed to set RTC!\n");
@@ -103,9 +103,9 @@ void setupTimeAndSyncTask()
     unsigned long localTime = rtc.getLocalEpoch();
     uint32_t rtcEpoch = 0;
     i2cStart();
-    rtcSet = display.rtcIsSet();
+    rtcSet = display.rtc.isSet();
     if (rtcSet) {
-        rtcEpoch = display.rtcGetEpoch();
+        rtcEpoch = display.rtc.getEpoch();
         Serial.printf("[TIME] Internal Clock and RTC differ by %ld seconds. local(%ld) RTC(%ld)\n", (localTime - rtcEpoch), localTime, rtcEpoch);
     }
     i2cEnd();
@@ -138,7 +138,9 @@ void setupTimeAndSyncTask()
             xTaskCreate(
                 ntpSync,           /* Task function. */
                 "NTP_TASK",        /* String with name of task. */
-                2048,              /* Stack size */
+                // 8192 under arduino-esp32 v3 — UDP/WiFi/lwIP call chains
+                // overflow at 2048 (which worked under v2.0.17).
+                8192,              /* Stack size */
                 NULL,              /* Parameter passed as input of the task */
                 NTP_TASK_PRIORITY, /* Priority of the task. */
                 NULL);             /* Task handle. */

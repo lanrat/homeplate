@@ -39,11 +39,6 @@ void gotoSleepNow()
     // disconnect WiFi as it's no longer needed
     mqttStopTask(); // prevent i2c lock in main thread
     wifiStopTask(); // prevent i2c lock in main thread
-
-    #if TOUCHPAD_ENABLE && defined(HAS_TOUCHPADS)
-        // set MCP interrupts
-        display.setIntOutput(1, false, false, HIGH, IO_INT_ADDR);
-    #endif
     i2cEnd();
 
     // Prevent integer overflow by checking max sleep duration (ESP32 limit is ~71 minutes)
@@ -60,11 +55,28 @@ void gotoSleepNow()
         esp_sleep_enable_ext0_wakeup(WAKE_BUTTON, LOW);
     #endif
 
-    #if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2) || defined(ARDUINO_ESP32_DEV) || defined(ARDUINO_INKPLATE6V2)
+    #if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2) || defined(ARDUINO_INKPLATE6) || defined(ARDUINO_INKPLATE6V2)
         // enable wake from MCP port expander
         if (TOUCHPAD_ENABLE)
             esp_sleep_enable_ext1_wakeup(TOUCHPAD_WAKE_MASK, ESP_EXT1_WAKEUP_ANY_HIGH);
     #endif
+
+    #if TOUCHPAD_ENABLE && defined(HAS_TOUCHPADS)
+        // Clear any latched MCP interrupt before sleeping. INTF can be set
+        // by transient capacitive noise, by the act of enabling GPINTEN
+        // while a pin happens to be HIGH, or by a real touch during sleep
+        // prep. If left latched the MCP's INT line stays asserted, GPIO 34
+        // stays HIGH, and the ESP32's ext1 wakeup fires immediately upon
+        // esp_deep_sleep_start() — manifesting as a spurious "touchpad"
+        // wake with no actual pad pressed. Reading INTCAP releases the
+        // latch and de-asserts INT; a genuine subsequent press will then
+        // properly re-trigger the wake.
+        i2cStart();
+        readMCPRegister(MCP23017_INTCAPA);
+        readMCPRegister(MCP23017_INTCAPB);
+        i2cEnd();
+    #endif
+
     Serial.printf("[SLEEP] entering sleep for %u seconds (%u min)\n\n\n", safeSleepDuration, safeSleepDuration / 60);
     vTaskDelay(50 / portTICK_PERIOD_MS);
     esp_deep_sleep_start(); // Put ESP32 into deep sleep. Program stops here.
@@ -121,7 +133,9 @@ void sleepTask()
     xTaskCreate(
         checkSleep,
         "SLEEP_TASK",        // Task name
-        2048,                // Stack size
+        // 4096 under arduino-esp32 v3 — eventually calls WiFi.disconnect()
+        // via wifiStopTask() which has fat lwIP/WiFi call chains.
+        4096,                // Stack size
         NULL,                // Parameter
         SLEEP_TASK_PRIORITY, // Task priority
         NULL                 // Task handle
