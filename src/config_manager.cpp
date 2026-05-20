@@ -30,6 +30,16 @@ static_assert(DITHER_KERNEL_NAMES_COUNT == DITHER_KERNEL_COUNT,
     "DITHER_KERNEL_NAMES is out of sync with Inkplate library DITHER_KERNELS — "
     "update DITHER_KERNEL_NAMES in config_manager.cpp to match the library.");
 
+const char *ditherKernelName(uint8_t value)
+{
+    if (value == 0)
+        return "None";
+    uint8_t index = value - 1;
+    if (index < DITHER_KERNEL_NAMES_COUNT)
+        return DITHER_KERNEL_NAMES[index];
+    return "(unknown)";
+}
+
 // ---- NVS helpers ----
 
 static void loadString(const char *key, char *dest, size_t destSize, const char *defaultVal)

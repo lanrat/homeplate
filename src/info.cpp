@@ -226,6 +226,12 @@ void displayInfoScreen()
   display.print("Display:");
   display.setCursor(COL1_DATA_X, y);
   display.printf("%dx%d", E_INK_WIDTH, E_INK_HEIGHT);
+  // Dither
+  y += lineHeight;
+  display.setCursor(COL1_NAME_X, y);
+  display.print("Dither:");
+  display.setCursor(COL1_DATA_X, y);
+  display.print(ditherKernelName(plateCfg.ditherKernel));
 
   // bootCount
   y += lineHeight * 2;
