@@ -16,6 +16,7 @@ pio run -e inkplate6v2     # Inkplate 6v2 (without touchpads)
 pio run -e inkplate6plus   # Inkplate 6 Plus
 pio run -e inkplate6plusv2 # Inkplate 6 Plus v2
 pio run -e inkplate6flick  # Inkplate 6 Flick
+pio run -e inkplate6color  # Inkplate 6 COLOR (7-color ACeP panel)
 ```
 
 > **Note:** Running `pio run` without `-e` builds all supported Inkplate board variants (the special-purpose `ota`, `debug`, `vcom`, `waveform_eeprom`, and `native` envs are excluded from the default set and must be invoked explicitly with `-e <env>`). `pio run` only compiles — it will not upload to a connected device. To flash, see the next section.
@@ -64,6 +65,7 @@ board_flag = -DARDUINO_INKPLATE10
 | `inkplate6flick`  | `-DARDUINO_INKPLATE6FLICK`    |
 | `inkplate10`      | `-DARDUINO_INKPLATE10`        |
 | `inkplate10v2`    | `-DARDUINO_INKPLATE10V2`      |
+| `inkplate6color`  | `-DARDUINO_INKPLATECOLOR`     |
 
 This setting only affects the four special-purpose envs above. The default board envs and CI builds are unaffected.
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "board_capabilities.h"
+
 // HomePlate Configuration Defaults
 //
 // This file provides default values for all configurable settings.
@@ -105,10 +107,10 @@
 // Disables touchpads if they are overly sensitive and result in phantom touch events.
 // Must be false for boards without touchpads.
 #ifndef TOUCHPAD_ENABLE
-  #if defined(ARDUINO_INKPLATE5) || defined(ARDUINO_INKPLATE5V2) || defined(ARDUINO_INKPLATE10V2) || defined(ARDUINO_INKPLATE6V2) || defined(ARDUINO_INKPLATE6PLUS) || defined(ARDUINO_INKPLATE6PLUSV2) || defined(ARDUINO_INKPLATE6FLICK)
-    #define TOUCHPAD_ENABLE false
-  #else
+  #ifdef HAS_TOUCHPADS
     #define TOUCHPAD_ENABLE true
+  #else
+    #define TOUCHPAD_ENABLE false
   #endif
 #endif
 

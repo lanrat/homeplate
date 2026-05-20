@@ -1,5 +1,34 @@
 #include "homeplate.h"
 #include <esp_chip_info.h>
+#include <esp_mac.h>
+#ifdef INKPLATE_IS_COLOR
+#include <esp_task_wdt.h>
+#endif
+
+// displayRefresh: wraps display.display(). On color panels, widens the task
+// watchdog timeout to cover the multi-second blocking refresh, then restores
+// it. Also bumps the sleep timer so it doesn't expire mid-refresh — the
+// i2c mutex would safely block gotoSleepNow() anyway, but pushing the timer
+// out avoids spurious "waiting" log noise and post-refresh immediate sleep.
+void displayRefresh()
+{
+#ifdef INKPLATE_IS_COLOR
+    delaySleep(45); // ACeP refresh is 15-30s; pad generously
+    esp_task_wdt_config_t cfg = {
+        .timeout_ms = 60000,
+        .idle_core_mask = (1U << portNUM_PROCESSORS) - 1U,
+        .trigger_panic = true,
+    };
+    esp_task_wdt_reconfigure(&cfg);
+#else
+    delaySleep(2);
+#endif
+    display.display();
+#ifdef INKPLATE_IS_COLOR
+    cfg.timeout_ms = CONFIG_ESP_TASK_WDT_TIMEOUT_S * 1000;
+    esp_task_wdt_reconfigure(&cfg);
+#endif
+}
 
 uint getBatteryPercent(double voltage)
 {
@@ -53,6 +82,12 @@ void printChipInfo()
                   (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
 
     Serial.printf("Minimum free heap size: %u bytes\n", esp_get_minimum_free_heap_size());
+
+    uint8_t mac[6];
+    if (esp_read_mac(mac, ESP_MAC_WIFI_STA) == ESP_OK) {
+        Serial.printf("WiFi STA MAC: %02x:%02x:%02x:%02x:%02x:%02x\n",
+                      mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    }
 
     heap_caps_print_heap_info(MALLOC_CAP_32BIT | MALLOC_CAP_8BIT | MALLOC_CAP_SPIRAM | MALLOC_CAP_INTERNAL);
 }
@@ -141,9 +176,10 @@ void displayBatteryWarning()
 
     snprintf(statusBuffer, buf_size, "WARNING: battery %u%%", percent);
 
+#ifdef INKPLATE_HAS_PARTIAL_UPDATE
     displayStart();
     display.selectDisplayMode(INKPLATE_1BIT);
-    display.setTextColor(BLACK, WHITE);
+    display.setTextColor(HP_FG, HP_BG);
     display.setFont(&FONT_BODY);
     display.setTextSize(1);
 
@@ -160,9 +196,7 @@ void displayBatteryWarning()
     x = (E_INK_WIDTH / 2) - (w / 2);
 
     // background box to set internal buffer colors
-    display.fillRect(x - pad, y - pad - h, w + (pad * 2), h + (pad * 2), WHITE);
-    // Serial.printf("fillRect(x:%u, y:%u, w:%u, h:%u)\n", x-pad, y-pad-h, max(w+(pad*2), 400), h+(pad*2));
-    // display.partialUpdate(sleepBoot);
+    display.fillRect(x - pad, y - pad - h, w + (pad * 2), h + (pad * 2), HP_BG);
 
     // display status message
     display.setCursor(x, y);
@@ -171,6 +205,7 @@ void displayBatteryWarning()
     display.print(statusBuffer);
     display.partialUpdate(sleepBoot);
     displayEnd();
+#endif
     i2cEnd();
 }
 

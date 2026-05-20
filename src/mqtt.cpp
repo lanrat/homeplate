@@ -34,7 +34,9 @@ static bool mqttKill;    // should the status task stop running
 
 // State topic buffers (populated at startup)
 static char state_topic_wifi_signal[128];
+#ifdef INKPLATE_HAS_TEMPERATURE
 static char state_topic_temperature[128];
+#endif
 static char state_topic_battery[128];
 static char state_topic_boot[128];
 static char state_topic_low_battery_alert[128];
@@ -43,11 +45,12 @@ static void initMqttTopics()
 {
   snprintf(mqttActionTopic, sizeof(mqttActionTopic),
            "homeplate/%s/activity/run", plateCfg.mqttNodeId);
-
   snprintf(state_topic_wifi_signal, sizeof(state_topic_wifi_signal),
            "%s/sensor/%s/wifi_signal/state", MQTT_DISCOVERY_TOPIC, plateCfg.mqttNodeId);
+#ifdef INKPLATE_HAS_TEMPERATURE
   snprintf(state_topic_temperature, sizeof(state_topic_temperature),
            "%s/sensor/%s/temperature/state", MQTT_DISCOVERY_TOPIC, plateCfg.mqttNodeId);
+#endif
   snprintf(state_topic_battery, sizeof(state_topic_battery),
            "%s/sensor/%s/battery/state", MQTT_DISCOVERY_TOPIC, plateCfg.mqttNodeId);
   snprintf(state_topic_boot, sizeof(state_topic_boot),
@@ -100,6 +103,7 @@ void mqttSendWiFiStatus()
   mqttClient.publish(state_topic_wifi_signal, 1, MQTT_RETAIN_SENSOR_VALUE, buff);
 }
 
+#ifdef INKPLATE_HAS_TEMPERATURE
 // This can cause screen fade, use sparingly
 void mqttSendTempStatus()
 {
@@ -123,6 +127,7 @@ void mqttSendTempStatus()
   Serial.printf("[MQTT] Sending MQTT State: [%s] %s\n", state_topic_temperature, buff);
   mqttClient.publish(state_topic_temperature, 1, MQTT_RETAIN_SENSOR_VALUE, buff);
 }
+#endif
 
 void mqttSendBatteryStatus()
 {
@@ -219,6 +224,7 @@ void sendHAConfig()
   snprintf(configTopic, sizeof(configTopic), "%s/config", mqttBaseSensor("wifi_signal"));
   mqttClient.publish(configTopic, qos, retain, buff);
 
+#ifdef INKPLATE_HAS_TEMPERATURE
   // temp
   doc.clear();
   doc["unique_id"] = mqttUniqueId("temperature");
@@ -233,6 +239,7 @@ void sendHAConfig()
   serializeJson(doc, buff);
   snprintf(configTopic, sizeof(configTopic), "%s/config", mqttBaseSensor("temperature"));
   mqttClient.publish(configTopic, qos, retain, buff);
+#endif
 
   // voltage
   doc.clear();
@@ -593,7 +600,9 @@ void sendMQTTStatusTask(void *param)
     waitForMQTT();
     mqttSendBootStatus(bootCount, activityCount, bootReason(), timeToSleep);
     mqttSendWiFiStatus();
+#ifdef INKPLATE_HAS_TEMPERATURE
     mqttSendTempStatus();
+#endif
     mqttSendBatteryStatus();
 
     mqttWaiting = false;

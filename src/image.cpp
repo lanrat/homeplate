@@ -87,7 +87,7 @@ imageInfo getImageInfo(uint8_t *buff, size_t size) {
 void displayStats()
 {
     displayStart();
-    display.setTextColor(C_BLACK, C_WHITE); // Set text color to black on white
+    display.setTextColor(HP_FG, HP_BG); // Set text color to foreground on background
     display.setFont(&FONT_SMALL);
     display.setTextSize(1);
 
@@ -182,7 +182,7 @@ bool drawImageFromURL(const char *url) {
     if (!buff)
     {
         Serial.println("[IMAGE] Download failed");
-        displayStatusMessage("Download failed!");
+        displayCriticalMessage("Image Download Failed");
         return false;
     }
     // check for stop after download before rendering
@@ -204,7 +204,9 @@ bool drawImageFromBuffer(uint8_t *buff, size_t size, bool center) {
     displayStatusMessage("Rendering image...");
 
     displayStart();
+#ifdef INKPLATE_HAS_DISPLAY_MODES
     display.selectDisplayMode(DISPLAY_MODE); // set grayscale mode
+#endif
     display.clearDisplay();                   // refresh the display buffer before rendering.
     displayEnd();
 
@@ -214,8 +216,8 @@ bool drawImageFromBuffer(uint8_t *buff, size_t size, bool center) {
     bool good = false;
     auto img = getImageInfo(buff, size);
     if (img.type == ImageType::UNKNOWN) {
-        displayStatusMessage("Unsupported Image!");
         Serial.println("[IMAGE][ERROR] Image render unknown type!");
+        displayCriticalMessage("Unsupported Image");
         good = false;
     } else {
         Serial.printf("[IMAGE] Detected image as %s %dx%d\n", imageTypeToString(img.type), img.width, img.height);
@@ -259,10 +261,12 @@ bool drawImageFromBuffer(uint8_t *buff, size_t size, bool center) {
     else
     {
         // If is something failed (wrong filename or format), write error message on the screen.
+#ifdef INKPLATE_HAS_PARTIAL_UPDATE
         displayStart();
         display.clearDisplay();
         displayEnd();
-        displayStatusMessage("Image display error");
+#endif
+        displayCriticalMessage("Image Display Error");
     }
     // Extend sleep timer to cover display.display() and post-render work
     delaySleep(10);
@@ -277,7 +281,7 @@ bool drawImageFromBuffer(uint8_t *buff, size_t size, bool center) {
     Serial.println("[IMAGE] displaying....");
     i2cStart();
     displayStart();
-    display.display();
+    displayRefresh();
     // wait before releasing the i2c bus while the display settles. Helps prevent image fading
     vTaskDelay(0.25 * SECOND/portTICK_PERIOD_MS);
     displayEnd();
@@ -319,10 +323,11 @@ void displayStatusMessage(const char *format, ...)
 
     Serial.printf("[STATUS] %s\n", statusBuffer);
 
+#ifdef INKPLATE_HAS_PARTIAL_UPDATE
     i2cStart();
     displayStart();
     display.selectDisplayMode(INKPLATE_1BIT);
-    display.setTextColor(BLACK, WHITE);       // Set text color to black on white
+    display.setTextColor(HP_FG, HP_BG);
     display.setFont(&FONT_BODY);
     display.setTextSize(1);
 
@@ -338,8 +343,7 @@ void displayStatusMessage(const char *format, ...)
     display.getTextBounds(statusBuffer, x, y, &x1, &y1, &w, &h);
 
     // background box to set internal buffer colors
-    display.fillRect(x - pad, y - pad - h, max(w + (pad * 2), statusWidth), h + (pad * 2), WHITE);
-    //Serial.printf("fillRect(x:%u, y:%u, w:%u, h:%u)\n", x-pad, y-pad-h, max(w+(pad*2), 400), h+(pad*2));
+    display.fillRect(x - pad, y - pad - h, max(w + (pad * 2), statusWidth), h + (pad * 2), HP_BG);
     display.partialUpdate(sleepBoot);
 
     // display status message
@@ -350,14 +354,16 @@ void displayStatusMessage(const char *format, ...)
     display.partialUpdate(sleepBoot);
     displayEnd();
     i2cEnd();
+#endif
 }
 
 void splashScreen()
 {
+#ifdef INKPLATE_HAS_PARTIAL_UPDATE
     static const char *splashName = "HomePlate";
     displayStart();
     display.selectDisplayMode(INKPLATE_1BIT);
-    display.setTextColor(BLACK, WHITE);
+    display.setTextColor(HP_FG, HP_BG);
 
     FontSizing font = findFontSizeFit(splashName, E_INK_WIDTH, E_INK_HEIGHT);
     display.setFont(font.font);
@@ -377,4 +383,5 @@ void splashScreen()
     display.partialUpdate(sleepBoot);
     displayEnd();
     i2cEnd();
+#endif
 }

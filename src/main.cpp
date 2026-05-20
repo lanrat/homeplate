@@ -1,13 +1,12 @@
-// Ensure a supported board is selected
-#if !defined(ARDUINO_INKPLATE5) && !defined(ARDUINO_INKPLATE5V2) && !defined(ARDUINO_INKPLATE10) && !defined(ARDUINO_INKPLATE10V2) && !defined(ARDUINO_INKPLATE6) && !defined(ARDUINO_INKPLATE6V2) && !defined(ARDUINO_INKPLATE6PLUS) && !defined(ARDUINO_INKPLATE6PLUSV2) && !defined(ARDUINO_INKPLATE6FLICK)
-#error "Unsupported board selection, please select a supported Inkplate board."
-#endif
-
 #include <driver/rtc_io.h> //ESP32 library used for deep sleep and RTC wake up pins
 #include <rom/rtc.h>       // Include ESP32 library for RTC (needed for rtc_get_reset_reason() function)
 #include "homeplate.h"
 
+#ifdef INKPLATE_HAS_DISPLAY_MODES
 Inkplate display(INKPLATE_1BIT);
+#else
+Inkplate display;
+#endif
 SemaphoreHandle_t mutexI2C, mutexSPI, mutexDisplay;
 
 // Font array for findFontSizeFit() — largest to smallest
@@ -69,10 +68,11 @@ void setup()
         checkBootPads();
     }
 
-    // ditherKernel: 0 = None, 1-7 = Image::DitherKernel enum shifted by +1
+    // ditherKernel: 0 = None, 1-7 = DitherKernel enum shifted by +1
     if (plateCfg.ditherKernel > 0)
     {
-        display.image.setDitherKernel((Image::DitherKernel)(plateCfg.ditherKernel - 1));
+        display.image.setDitherKernel(
+            (decltype(display.image)::DitherKernel)(plateCfg.ditherKernel - 1));
     }
 
     displayStart();
@@ -85,8 +85,10 @@ void setup()
 #endif
 
     // setup display
+#ifdef INKPLATE_HAS_PARTIAL_UPDATE
     if (sleepBoot)
         display.preloadScreen(); // copy saved screen state to buffer
+#endif
     display.clearDisplay();      // Clear frame buffer of display
     i2cEnd();
     displayEnd();

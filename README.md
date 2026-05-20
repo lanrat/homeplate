@@ -11,6 +11,7 @@ A [Trmnl](https://trmnl.com/?ref=mrlanrat) and [Home Assistant](https://www.home
 * Inkplate 6 Plus
 * Inkplate 6 Plusv2
 * Inkplate 6 Flick
+* Inkplate 6 COLOR
 * Inkplate 10
 * Inkplate 10v2
 
@@ -41,7 +42,7 @@ HomePlate supports multiple display modes called activities. See [activities.md]
 * Low battery warning displayed and sent over MQTT
 * Test display output directly from the config portal (message, WiFi QR, info screen)
 * OTA updates over WiFi
-* Partial screen updates in grayscale mode.
+* Partial screen updates in grayscale mode (B&W boards only; the Inkplate COLOR panel hardware only supports full refreshes).
 * Power saving sleep mode.
 * Display any image from MQTT command
 * Supports PNG, BMP, and JPEG images

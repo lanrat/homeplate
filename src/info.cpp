@@ -40,15 +40,15 @@ const char *wl_status_to_string(wl_status_t status)
 void displayBoundaryBox()
 {
   int bw = max(scaleX(10), 2);
-  display.fillRect(0, 0, bw, E_INK_HEIGHT, BLACK);                // left
-  display.fillRect(E_INK_WIDTH - bw, 0, bw, E_INK_HEIGHT, BLACK); // right
-  display.fillRect(0, 0, E_INK_WIDTH, bw, BLACK);                 // top
-  display.fillRect(0, E_INK_HEIGHT - bw, E_INK_WIDTH, bw, BLACK); // bottom
+  display.fillRect(0, 0, bw, E_INK_HEIGHT, HP_FG);                // left
+  display.fillRect(E_INK_WIDTH - bw, 0, bw, E_INK_HEIGHT, HP_FG); // right
+  display.fillRect(0, 0, E_INK_WIDTH, bw, HP_FG);                 // top
+  display.fillRect(0, E_INK_HEIGHT - bw, E_INK_WIDTH, bw, HP_FG); // bottom
 }
 
 void cleanField(uint32_t x, uint32_t y)
 {
-  display.fillRect(x, y - lineHeight, (E_INK_WIDTH / 8), lineHeight, WHITE);
+  display.fillRect(x, y - lineHeight, (E_INK_WIDTH / 8), lineHeight, HP_BG);
   //Serial.printf("fillRect(x:%u, y:%u, w:%u, h:%u)\n", x, y, (E_INK_WIDTH / 8), lineHeight);
 }
 
@@ -164,8 +164,10 @@ void displayInfoScreen()
 
   i2cStart();
   displayStart();
+#ifdef INKPLATE_HAS_DISPLAY_MODES
   display.selectDisplayMode(INKPLATE_1BIT);
-  display.setTextColor(BLACK, WHITE);
+#endif
+  display.setTextColor(HP_FG, HP_BG);
   display.clearDisplay();
 
   // Title
@@ -259,6 +261,7 @@ void displayInfoScreen()
   display.print("Battery:");
   display.setCursor(COL1_DATA_X, y);
   display.printf("%d%% (%.2fv)", percent, voltage);
+#ifdef INKPLATE_HAS_TEMPERATURE
   // temp
   y += lineHeight;
   int temp = display.readTemperature();
@@ -267,6 +270,7 @@ void displayInfoScreen()
   display.print("Temperature:");
   display.setCursor(COL1_DATA_X, y);
   display.printf("%dC (%dF)", temp, tempF);
+#endif
 
   if (strlen(plateCfg.trmnlId) > 0) {
   // TRMNL
@@ -333,10 +337,11 @@ void displayInfoScreen()
   }
 
   displayBoundaryBox();
-  display.display();
+  displayRefresh();
   displayEnd();
   i2cEnd();
 
+#ifdef INKPLATE_HAS_PARTIAL_UPDATE
   // check WiFi and MQTT state
   uint8_t needsRedraw = 0;
   for (int i = 0; i < 20; i++)
@@ -381,7 +386,7 @@ void displayInfoScreen()
     i2cStart();
     displayStart();
     display.selectDisplayMode(INKPLATE_1BIT);
-    display.setTextColor(BLACK, WHITE);
+    display.setTextColor(HP_FG, HP_BG);
     display.setTextSize(1);
     display.setFont(&FONT_BODY);
     display.partialUpdate(sleepBoot);
@@ -410,4 +415,5 @@ void displayInfoScreen()
     displayEnd();
     i2cEnd();
   }
+#endif // INKPLATE_HAS_PARTIAL_UPDATE
 }

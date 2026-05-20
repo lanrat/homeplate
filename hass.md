@@ -70,6 +70,8 @@ Set this dashboard URL as the `Image URL` in the WiFi setup portal (see [setup.m
 
 The HomePlate makes use of [MQTT Discovery](https://www.home-assistant.io/docs/mqtt/discovery/) so it should automatically add its sensors to your Home Assistant instance if MQTT is already setup.
 
+> **Note:** Temperature is only reported on hardware equipped with a temperature sensor.
+
 For example dashboard yaml see [dashboard.md](dashboard.md).
 
 ### MQTT Commands

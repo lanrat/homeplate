@@ -109,7 +109,11 @@ bool trmnlDisplay(const char *url)
     // set voltage and temperature
     i2cStart();
     double voltage = display.readBattery();
+#ifdef INKPLATE_HAS_TEMPERATURE
     int temp = display.readTemperature();
+#else
+    int temp = 0;
+#endif
     i2cEnd();
     if (voltage > 0) {
         char volt_buffer[10];
@@ -139,7 +143,7 @@ bool trmnlDisplay(const char *url)
     if (!buff)
     {
         Serial.println("[TRMNL] Download failed");
-        displayStatusMessage("Download failed!");
+        displayCriticalMessage("TRMNL Download Failed");
         trmnlLogAdd("error: download failed");
         trmnlLogSend();
         return false;
@@ -189,7 +193,7 @@ bool trmnlDisplay(const char *url)
     if (doc["error"].is<JsonVariant>()) {
         String error = doc["error"].as<String>();
         Serial.printf("[TRMNL][ERROR]: received error: %s\n", error.c_str());
-        displayStatusMessage("Error: %s", error.c_str());
+        displayCriticalMessage("TRMNL Error: %s", error.c_str());
     }
 
     if (doc["filename"].is<JsonVariant>())
@@ -227,7 +231,7 @@ bool trmnlDisplay(const char *url)
         return ret;
     } else {
         Serial.printf("[TRMNL][ERROR]: No image_url found!\n");
-        displayStatusMessage("Download failed!");
+        displayCriticalMessage("TRMNL: No Image URL");
         trmnlLogAdd("error: no image_url in response");
     }
     trmnlLogSend();

@@ -19,7 +19,7 @@ It is also a good idea to update the _MAC Address_ to your device's MAC Address 
 
 ## Sensors
 
-Homeplate reports the device's internal temperature sensor to TRMNL via the `SENSORS` HTTP header. This is sent automatically with each display API request when a valid temperature reading is available. The temperature is read from the TPS65186 e-paper power management IC in degrees Celsius.
+Homeplate reports the device's internal temperature sensor to TRMNL via the `SENSORS` HTTP header. This is sent automatically with each display API request when a valid temperature reading is available, and is only provided on hardware equipped with a temperature sensor. The temperature is read from the TPS65186 e-paper power management IC in degrees Celsius.
 
 ## Logging
 

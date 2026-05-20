@@ -79,36 +79,25 @@ extern uint bootCount, activityCount, timeToSleep;
   #define FONT_SMALL   Roboto_8
 #endif
 
-#if defined(ARDUINO_INKPLATE10) \
-    || defined(ARDUINO_INKPLATE10V2) \
-    || defined(ARDUINO_INKPLATE6V2) \
-    || defined(ARDUINO_INKPLATE6PLUS) \
-    || defined(ARDUINO_INKPLATE6PLUSV2) \
-    || defined(ARDUINO_INKPLATE6FLICK) \
-    || defined(ARDUINO_INKPLATECOLOR) \
-    || defined(ARDUINO_INKPLATE5) \
-    || defined(ARDUINO_INKPLATE5V2)
-#define WAKE_BUTTON GPIO_NUM_36
-// GPIO 36 is input-only and has no internal pull-up resistor on ESP32 — the
-// Inkplate PCB provides an external one, so we must use INPUT (not INPUT_PULLUP).
-#define WAKE_BUTTON_MODE INPUT
-// the original Inkplate 6 does not have a wake button
-#elif defined(ARDUINO_INKPLATE6)
-#define WAKE_BUTTON GPIO_NUM_13
-// GPIO 13 is a regular bidirectional pin with internal pull-up available.
-#define WAKE_BUTTON_MODE INPUT_PULLUP
-#endif
-
-// Boards with capacitive touchpads (PAD1, PAD2, PAD3)
-#if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE6)
-#define HAS_TOUCHPADS
-// MCP23017 internal expander pin numbers for the three touchpads.
-// Used for direct register bit math (INTFB / INTCAPB) and for setIntPin().
-// The library used to expose these as PAD1/PAD2/PAD3 in defines.h; v11.0.0
-// removed them, so we define them locally.
-#define PAD1 10
-#define PAD2 11
-#define PAD3 12
+// Semantic color tokens. Use these in draw code instead of raw BLACK / WHITE
+// / C_BLACK so the same source compiles for B&W and color panels.
+//   HP_FG     primary foreground (text, borders)
+//   HP_BG     primary background
+//   HP_ACCENT secondary accent (charts, dividers)
+//   HP_WARN   warnings (low battery, errors)
+//   HP_OK     success indicator
+#ifdef INKPLATE_IS_COLOR
+#define HP_FG     INKPLATE_BLACK
+#define HP_BG     INKPLATE_WHITE
+#define HP_ACCENT INKPLATE_BLUE
+#define HP_WARN   INKPLATE_RED
+#define HP_OK     INKPLATE_GREEN
+#else
+#define HP_FG     BLACK
+#define HP_BG     WHITE
+#define HP_ACCENT BLACK
+#define HP_WARN   BLACK
+#define HP_OK     BLACK
 #endif
 
 #ifndef VERSION
@@ -145,7 +134,9 @@ bool drawImageFromURL(const char *url);
 bool drawImageFromBuffer(uint8_t *buff, size_t size, bool center = true);
 uint16_t centerTextX(const char *t, int16_t x1, int16_t x2, int16_t y, bool lock = true);
 void displayStatusMessage(const char *format, ...);
+void displayCriticalMessage(const char *format, ...);
 void splashScreen();
+void displayRefresh();
 
 // Trmnl
 bool trmnlDisplay(const char *url);
@@ -258,7 +249,9 @@ void delaySleep(uint seconds);
 #define USE_SDCARD false
 
 // set some display defaults
+#ifdef INKPLATE_HAS_DISPLAY_MODES
 #define DISPLAY_MODE INKPLATE_3BIT
+#endif
 
 // debounce time limit for static activities
 #define MIN_ACTIVITY_RESTART_SECS 5
@@ -291,35 +284,3 @@ void delaySleep(uint seconds);
 #define MAX_REFRESH_SEC 60*60*24 // 1 day
 
 
-// Device Models (board defines from Inkplate-Arduino-library/src/include/defines.h)
-#if defined(ARDUINO_INKPLATE2)
-#define DEVICE_MODEL "Inkplate 2"
-#elif defined(ARDUINO_INKPLATE4)
-#define DEVICE_MODEL "Inkplate 4"
-#elif defined(ARDUINO_INKPLATE4TEMPERA)
-#define DEVICE_MODEL "Inkplate 4 Tempera"
-#elif defined(ARDUINO_INKPLATE5)
-#define DEVICE_MODEL "Inkplate 5"
-#elif defined(ARDUINO_INKPLATE5V2)
-#define DEVICE_MODEL "Inkplate 5v2"
-#elif defined(ARDUINO_INKPLATE6)
-#define DEVICE_MODEL "Inkplate 6"
-#elif defined(ARDUINO_INKPLATE6V2)
-#define DEVICE_MODEL "Inkplate 6v2"
-#elif defined(ARDUINO_INKPLATE6PLUS)
-#define DEVICE_MODEL "Inkplate 6 Plus"
-#elif defined(ARDUINO_INKPLATE6PLUSV2)
-#define DEVICE_MODEL "Inkplate 6 Plusv2"
-#elif defined(ARDUINO_INKPLATECOLOR)
-#define DEVICE_MODEL "Inkplate 6 Color"
-#elif defined(ARDUINO_INKPLATE6FLICK)
-#define DEVICE_MODEL "Inkplate 6 Flick"
-#elif defined(ARDUINO_INKPLATE7)
-#define DEVICE_MODEL "Inkplate 7"
-#elif defined(ARDUINO_INKPLATE10)
-#define DEVICE_MODEL "Inkplate 10"
-#elif defined(ARDUINO_INKPLATE10V2)
-#define DEVICE_MODEL "Inkplate 10v2"
-#else
-#define DEVICE_MODEL "Inkplate (other)"
-#endif

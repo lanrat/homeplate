@@ -630,7 +630,7 @@ void displayConfigModeScreen(const char *apSsid)
     QRCode qrcode;
     uint8_t qrcodeData[qrcode_getBufferSize(version)];
     qrcode_initText(&qrcode, qrcodeData, version, ECC_MEDIUM, qrBuf);
-    uint32_t qrSize = max(scaleY(12), 8);
+    uint32_t qrSize = max(scaleY(12), 6);
     uint32_t qrPadRight = scaleX(100);
     uint32_t qrTextGap = scaleX(50);
 
@@ -639,8 +639,10 @@ void displayConfigModeScreen(const char *apSsid)
 
     i2cStart();
     displayStart();
+#ifdef INKPLATE_HAS_DISPLAY_MODES
     display.selectDisplayMode(INKPLATE_1BIT);
-    display.setTextColor(BLACK, WHITE);
+#endif
+    display.setTextColor(HP_FG, HP_BG);
     display.clearDisplay();
 
     // Title
@@ -670,7 +672,7 @@ void displayConfigModeScreen(const char *apSsid)
 
     // Push to display (i2c already held from above)
     displayStart();
-    display.display();
+    displayRefresh();
     displayEnd();
     i2cEnd();
 }
@@ -679,8 +681,10 @@ void displayUnconfiguredScreen()
 {
     i2cStart();
     displayStart();
+#ifdef INKPLATE_HAS_DISPLAY_MODES
     display.selectDisplayMode(INKPLATE_1BIT);
-    display.setTextColor(BLACK, WHITE);
+#endif
+    display.setTextColor(HP_FG, HP_BG);
     display.clearDisplay();
 
     display.setFont(&FONT_TITLE);
@@ -693,7 +697,7 @@ void displayUnconfiguredScreen()
     display.setFont(&FONT_BODY);
     centerTextX("Will retry on next wake cycle.", 0, E_INK_WIDTH, scaleY(500), false);
 
-    display.display();
+    displayRefresh();
     displayEnd();
     i2cEnd();
 }

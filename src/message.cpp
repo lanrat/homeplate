@@ -39,6 +39,24 @@ FontSizing findFontSizeFit(const char *m, uint16_t max_width, uint16_t max_heigh
     return font;
 }
 
+// displayCriticalMessage: like displayStatusMessage, but falls back to a
+// full-screen displayMessage() on boards without partial update (where
+// displayStatusMessage is a no-op). Use for error/state messages that must
+// be visible; use displayStatusMessage for progress that's OK to drop.
+void displayCriticalMessage(const char *format, ...)
+{
+    char buf[256];
+    va_list argptr;
+    va_start(argptr, format);
+    vsnprintf(buf, sizeof(buf), format, argptr);
+    va_end(argptr);
+#ifdef INKPLATE_HAS_PARTIAL_UPDATE
+    displayStatusMessage("%s", buf);
+#else
+    displayMessage(buf);
+#endif
+}
+
 void displayMessage(const char *m)
 {
     if (m != NULL)
@@ -49,8 +67,10 @@ void displayMessage(const char *m)
     Serial.printf("[MESSAGE] rendering message: %s\n", message);
 
     displayStart();
+#ifdef INKPLATE_HAS_DISPLAY_MODES
     display.selectDisplayMode(INKPLATE_1BIT);
-    display.setTextColor(BLACK, WHITE);
+#endif
+    display.setTextColor(HP_FG, HP_BG);
     display.setTextSize(1);
     display.clearDisplay();
 
@@ -90,7 +110,7 @@ void displayMessage(const char *m)
 
     i2cStart();
     displayStart();
-    display.display();
+    displayRefresh();
     displayEnd();
     i2cEnd();
 }
