@@ -31,7 +31,7 @@ jobs:
 
             Flash directly from your browser using the [Web Installer](https://lanrat.github.io/homeplate/).
           files: |
-            firmware-*/homeplate-*.bin
+            homeplate-*/homeplate-*.bin
 
   deploy-web-installer:
     needs: build
@@ -58,15 +58,15 @@ jobs:
           # Discover and copy all firmware variants dynamically
           BOARDS="["
           FIRST=true
-          for dir in firmware-*/; do
-            env="${dir#firmware-}"
+          for dir in homeplate-*/; do
+            env="${dir#homeplate-}"
             env="${env%/}"
             mkdir -p "site/${env}"
-            cp "firmware-${env}/bootloader.bin" "site/${env}/"
-            cp "firmware-${env}/partitions.bin" "site/${env}/"
-            cp "firmware-${env}/boot_app0.bin" "site/${env}/"
-            cp "firmware-${env}/firmware.bin" "site/${env}/"
-            sed "s/VERSION_PLACEHOLDER/$VERSION/" "firmware-${env}/manifest.json" > "site/manifest-${env}.json"
+            cp "homeplate-${env}/bootloader.bin" "site/${env}/"
+            cp "homeplate-${env}/partitions.bin" "site/${env}/"
+            cp "homeplate-${env}/boot_app0.bin" "site/${env}/"
+            cp "homeplate-${env}/firmware.bin" "site/${env}/"
+            sed "s/VERSION_PLACEHOLDER/$VERSION/" "homeplate-${env}/manifest.json" > "site/manifest-${env}.json"
             if [ "$FIRST" = true ]; then
               FIRST=false
             else

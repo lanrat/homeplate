@@ -97,5 +97,5 @@ jobs:
       - name: Upload firmware
         uses: actions/upload-artifact@v7
         with:
-          name: firmware-${{ matrix.environment }}
+          name: homeplate-${{ matrix.environment }}
           path: flash-package/
