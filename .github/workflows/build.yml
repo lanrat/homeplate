@@ -79,7 +79,13 @@ jobs:
           import json
           d = json.load(open('$IDEDATA'))
           parts = [{'path': '${{ matrix.environment }}/' + p['path'].rsplit('/',1)[1], 'offset': int(p['offset'],16)} for p in d['extra']['flash_images']]
-          parts.append({'path': '${{ matrix.environment }}/firmware.bin', 'offset': int(d['extra']['application_offset'],16)})
+          # Application offset: idedata.json under pioarduino / arduino-esp32 v3
+          # no longer includes 'application_offset' under 'extra'. Fall back to
+          # 0x10000 which is the standard offset across all default arduino-esp32
+          # partition layouts (min_spiffs.csv, default.csv, huge_app.csv, etc.)
+          # and matches our pinned 'board_build.partitions = min_spiffs.csv'.
+          app_offset = int(d['extra'].get('application_offset', '0x10000'), 16)
+          parts.append({'path': '${{ matrix.environment }}/firmware.bin', 'offset': app_offset})
           manifest = {
             'name': 'HomePlate (${{ matrix.environment }})',
             'version': 'VERSION_PLACEHOLDER',
