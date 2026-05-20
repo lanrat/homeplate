@@ -20,9 +20,9 @@ jobs:
       contents: write
     steps:
       - name: Download firmware artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
           append_body: true
@@ -43,9 +43,9 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Download firmware artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
       - name: Prepare GitHub Pages site
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
@@ -77,9 +77,9 @@ jobs:
           BOARDS+="]"
           echo "{\"version\":\"${VERSION}\",\"boards\":${BOARDS}}" > site/boards.json
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v5
         with:
           path: site/
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

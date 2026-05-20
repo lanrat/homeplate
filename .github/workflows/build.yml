@@ -18,7 +18,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Set up PlatformIO
@@ -31,7 +31,7 @@ jobs:
     outputs:
       envs: ${{ steps.parse.outputs.envs }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Parse default_envs from platformio.ini
         id: parse
         run: |
@@ -51,7 +51,7 @@ jobs:
         environment: ${{ fromJSON(needs.discover-envs.outputs.envs) }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Set up PlatformIO
@@ -95,7 +95,7 @@ jobs:
           json.dump(manifest, open('flash-package/manifest.json','w'), indent=2)
           "
       - name: Upload firmware
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: firmware-${{ matrix.environment }}
           path: flash-package/
