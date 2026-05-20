@@ -70,8 +70,6 @@
 // Board defines from Inkplate-Arduino-library/src/include/defines.h
 #if defined(ARDUINO_INKPLATE2)
 #define DEVICE_MODEL "Inkplate 2"
-#elif defined(ARDUINO_INKPLATE4)
-#define DEVICE_MODEL "Inkplate 4"
 #elif defined(ARDUINO_INKPLATE4TEMPERA)
 #define DEVICE_MODEL "Inkplate 4 Tempera"
 #elif defined(ARDUINO_INKPLATE5)
@@ -90,12 +88,12 @@
 #define DEVICE_MODEL "Inkplate 6 Color"
 #elif defined(ARDUINO_INKPLATE6FLICK)
 #define DEVICE_MODEL "Inkplate 6 Flick"
-#elif defined(ARDUINO_INKPLATE7)
-#define DEVICE_MODEL "Inkplate 7"
 #elif defined(ARDUINO_INKPLATE10)
 #define DEVICE_MODEL "Inkplate 10"
 #elif defined(ARDUINO_INKPLATE10V2)
 #define DEVICE_MODEL "Inkplate 10v2"
+#elif defined(ARDUINO_INKPLATE13SPECTRA)
+#define DEVICE_MODEL "Inkplate 13 Spectra"
 #else
 #define DEVICE_MODEL "Inkplate (other)"
 #endif
