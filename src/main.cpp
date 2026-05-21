@@ -126,9 +126,12 @@ void setup()
     // or if the wake button is held during boot
     bool forcePortal = !isConfigured();
 #ifdef WAKE_BUTTON
-    if (!forcePortal && wakeButtonHeld)
+    // Only honor a held wake button on a fresh boot (power-on / reset).
+    // Skipping this on deep-sleep wake avoids the long-press that woke the
+    // device being misread as "hold to enter setup".
+    if (!forcePortal && wakeButtonHeld && !sleepBoot)
     {
-        Serial.println("[SETUP] Wake button held at boot, forcing config portal");
+        Serial.println("[SETUP] Wake button held at fresh boot, forcing config portal");
         forcePortal = true;
     }
 #endif
