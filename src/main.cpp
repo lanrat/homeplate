@@ -7,7 +7,6 @@ Inkplate display(INKPLATE_1BIT);
 #else
 Inkplate display;
 #endif
-SemaphoreHandle_t mutexI2C, mutexSPI, mutexDisplay;
 
 // Font array for findFontSizeFit() — largest to smallest
 const GFXfont *fonts[] = {&FONT_SPLASH, &FONT_TITLE, &FONT_HEADING, &FONT_BODY, &FONT_SMALL};
@@ -31,10 +30,7 @@ void setup()
         rtc_gpio_deinit(WAKE_BUTTON);
     #endif
 
-    // start inkplate display mutexes
-    mutexI2C = xSemaphoreCreateMutex();
-    mutexSPI = xSemaphoreCreateMutex();
-    mutexDisplay = xSemaphoreCreateMutex();
+    inkplateMutexInit();
 
     sleepBoot = (rtc_get_reset_reason(0) == DEEPSLEEP_RESET); // test for deep sleep wake
 

@@ -1,33 +1,19 @@
 #include "homeplate.h"
 #include <esp_chip_info.h>
 #include <esp_mac.h>
-#ifdef INKPLATE_IS_COLOR
-#include <esp_task_wdt.h>
-#endif
 
-// displayRefresh: wraps display.display(). On color panels, widens the task
-// watchdog timeout to cover the multi-second blocking refresh, then restores
-// it. Also bumps the sleep timer so it doesn't expire mid-refresh — the
-// i2c mutex would safely block gotoSleepNow() anyway, but pushing the timer
-// out avoids spurious "waiting" log noise and post-refresh immediate sleep.
+// displayRefresh: wraps display.display(). Bumps the sleep timer so it
+// doesn't expire mid-refresh — the i2c mutex would safely block
+// gotoSleepNow() anyway, but pushing the timer out avoids spurious
+// "waiting" log noise and post-refresh immediate sleep.
 void displayRefresh()
 {
 #ifdef INKPLATE_IS_COLOR
     delaySleep(45); // ACeP refresh is 15-30s; pad generously
-    esp_task_wdt_config_t cfg = {
-        .timeout_ms = 60000,
-        .idle_core_mask = (1U << portNUM_PROCESSORS) - 1U,
-        .trigger_panic = true,
-    };
-    esp_task_wdt_reconfigure(&cfg);
 #else
     delaySleep(2);
 #endif
     display.display();
-#ifdef INKPLATE_IS_COLOR
-    cfg.timeout_ms = CONFIG_ESP_TASK_WDT_TIMEOUT_S * 1000;
-    esp_task_wdt_reconfigure(&cfg);
-#endif
 }
 
 uint getBatteryPercent(double voltage)
