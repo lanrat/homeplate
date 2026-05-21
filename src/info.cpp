@@ -1,10 +1,19 @@
 #include "homeplate.h"
 #include <esp_chip_info.h>
 
+#if E_INK_WIDTH < 800
+// Small displays (Inkplate 6 COLOR 600px): symmetric layout with tight margins.
+// (32ths) 1 left | 6 label1 | 8 data1 | 2 middle gap | 6 label2 | 8 data2 | 1 right
+#define COL1_NAME_X (1  * (E_INK_WIDTH / 32))
+#define COL1_DATA_X (7  * (E_INK_WIDTH / 32))
+#define COL2_NAME_X (17 * (E_INK_WIDTH / 32))
+#define COL2_DATA_X (23 * (E_INK_WIDTH / 32))
+#else
 #define COL1_NAME_X 1 * (E_INK_WIDTH / 8)
 #define COL1_DATA_X 2 * (E_INK_WIDTH / 8)
 #define COL2_NAME_X 5 * (E_INK_WIDTH / 8)
 #define COL2_DATA_X 6 * (E_INK_WIDTH / 8)
+#endif
 
 #define REDRAW_NETWORK 0
 #define REDRAW_WIFI    1
@@ -12,6 +21,28 @@
 
 // Use font's yAdvance to prevent line overlap on smaller displays
 const static int lineHeight = (int)FONT_BODY.yAdvance + 2;
+
+// truncateToFit: returns s unchanged if it fits in max_width pixels at the
+// current font, otherwise returns a pointer to a static buffer containing
+// "<head>..." truncated to fit. Measures against display's current font.
+// Single static buffer — not safe to nest calls in one print statement.
+static const char *truncateToFit(const char *s, uint16_t max_width)
+{
+    static char buf[128];
+    if (!s) return "";
+    int16_t x1, y1;
+    uint16_t w, h;
+    display.getTextBounds(s, 0, 0, &x1, &y1, &w, &h);
+    if (w <= max_width) return s;
+    // Doesn't fit. Try progressively shorter "<head>..." until it does.
+    for (size_t n = strlen(s); n > 0; n--)
+    {
+        snprintf(buf, sizeof(buf), "%.*s...", (int)n, s);
+        display.getTextBounds(buf, 0, 0, &x1, &y1, &w, &h);
+        if (w <= max_width) return buf;
+    }
+    return "...";
+}
 
 const char *wl_status_to_string(wl_status_t status)
 {
@@ -283,7 +314,9 @@ void displayInfoScreen()
   display.setCursor(COL1_NAME_X, y);
   display.print("TRMNL URL:");
   display.setCursor(COL1_DATA_X, y);
-  display.print(plateCfg.trmnlUrl);
+  // Truncate to stay within the left column — otherwise on small displays
+  // the URL bleeds rightward into the right column's data.
+  display.print(truncateToFit(plateCfg.trmnlUrl, COL2_NAME_X - COL1_DATA_X - scaleX(20)));
   }
 
   // column 2
@@ -315,6 +348,12 @@ void displayInfoScreen()
   display.print("Time:");
   display.setCursor(COL2_DATA_X, y);
   display.print(shortDateTimeString());
+  // Timezone
+  y += lineHeight;
+  display.setCursor(COL2_NAME_X, y);
+  display.print("Timezone:");
+  display.setCursor(COL2_DATA_X, y);
+  display.print(plateCfg.timezone);
   // NTP
   y += lineHeight;
   display.setCursor(COL2_NAME_X, y);
