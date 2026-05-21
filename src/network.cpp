@@ -45,6 +45,30 @@ void WiFiStationDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
     Serial.println(info.wifi_sta_disconnected.reason);
 }
 
+// configureWiFi: apply STA mode, hostname, and (optional) static IP from
+// plateCfg. Idempotent. Call BEFORE WiFi.begin() / wm.autoConnect() so the
+// initial DHCP request announces our hostname instead of the default
+// `esp32-<MAC>`. Order matters: WIFI_STA must be set before setHostname()
+// so the STA netif exists when the hostname is applied.
+void configureWiFi()
+{
+    WiFi.mode(WIFI_STA);
+    WiFi.setHostname(plateCfg.hostname);
+    if (strlen(plateCfg.staticIp) > 0)
+    {
+        if (ip.fromString(plateCfg.staticIp) && gateway.fromString(plateCfg.staticGateway) &&
+            subnet.fromString(plateCfg.staticSubnet) && dns.fromString(plateCfg.staticDns))
+        {
+            WiFi.config(ip, gateway, subnet, dns);
+        }
+        else
+        {
+            Serial.printf("[WIFI] Failed to parse static IP information %s/%s %s %s\n",
+                          plateCfg.staticIp, plateCfg.staticSubnet, plateCfg.staticGateway, plateCfg.staticDns);
+        }
+    }
+}
+
 void keepWiFiAlive(void *parameter)
 {
     printDebug("[WIFI] loop start...");
@@ -58,21 +82,7 @@ void keepWiFiAlive(void *parameter)
         }
 
         Serial.println("[WIFI] Reconnecting...");
-        WiFi.mode(WIFI_STA);
-        WiFi.setHostname(plateCfg.hostname);
-        if (strlen(plateCfg.staticIp) > 0)
-        {
-            if (ip.fromString(plateCfg.staticIp) && gateway.fromString(plateCfg.staticGateway) &&
-                subnet.fromString(plateCfg.staticSubnet) && dns.fromString(plateCfg.staticDns))
-            {
-                WiFi.config(ip, gateway, subnet, dns);
-            }
-            else
-            {
-                Serial.printf("[WIFI] Failed to parse static IP information %s/%s %s %s\n",
-                              plateCfg.staticIp, plateCfg.staticSubnet, plateCfg.staticGateway, plateCfg.staticDns);
-            }
-        }
+        configureWiFi();
         // Use stored credentials from WiFiManager (no args)
         Serial.printf("[WIFI] Connecting to SSID: %s\n", WiFi.SSID().c_str());
         WiFi.begin();

@@ -110,6 +110,7 @@ extern uint bootCount, activityCount, timeToSleep;
 #define SECOND 1000
 
 // WiFi
+void configureWiFi();
 void wifiConnectTask();
 void wifiStopTask();
 void waitForWiFi();

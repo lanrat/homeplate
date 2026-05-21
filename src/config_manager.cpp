@@ -275,6 +275,12 @@ bool isConfigured()
 
 bool startWiFiManager(bool forcePortal)
 {
+    // Apply mode + hostname + static IP before WiFiManager runs, so the
+    // initial DHCP exchange uses our hostname rather than the default
+    // `esp32-<MAC>`. In AP/portal mode WiFiManager overrides this; the
+    // settings only take effect on the STA connect path.
+    configureWiFi();
+
     WiFiManager wm;
 
     wm.setConnectRetries(5);
