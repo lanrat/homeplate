@@ -229,6 +229,26 @@ void sleepTask();
 void delaySleep(uint seconds);
 
 /*
+ * Wake locks
+ */
+typedef int8_t WakeLockHandle;
+static constexpr WakeLockHandle WAKELOCK_INVALID = -1;
+
+WakeLockHandle acquireWakeLock(const char *name, uint32_t maxHoldSec);
+void releaseWakeLock(WakeLockHandle handle);
+bool anyWakeLocksHeld();
+
+class WakeLock {
+public:
+    WakeLock(const char *name, uint32_t maxHoldSec) : handle(acquireWakeLock(name, maxHoldSec)) {}
+    ~WakeLock() { releaseWakeLock(handle); }
+    WakeLock(const WakeLock &) = delete;
+    WakeLock &operator=(const WakeLock &) = delete;
+private:
+    WakeLockHandle handle;
+};
+
+/*
  * Global Settings
  */
 

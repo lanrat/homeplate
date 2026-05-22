@@ -105,6 +105,13 @@ void checkSleep(void *parameter)
             vTaskDelay(SECOND / portTICK_PERIOD_MS);
         }
 
+        // wait for any wake locks to release
+        if (anyWakeLocksHeld())
+        {
+            vTaskDelay(SECOND / portTICK_PERIOD_MS);
+            continue;
+        }
+
         // wait for mqtt messages to send
         // only check if both wifi and mqtt did not fail
         if (!getWifIFailed() && !getMQTTFailed() && mqttRunning())

@@ -4,6 +4,7 @@
 #define OTA_TASK_PRIORITY 2
 
 static bool otaRunning = false;
+static WakeLockHandle otaWakeLock = WAKELOCK_INVALID;
 
 // if an OTA is running, pause main event tasks
 void waitForOTA()
@@ -50,7 +51,7 @@ void startOTATask()
                          type = "filesystem";
                     
                     startActivity(NONE);
-                    delaySleep(60);
+                    otaWakeLock = acquireWakeLock("ota", 600);
 
                      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
                      Serial.printf("[OTA] Start OTA updating %s\n", type.c_str());
@@ -79,6 +80,8 @@ void startOTATask()
                      else if (error == OTA_END_ERROR)
                          Serial.println("End Failed");
                      displayStatusMessage("OTA Error[%u]", error);
+                     releaseWakeLock(otaWakeLock);
+                     otaWakeLock = WAKELOCK_INVALID;
                      otaRunning = false; });
 
     xTaskCreate(

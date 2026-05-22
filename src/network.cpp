@@ -175,6 +175,7 @@ int httpPost(const char* url, std::map<String, String> *headers, const char* bod
 
     Serial.printf("[NET] POST %s\n", url);
 
+    WakeLock lock("http-post", 30);
     bool sleep = WiFi.getSleep();
     WiFi.setSleep(false);
 
@@ -215,8 +216,8 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
     bool sleep = WiFi.getSleep();
     WiFi.setSleep(false);
 
+    WakeLock lock("http-get", timeout_sec + 5);
     HTTPClient http;
-    delaySleep(timeout_sec);
 
     // Connect with HTTP
     http.begin(url);

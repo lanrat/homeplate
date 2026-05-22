@@ -68,6 +68,16 @@ void startActivity(Activity activity)
             xSemaphoreGive(startActivityMutex);
             return;
         }
+        // Bump sleepTime before enqueueing so the sleep task's deadline
+        // wait holds until the activity task wakes, dequeues, and acquires
+        // its own WakeLock — closes the producer/consumer race where the
+        // sleep task could pass the wake-lock gate in the gap between
+        // enqueue and the consumer constructing its lock. NONE is skipped
+        // since it has no case body / no WakeLock to hand off to, and is
+        // itself enqueued by the sleep task on its way down.
+        if (activity != NONE)
+            delaySleep(3);
+
         // insert into queue
         Serial.printf("[ACTIVITY] startActivity(%d) put into queue\n", activity);
         setResetActivity(true);
@@ -115,9 +125,6 @@ void runActivities(void *params)
         setResetActivity(false);
         printDebug("[ACTIVITY] runActivities ready...");
 
-        if (activityNext != NONE)
-            delaySleep(10);
-
         // activity debounce
         if ((activityNext == activityCurrent) && ((millis() - lastActivityTime) / SECOND < MIN_ACTIVITY_RESTART_SECS))
         {
@@ -150,12 +157,13 @@ void runActivities(void *params)
         case NONE:
             break;
         case HomeAssistant:
+        {
             if (strlen(plateCfg.imageUrl) == 0)
             {
                 Serial.println("[ACTIVITY] HomeAssistant: no IMAGE_URL configured");
                 break;
             }
-            delaySleep(15);
+            WakeLock lock("activity-ha", 90);
             setSleepDuration(timeToSleep);
             waitForWiFiOrActivityChange();
             if (getResetActivity())
@@ -163,16 +171,17 @@ void runActivities(void *params)
                 Serial.printf("[ACTIVITY][ERROR] HomeAssistant Activity reset while waiting, aborting...\n");
                 continue;
             }
-            delaySleep(20);
             drawImageFromURL(plateCfg.imageUrl);
             break;
+        }
         case Trmnl:
+        {
             if (strlen(plateCfg.trmnlId) == 0)
             {
                 Serial.println("[ACTIVITY] Trmnl: no TRMNL_ID configured");
                 break;
             }
-            delaySleep(15);
+            WakeLock lock("activity-trmnl", 90);
             setSleepDuration(timeToSleep);
             waitForWiFiOrActivityChange();
             if (getResetActivity())
@@ -180,22 +189,33 @@ void runActivities(void *params)
                 Serial.printf("[ACTIVITY][ERROR] Trmnl Activity reset while waiting, aborting...\n");
                 continue;
             }
-            delaySleep(20);
             trmnlDisplay(plateCfg.trmnlUrl);
             break;
+        }
         case GuestWifi:
+        {
+            WakeLock lock("activity-guestwifi", 15);
             setSleepDuration(timeToSleep);
             displayWiFiQR();
             break;
+        }
         case Info:
+        {
+            WakeLock lock("activity-info", 15);
             setSleepDuration(timeToSleep);
             displayInfoScreen();
             break;
+        }
         case Message:
+        {
+            WakeLock lock("activity-message", 15);
             setSleepDuration(timeToSleep);
             displayMessage();
             break;
+        }
         case IMG:
+        {
+            WakeLock lock("activity-img", 90);
             setSleepDuration(timeToSleep);
             waitForWiFiOrActivityChange();
             if (getResetActivity())
@@ -203,9 +223,9 @@ void runActivities(void *params)
                 Serial.printf("[ACTIVITY][ERROR] IMG Activity reset while waiting, aborting...\n");
                 continue;
             }
-            delaySleep(20);
             drawImageFromURL(getMessage());
             break;
+        }
         default:
             Serial.printf("[ACTIVITY][ERROR] runActivities() unhandled Activity: %d\n", activityNext);
         }
