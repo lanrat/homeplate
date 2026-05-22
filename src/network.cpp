@@ -236,8 +236,13 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
     int httpCode = http.GET();
 
     if (responseHeadersOut) {
+        // collectHeaders() reserves a slot per watched header even when the
+        // server didn't send it; http.header(i) then returns "". Skip empties
+        // so callers can use find() as "header was actually present".
         for (int i = 0; i < http.headers(); i++) {
-            (*responseHeadersOut)[http.headerName(i)] = http.header(i);
+            String val = http.header(i);
+            if (val.length() == 0) continue;
+            (*responseHeadersOut)[http.headerName(i)] = val;
         }
     }
 
