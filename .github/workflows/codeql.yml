@@ -30,6 +30,11 @@ jobs:
       uses: github/codeql-action/init@v4
       with:
         languages: cpp
+        # Vendored library code is compiled so CodeQL can resolve symbols,
+        # but alerts from those paths are filtered out — we don't maintain them.
+        config: |
+          paths-ignore:
+            - .pio/
 
     - name: Set up PlatformIO
       uses: ./.github/actions/setup-platformio

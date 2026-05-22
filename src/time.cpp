@@ -72,7 +72,7 @@ void ntpSync(void *parameter)
         // print how far the clocks are off
         long delta_s = (ntp_et - localTime);
         Serial.printf("[TIME] Internal clock was adjusted by %ld seconds\n", delta_s);
-        Serial.printf("[TIME] Internal RTC was adjusted by %ld seconds\n", (ntp_et - rtcEpoch));
+        Serial.printf("[TIME] Internal RTC was adjusted by %lld seconds\n", (long long)(ntp_et - rtcEpoch));
 
         ntpSynced = true;
         // TZ env (set in config_manager via setenv/tzset) drives localtime
@@ -81,7 +81,7 @@ void ntpSync(void *parameter)
         // informational log line below.
         long offset = tzOffset(ntp_et);
         localTime = rtc.getLocalEpoch();
-        Serial.printf("[TIME] NTP UNIX time Epoch(%ld)\n", ntp_et);
+        Serial.printf("[TIME] NTP UNIX time Epoch(%lld)\n", (long long)ntp_et);
         Serial.printf("[TIME] Timezone offset: (%ld) %ld hours\n", offset, (offset/60/60));
         Serial.printf("[TIME] synced local UNIX time Epoch(%ld) %s \n", localTime, fullDateString().c_str());
 

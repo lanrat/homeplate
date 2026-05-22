@@ -462,12 +462,22 @@ bool startWiFiManager(bool forcePortal)
     char ditherKernelHtml[768];
     char *dp = ditherKernelHtml;
     size_t dremaining = sizeof(ditherKernelHtml);
+    auto advance = [&](int n) {
+        if (n < 0 || (size_t)n >= dremaining) {
+            // truncate at the boundary; subsequent snprintfs become no-ops with dremaining==1
+            dp += dremaining ? dremaining - 1 : 0;
+            dremaining = dremaining ? 1 : 0;
+        } else {
+            dp += n;
+            dremaining -= n;
+        }
+    };
     int dn = snprintf(dp, dremaining,
         "<br/><label for='dither_kern'>Dither Kernel</label>"
         "<select name='dither_kern' id='dither_kern' class='button'>"
         "<option value='0'%s>None</option>",
         plateCfg.ditherKernel == 0 ? " selected" : "");
-    dp += dn; dremaining -= dn;
+    advance(dn);
     for (uint8_t i = 0; i < DITHER_KERNEL_COUNT; i++)
     {
         uint8_t cfgVal = i + 1; // config values are library enum + 1
@@ -476,7 +486,7 @@ bool startWiFiManager(bool forcePortal)
             cfgVal,
             plateCfg.ditherKernel == cfgVal ? " selected" : "",
             ditherKernelName(cfgVal));
-        dp += dn; dremaining -= dn;
+        advance(dn);
     }
     snprintf(dp, dremaining, "</select>");
     WiFiManagerParameter p_dkern(ditherKernelHtml);
