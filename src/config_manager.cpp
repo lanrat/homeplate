@@ -10,36 +10,6 @@ HomePlateConfig plateCfg;
 static Preferences preferences;
 static const char *NVS_NAMESPACE = "homeplate";
 
-// Display names for Image::DitherKernel values, indexed by enum value (0..N-1).
-// The DITHER_KERNELS array in the Inkplate library does not expose names, so
-// we maintain this table locally. The static_assert below catches drift: if a
-// future library version adds or removes a kernel, the build will fail and
-// this table must be updated to match.
-static const char *const DITHER_KERNEL_NAMES[] = {
-    "Floyd-Steinberg",      // 0 FloydSteinberg
-    "Jarvis-Judice-Ninke",  // 1 JarvisJudiceNinke
-    "Atkinson",             // 2 Atkinson
-    "Burkes",               // 3 Burkes
-    "Stucki",               // 4 Stucki
-    "Sierra Lite",          // 5 SierraLite
-    "Reduced Diffusion",    // 6 ReducedDiffusion
-};
-static const uint8_t DITHER_KERNEL_NAMES_COUNT =
-    sizeof(DITHER_KERNEL_NAMES) / sizeof(DITHER_KERNEL_NAMES[0]);
-static_assert(DITHER_KERNEL_NAMES_COUNT == DITHER_KERNEL_COUNT,
-    "DITHER_KERNEL_NAMES is out of sync with Inkplate library DITHER_KERNELS — "
-    "update DITHER_KERNEL_NAMES in config_manager.cpp to match the library.");
-
-const char *ditherKernelName(uint8_t value)
-{
-    if (value == 0)
-        return "None";
-    uint8_t index = value - 1;
-    if (index < DITHER_KERNEL_NAMES_COUNT)
-        return DITHER_KERNEL_NAMES[index];
-    return "(unknown)";
-}
-
 // ---- NVS helpers ----
 
 static void loadString(const char *key, char *dest, size_t destSize, const char *defaultVal)
@@ -477,15 +447,12 @@ bool startWiFiManager(bool forcePortal)
     dp += dn; dremaining -= dn;
     for (uint8_t i = 0; i < DITHER_KERNEL_COUNT; i++)
     {
-        const char *name = (i < DITHER_KERNEL_NAMES_COUNT)
-            ? DITHER_KERNEL_NAMES[i]
-            : "(unknown)";
         uint8_t cfgVal = i + 1; // config values are library enum + 1
         dn = snprintf(dp, dremaining,
             "<option value='%u'%s>%s</option>",
             cfgVal,
             plateCfg.ditherKernel == cfgVal ? " selected" : "",
-            name);
+            ditherKernelName(cfgVal));
         dp += dn; dremaining -= dn;
     }
     snprintf(dp, dremaining, "</select>");

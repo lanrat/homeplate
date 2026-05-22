@@ -40,6 +40,7 @@ static char state_topic_temperature[128];
 static char state_topic_battery[128];
 static char state_topic_boot[128];
 static char state_topic_low_battery_alert[128];
+static char topic_dither_options[128];
 
 static void initMqttTopics()
 {
@@ -57,6 +58,20 @@ static void initMqttTopics()
            "%s/sensor/%s/boot/state", MQTT_DISCOVERY_TOPIC, plateCfg.mqttNodeId);
   snprintf(state_topic_low_battery_alert, sizeof(state_topic_low_battery_alert),
            "%s/sensor/%s/low_battery_alert/state", MQTT_DISCOVERY_TOPIC, plateCfg.mqttNodeId);
+  snprintf(topic_dither_options, sizeof(topic_dither_options),
+           "homeplate/%s/dither/options", plateCfg.mqttNodeId);
+}
+
+static void mqttPublishDitherOptions()
+{
+  char buff[256];
+  size_t n = buildDitherOptionsJson(buff, sizeof(buff));
+  if (n == 0) {
+    Serial.println("[MQTT][ERROR] dither options JSON overflow");
+    return;
+  }
+  Serial.printf("[MQTT] Sending dither options: [%s] %s\n", topic_dither_options, buff);
+  mqttClient.publish(topic_dither_options, 1, true, buff);
 }
 
 bool getMQTTFailed()
@@ -398,8 +413,10 @@ void onMqttConnect(bool sessionPresent)
   Serial.print("[MQTT] Subscribing at QoS 2, packetId: ");
   Serial.println(packetIdSub);
 
-  if (!sleepBoot || (bootCount % MQTT_RESEND_CONFIG_EVERY) == 0)
+  if (!sleepBoot || (bootCount % MQTT_RESEND_CONFIG_EVERY) == 0) {
     sendHAConfig();
+    mqttPublishDitherOptions();
+  }
 }
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
@@ -517,6 +534,8 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
         Serial.printf("[MQTT][ERROR] img action has no url message!\n");
         return;
       }
+      const char *d = doc["dither"].is<const char *>() ? doc["dither"].as<const char *>() : nullptr;
+      setPendingDitherOverride(parseDitherName(d));
       setMessage(doc["message"]);
       startActivity(IMG);
       return;
@@ -545,6 +564,7 @@ void startMQTTTask()
   mqtt_filter["action"] = true;
   mqtt_filter["message"] = true;
   mqtt_filter["refresh"] = true;
+  mqtt_filter["dither"] = true;
 
   mqttClient.setClientId(plateCfg.hostname);
   mqttClient.setServer(plateCfg.mqttHost, plateCfg.mqttPort);

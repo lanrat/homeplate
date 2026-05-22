@@ -2,6 +2,15 @@
 
 #define IMAGE_HTTP_REQUEST_TIMEOUT 15
 
+// Per-request dither override stash. Set by an upstream source (e.g. MQTT
+// img action's "dither" field) before triggering an image render; consumed
+// and reset to -1 on the next drawImageFromURL() entry. -1 means "no
+// override". HTTP X-Dither response header takes precedence over this when
+// both are present.
+static int8_t pendingDitherOverride = -1;
+
+void setPendingDitherOverride(int8_t v) { pendingDitherOverride = v; }
+
 // Enum to represent the different image types we can detect.
 enum class ImageType {
     UNKNOWN,
@@ -175,10 +184,15 @@ bool drawImageFromURL(const char *url) {
          Serial.print("[IMAGE] ERROR: got null url!");
          return false;
     }
+    // Snapshot and consume any pending override (e.g. set by an MQTT img command).
+    int8_t mqttOverride = pendingDitherOverride;
+    pendingDitherOverride = -1;
+
     displayStatusMessage("Downloading image...");
     static int32_t len = E_INK_WIDTH * E_INK_HEIGHT + 100;
     Serial.printf("[IMAGE] Downloading image: %s\n", url);
-    uint8_t *buff = httpGetRetry(3, url, NULL, &len, IMAGE_HTTP_REQUEST_TIMEOUT);
+    std::map<String, String> respHeaders;
+    uint8_t *buff = httpGetRetry(3, url, NULL, &len, IMAGE_HTTP_REQUEST_TIMEOUT, &respHeaders);
     if (!buff)
     {
         Serial.println("[IMAGE] Download failed");
@@ -195,12 +209,21 @@ bool drawImageFromURL(const char *url) {
         return false;
     }
     Serial.println("[IMAGE] Download done");
-    bool good = drawImageFromBuffer(buff, len);
+
+    // HTTP X-Dither header wins over MQTT-pending override.
+    int8_t ditherOverride = mqttOverride;
+    auto it = respHeaders.find("X-Dither");
+    if (it != respHeaders.end())
+    {
+        ditherOverride = parseDitherName(it->second.c_str());
+    }
+
+    bool good = drawImageFromBuffer(buff, len, false, ditherOverride);
     free(buff);
     return good;
 }
 
-bool drawImageFromBuffer(uint8_t *buff, size_t size, bool center) {
+bool drawImageFromBuffer(uint8_t *buff, size_t size, bool center, int8_t ditherOverride) {
     WakeLock lock("image-render", 60);
     displayStatusMessage("Rendering image...");
 
@@ -210,6 +233,19 @@ bool drawImageFromBuffer(uint8_t *buff, size_t size, bool center) {
 #endif
     display.clearDisplay();                   // refresh the display buffer before rendering.
     displayEnd();
+
+    uint8_t effectiveKernel = (ditherOverride < 0) ? plateCfg.ditherKernel : (uint8_t)ditherOverride;
+    bool useDither = effectiveKernel != 0;
+    if (useDither) {
+        // display.image is `Image` on B&W boards and `ImageColor` on the 6COLOR
+        // board; both expose a class-local DitherKernel enum with identical
+        // values (0=FloydSteinberg .. 6=ReducedDiffusion). decltype picks the
+        // right scope for each board without an #ifdef.
+        display.image.setDitherKernel((decltype(display.image)::DitherKernel)(effectiveKernel - 1));
+    }
+    Serial.printf("[IMAGE] Dither: %s%s\n",
+        ditherKernelName(effectiveKernel),
+        (ditherOverride >= 0) ? " (override)" : "");
 
     bool good = false;
     auto img = getImageInfo(buff, size);
@@ -234,13 +270,13 @@ bool drawImageFromBuffer(uint8_t *buff, size_t size, bool center) {
         displayStart();
         switch(img.type) {
             case ImageType::PNG:
-                good = display.image.drawPngFromBuffer(buff, size, xLoc, yLoc, (plateCfg.ditherKernel != 0), false);
+                good = display.image.drawPngFromBuffer(buff, size, xLoc, yLoc, useDither, false);
                 break;
             case ImageType::BMP:
-                good = display.image.drawBitmapFromBuffer(buff, xLoc, yLoc, (plateCfg.ditherKernel != 0), false);
+                good = display.image.drawBitmapFromBuffer(buff, xLoc, yLoc, useDither, false);
                 break;
             case ImageType::JPEG:
-                good = display.image.drawJpegFromBuffer(buff, size, xLoc, yLoc, (plateCfg.ditherKernel != 0), false);
+                good = display.image.drawJpegFromBuffer(buff, size, xLoc, yLoc, useDither, false);
                 break;
             default:
                 good = false;

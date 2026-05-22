@@ -86,8 +86,3 @@ uint32_t getMqttExpireAfterSec();
 
 // Get NTP sync interval (computed from sleep minutes)
 uint16_t getNtpSyncInterval();
-
-// Returns the human-readable name for a ditherKernel config value.
-// 0 → "None"; 1..DITHER_KERNEL_COUNT → the corresponding library kernel
-// name; anything out of range → "(unknown)".
-const char *ditherKernelName(uint8_t value);

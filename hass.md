@@ -136,6 +136,59 @@ with a 5 minute refresh timer for the next boot:
         retain: true
 ```
 
+### Display an Image with Dither Override
+
+The `img` action downloads and displays an image from a URL:
+
+```json
+{
+    "action": "img",
+    "message": "https://example.com/photo.jpg"
+}
+```
+
+The dither kernel used to convert the image to e-ink can be overridden per-request via the optional `"dither"` field. When unset, the device falls back to the default kernel configured in the WiFiManager portal.
+
+```json
+{
+    "action": "img",
+    "message": "https://example.com/photo.jpg",
+    "dither": "atkinson"
+}
+```
+
+```json
+{
+    "action": "img",
+    "message": "https://example.com/screenshot.png",
+    "dither": "none"
+}
+```
+
+Accepted names are case-insensitive and ignore spaces, hyphens, and underscores: `none` / `false` / `off` / `""`, `floyd-steinberg`, `jarvis-judice-ninke`, `atkinson`, `burkes`, `stucki`, `sierra-lite`, `reduced-diffusion`. Unknown names log an error and fall back to the configured default.
+
+#### HTTP `X-Dither` response header
+
+For HTTP image requests, the image server can also set the dither by returning an `X-Dither: <name>` response header. The same name set is accepted. When both an MQTT `"dither"` field and the HTTP header are present, **the HTTP header wins** (the server hosting the image is closer to knowing what dither suits it).
+
+#### Discovering supported names from MQTT
+
+On every MQTT connect, HomePlate publishes the full list of accepted dither names as a retained JSON array to:
+
+```text
+homeplate/<mqtt_node_id>/dither/options
+```
+
+Example payload:
+
+```json
+["none","Floyd-Steinberg","Jarvis-Judice-Ninke","Atkinson","Burkes","Stucki","Sierra-Lite","Reduced-Diffusion"]
+```
+
+Names are matched case-insensitively and ignore hyphens/underscores/spaces, so `"atkinson"`, `"Atkinson"`, and `"AT KIN SON"` all work.
+
+Use this in automations or HA templates instead of hardcoding the list.
+
 ### Home Plate Card Example
 
 ![Home Assistant card](https://user-images.githubusercontent.com/164192/151242986-a8ed6948-3462-4d02-80f4-9a08062d237b.png)

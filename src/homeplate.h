@@ -124,7 +124,24 @@ void displayInfoScreen();
 
 // Image
 bool drawImageFromURL(const char *url);
-bool drawImageFromBuffer(uint8_t *buff, size_t size, bool center = true);
+bool drawImageFromBuffer(uint8_t *buff, size_t size, bool center = true, int8_t ditherOverride = -1);
+// Stash a per-request dither override for the next drawImageFromURL() call.
+// Consumed (cleared to -1) on use. Use sentinel -1 = "no override".
+void setPendingDitherOverride(int8_t v);
+
+// Dither
+// Parse a user-supplied dither name (HTTP header or MQTT field).
+// Returns: -1 = unset / unknown (caller falls back to plateCfg.ditherKernel),
+//           0 = explicit "none" (no dithering),
+//         1-N = library DitherKernel + 1 (matches plateCfg.ditherKernel encoding).
+int8_t parseDitherName(const char *name);
+// Fills out with a JSON array of canonical supported dither names (including "none").
+// Returns bytes written (excluding NUL), or 0 on overflow.
+size_t buildDitherOptionsJson(char *out, size_t outSize);
+// Returns the human-readable name for a ditherKernel config value.
+// 0 → "None"; 1..DITHER_KERNEL_COUNT → the corresponding library kernel
+// name; anything out of range → "(unknown)".
+const char *ditherKernelName(uint8_t value);
 uint16_t centerTextX(const char *t, int16_t x1, int16_t x2, int16_t y, bool lock = true);
 void displayStatusMessage(const char *format, ...);
 void displayCriticalMessage(const char *format, ...);
@@ -186,8 +203,8 @@ void displayBatteryWarning();
 void printDebug(const char *s);
 
 // network
-uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec = 5);
-uint8_t* httpGetRetry(uint32_t trys, const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec);
+uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec = 5, std::map<String, String> *responseHeadersOut = nullptr);
+uint8_t* httpGetRetry(uint32_t trys, const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec, std::map<String, String> *responseHeadersOut = nullptr);
 int httpPost(const char* url, std::map<String, String> *headers, const char* body);
 
 // message

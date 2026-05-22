@@ -148,11 +148,11 @@ void wifiStopTask()
     }
 }
 
-uint8_t* httpGetRetry(uint32_t trys, const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec) {
+uint8_t* httpGetRetry(uint32_t trys, const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec, std::map<String, String> *responseHeadersOut) {
     uint8_t* ret = 0;
     for (uint32_t i = 0; i < trys; i++) {
         Serial.printf("[NET] download attempt: %d\n", i);
-        ret = httpGet(url, headers, defaultLen,timeout_sec);
+        ret = httpGet(url, headers, defaultLen, timeout_sec, responseHeadersOut);
         if (ret != nullptr) {
             return ret;
         }
@@ -198,7 +198,7 @@ int httpPost(const char* url, std::map<String, String> *headers, const char* bod
     return httpCode;
 }
 
-uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec) {
+uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec, std::map<String, String> *responseHeadersOut) {
     // Input validation
     if (!url || strlen(url) == 0) {
         Serial.println("[NET] Invalid URL: null or empty");
@@ -228,7 +228,18 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
         }
     }
 
+    static const char* watchedHeaders[] = { "X-Dither" };
+    if (responseHeadersOut) {
+        http.collectHeaders(watchedHeaders, sizeof(watchedHeaders) / sizeof(watchedHeaders[0]));
+    }
+
     int httpCode = http.GET();
+
+    if (responseHeadersOut) {
+        for (int i = 0; i < http.headers(); i++) {
+            (*responseHeadersOut)[http.headerName(i)] = http.header(i);
+        }
+    }
 
     int32_t size = http.getSize();
     if (size == -1)
