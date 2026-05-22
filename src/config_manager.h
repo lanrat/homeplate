@@ -86,3 +86,11 @@ uint32_t getMqttExpireAfterSec();
 
 // Get NTP sync interval (computed from sleep minutes)
 uint16_t getNtpSyncInterval();
+
+// Apply the current plateCfg.timezone via setenv("TZ", ...) + tzset()
+void applyTimezone();
+
+// One-shot "enter setup mode on next boot" NVS flag, set by the MQTT
+// setup_mode button. Consumed (cleared) at boot.
+void setForcePortalFlag(bool v);
+bool consumeForcePortalFlag();

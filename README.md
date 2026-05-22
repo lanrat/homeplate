@@ -74,6 +74,8 @@ See [setup.md](setup.md) for detailed setup instructions, settings reference, an
 
 To change settings later, hold the **wake button** during boot to re-open the config portal. On the original Inkplate 6, short **GPIO 13** to **GND** during boot instead.
 
+If you use Home Assistant, most settings are also exposed as MQTT-Discovery entities under the HomePlate device — including sleep duration, default activity, TRMNL credentials, dither kernel, timezone, and Reboot / Enter Setup Mode buttons — so you can change them from HA without touching the device. See [hass.md](hass.md#configuration-entities).
+
 ### [Hardware](hardware.md)
 
 Tips for mounting your Inkplate in a picture frame, including adding an external USB-C port.

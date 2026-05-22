@@ -169,8 +169,7 @@ void loadConfig()
     }
 
     // Apply timezone
-    setenv("TZ", plateCfg.timezone, 1);
-    tzset();
+    applyTimezone();
 
     Serial.printf("[CONFIG] Loaded config: hostname=%s, tz=%s, sleep=%dmin\n",
                   plateCfg.hostname, plateCfg.timezone, plateCfg.sleepMinutes);
@@ -239,6 +238,30 @@ uint16_t getNtpSyncInterval()
 bool isConfigured()
 {
     return plateCfg.configured;
+}
+
+void applyTimezone()
+{
+    setenv("TZ", plateCfg.timezone, 1);
+    tzset();
+}
+
+void setForcePortalFlag(bool v)
+{
+    preferences.begin(NVS_NAMESPACE, false);
+    preferences.putBool("force_portal", v);
+    preferences.end();
+}
+
+bool consumeForcePortalFlag()
+{
+    preferences.begin(NVS_NAMESPACE, false);
+    bool v = preferences.getBool("force_portal", false);
+    if (v) {
+        preferences.remove("force_portal");
+    }
+    preferences.end();
+    return v;
 }
 
 // ---- WiFiManager ----
@@ -547,8 +570,7 @@ bool startWiFiManager(bool forcePortal)
             strlcpy(plateCfg.mqttNodeId, plateCfg.hostname, sizeof(plateCfg.mqttNodeId));
 
         // Apply timezone
-        setenv("TZ", plateCfg.timezone, 1);
-        tzset();
+        applyTimezone();
 
         saveConfig();
         Serial.println("[CONFIG] Configuration saved via WiFiManager"); });

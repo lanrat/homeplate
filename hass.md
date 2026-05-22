@@ -189,6 +189,40 @@ Names are matched case-insensitively and ignore hyphens/underscores/spaces, so `
 
 Use this in automations or HA templates instead of hardcoding the list.
 
+### Configuration Entities
+
+Settings that previously could only be changed through the WiFiManager setup portal are now exposed as native Home Assistant entities via MQTT Discovery. They appear under the existing HomePlate device in HA, in the "Configuration" section. Changes are persisted to NVS and survive reboots.
+
+| Entity | HA component | Key (topic slug) | Range / options | Apply timing |
+|---|---|---|---|---|
+| Sleep Minutes | number | `sleep_min` | 1–1440 min | next sleep |
+| Quick Sleep Seconds | number | `quick_sleep` | 0–86400 s | next quick sleep |
+| Default Activity | select | `def_activity` | HomeAssistant / Trmnl / Info / GuestWifi | next default dispatch |
+| Image URL | text | `image_url` | up to 256 chars | next HomeAssistant activity |
+| TRMNL URL | text | `trmnl_url` | up to 256 chars | next TRMNL activity |
+| TRMNL ID | text | `trmnl_id` | up to 64 chars | next TRMNL activity |
+| TRMNL Token | text (password) | `trmnl_token` | up to 64 chars | next TRMNL activity |
+| TRMNL Logging | switch | `trmnl_log` | ON / OFF | next TRMNL activity |
+| Dither Kernel | select | `dither_kern` | None + each kernel name | next image render |
+| Show Update Time | switch | `disp_time` | ON / OFF | next render |
+| Timezone | text | `timezone` | POSIX TZ string | immediate (no reboot) |
+| Guest WiFi SSID | text | `qr_name` | up to 64 chars | next GuestWifi render |
+| Guest WiFi Password | text (password) | `qr_pass` | up to 64 chars | next GuestWifi render |
+| Reboot | button | `cmd/reboot` | — | immediate |
+| Enter Setup Mode | button | `cmd/setup_mode` | — | reboots into WiFiManager portal |
+
+**Topics** (where `<node>` is `mqtt_node_id`, default `homeplate`):
+
+- State (retained): `homeplate/<node>/config/<key>/state` — raw scalar (e.g. `30`, `Atkinson`, `ON`).
+- Command: `homeplate/<node>/config/<key>/set` — same scalar form HA publishes.
+- Button command: `homeplate/<node>/cmd/reboot`, `homeplate/<node>/cmd/setup_mode` — payload ignored (HA sends `PRESS`).
+
+**Excluded by design** (require reboot or are network-critical, so they stay portal-only): `hostname`, static IP fields, MQTT broker host/port/credentials, NTP server, OTA enable.
+
+**Sensitive fields:** `trmnl_token` and `qr_pass` are exposed as HA password-mode text. The values still pass over MQTT in cleartext and are retained on the broker — anyone with broker access can read them. If that is unacceptable, leave them blank in HA and set them only via the WiFiManager portal.
+
+**Idempotency:** every command is value-compared against the current setting before NVS is rewritten, so retained replays on reconnect do not cause repeated flash writes.
+
 ### Home Plate Card Example
 
 ![Home Assistant card](https://user-images.githubusercontent.com/164192/151242986-a8ed6948-3462-4d02-80f4-9a08062d237b.png)

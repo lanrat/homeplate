@@ -4,7 +4,7 @@ In order to use Homeplate with Trmnl you will either need [BYOD](https://docs.tr
 
 ## Homeplate Config
 
-Configure the following settings in the WiFi setup portal (see [setup.md](setup.md)):
+Configure the following settings in the WiFi setup portal (see [setup.md](setup.md)), or — if MQTT is already set up — directly from Home Assistant via the exposed config entities (see [hass.md](hass.md#configuration-entities)):
 
 | Setting | Value |
 | ------- | ----- |

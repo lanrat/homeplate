@@ -125,6 +125,11 @@ void setup()
     // if the selected activity is missing required settings,
     // or if the wake button is held during boot
     bool forcePortal = !isConfigured();
+    if (consumeForcePortalFlag())
+    {
+        Serial.println("[SETUP] force_portal flag set via MQTT, forcing config portal");
+        forcePortal = true;
+    }
 #ifdef WAKE_BUTTON
     // Only honor a held wake button on a fresh boot (power-on / reset).
     // Skipping this on deep-sleep wake avoids the long-press that woke the

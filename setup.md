@@ -41,6 +41,10 @@ After saving, the device will reboot and connect to your WiFi network with the n
 
 ## Changing Settings
 
+### Home Assistant / MQTT method
+
+If MQTT is configured, most settings are exposed as native Home Assistant entities via MQTT Discovery and can be changed directly from HA without entering the config portal. Exposed settings include sleep duration, default activity, image URL, TRMNL credentials, dither kernel, show-update-time, timezone, and the guest WiFi QR fields, plus **Reboot** and **Enter Setup Mode** buttons. Changes persist to NVS. Network-critical settings (WiFi, MQTT broker, hostname, OTA, static IP) remain portal-only. See [hass.md](hass.md#configuration-entities) for the full list and topic layout.
+
 ### Wake button method
 
 Hold the **wake button** while the device boots (press reset or wait for a sleep wake cycle) to force the config portal to open. The device will connect to your saved WiFi and open the **HomePlate-Setup** AP simultaneously, allowing you to reconfigure any settings.
@@ -57,7 +61,7 @@ To clear all saved settings and start fresh, use the [Web Installer](https://lan
 
 ## Settings Reference
 
-All settings below can be configured through the WiFi portal. They are saved to the device's non-volatile storage (NVS) and persist across reboots and firmware updates.
+All settings below can be configured through the WiFi portal. They are saved to the device's non-volatile storage (NVS) and persist across reboots and firmware updates. A subset can also be changed at runtime via Home Assistant / MQTT — see [hass.md](hass.md#configuration-entities).
 
 ### Network
 

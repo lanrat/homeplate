@@ -42,6 +42,11 @@ static char state_topic_boot[128];
 static char state_topic_low_battery_alert[128];
 static char topic_dither_options[128];
 
+// Forward decls for config-entity helpers defined further below.
+static char btnRebootTopic[128];
+static char btnSetupTopic[128];
+static void sendConfigDiscovery(JsonDocument &deviceInfo, char *buff, size_t buffSz);
+
 static void initMqttTopics()
 {
   snprintf(mqttActionTopic, sizeof(mqttActionTopic),
@@ -60,6 +65,10 @@ static void initMqttTopics()
            "%s/sensor/%s/low_battery_alert/state", MQTT_DISCOVERY_TOPIC, plateCfg.mqttNodeId);
   snprintf(topic_dither_options, sizeof(topic_dither_options),
            "homeplate/%s/dither/options", plateCfg.mqttNodeId);
+  snprintf(btnRebootTopic, sizeof(btnRebootTopic),
+           "homeplate/%s/cmd/reboot", plateCfg.mqttNodeId);
+  snprintf(btnSetupTopic, sizeof(btnSetupTopic),
+           "homeplate/%s/cmd/setup_mode", plateCfg.mqttNodeId);
 }
 
 static void mqttPublishDitherOptions()
@@ -364,6 +373,359 @@ void sendHAConfig()
   serializeJson(doc, buff);
   snprintf(configTopic, sizeof(configTopic), "%s/config", mqttBaseSensor("low_battery_alert"));
   mqttClient.publish(configTopic, qos, retain, buff);
+
+  // Config entities (number/select/text/switch) + reboot/setup buttons
+  sendConfigDiscovery(deviceInfo, buff, sizeof(buff));
+}
+
+// ============================================================================
+// Configuration entities exposed via HA MQTT Discovery
+// ----------------------------------------------------------------------------
+// Each ConfigEntity row describes one user-mutable setting. The table drives
+// discovery publish, state publish, subscribe, and command dispatch — adding a
+// new exposed setting only requires appending a row here (plus, if it's a new
+// type, extending the small switch statements below).
+//
+// Topics:
+//   discovery: <D>/<component>/<node>/cfg_<key>/config   (retained)
+//   state:     homeplate/<node>/config/<key>/state       (retained, raw scalar)
+//   command:   homeplate/<node>/config/<key>/set         (subscribed)
+//
+// Command idempotency: every handler dirty-checks against the live value
+// before writing NVS, so retained replays on reconnect (or external retained
+// publishes) are no-ops.
+// ============================================================================
+
+enum HAComp { HC_NUMBER, HC_SELECT, HC_TEXT, HC_TEXT_PASSWORD, HC_SWITCH };
+enum CType  { CT_U16, CT_BOOL, CT_STR, CT_ENUM_STR, CT_DITHER };
+
+struct ConfigEntity {
+  const char *key;             // NVS key + topic slug
+  const char *name;            // HA friendly name
+  const char *icon;            // mdi:..., may be nullptr
+  HAComp comp;
+  CType  type;
+  void  *valPtr;               // pointer into plateCfg
+  size_t valSize;              // for strings (includes NUL)
+  int32_t numMin, numMax;      // for HC_NUMBER
+  const char *unit;            // for HC_NUMBER, may be nullptr
+  const char *const *options;  // null-terminated for CT_ENUM_STR
+  bool sensitive;              // mask in serial logs
+  void (*applyFn)();           // optional post-write hook
+};
+
+static const char *const activityOpts[] = {"HomeAssistant", "Trmnl", "Info", "GuestWifi", nullptr};
+
+static const ConfigEntity configEntities[] = {
+  {"sleep_min",    "Sleep Minutes",       "mdi:timer-sand",               HC_NUMBER,        CT_U16,      &plateCfg.sleepMinutes,           0,                                       1, 1440,  "min", nullptr,      false, nullptr},
+  {"quick_sleep",  "Quick Sleep Seconds", "mdi:timer",                    HC_NUMBER,        CT_U16,      &plateCfg.quickSleepSec,          0,                                       0, 86400, "s",   nullptr,      false, nullptr},
+  {"def_activity", "Default Activity",    "mdi:application",              HC_SELECT,        CT_ENUM_STR, plateCfg.defaultActivityStr,      sizeof(plateCfg.defaultActivityStr),     0, 0,     nullptr, activityOpts, false, nullptr},
+  {"image_url",    "Image URL",           "mdi:link-variant",             HC_TEXT,          CT_STR,      plateCfg.imageUrl,                sizeof(plateCfg.imageUrl),               0, 0,     nullptr, nullptr,      false, nullptr},
+  {"trmnl_url",    "TRMNL URL",           "mdi:link-variant",             HC_TEXT,          CT_STR,      plateCfg.trmnlUrl,                sizeof(plateCfg.trmnlUrl),               0, 0,     nullptr, nullptr,      false, nullptr},
+  {"trmnl_id",     "TRMNL ID",            "mdi:identifier",               HC_TEXT,          CT_STR,      plateCfg.trmnlId,                 sizeof(plateCfg.trmnlId),                0, 0,     nullptr, nullptr,      false, nullptr},
+  {"trmnl_token",  "TRMNL Token",         "mdi:key",                      HC_TEXT_PASSWORD, CT_STR,      plateCfg.trmnlToken,              sizeof(plateCfg.trmnlToken),             0, 0,     nullptr, nullptr,      true,  nullptr},
+  {"trmnl_log",    "TRMNL Logging",       "mdi:text-box-outline",         HC_SWITCH,        CT_BOOL,     &plateCfg.trmnlEnableLog,         0,                                       0, 0,     nullptr, nullptr,      false, nullptr},
+  {"dither_kern",  "Dither Kernel",       "mdi:image-filter-black-white", HC_SELECT,        CT_DITHER,   &plateCfg.ditherKernel,           0,                                       0, 0,     nullptr, nullptr,      false, nullptr},
+  {"disp_time",    "Show Update Time",    "mdi:clock-outline",            HC_SWITCH,        CT_BOOL,     &plateCfg.displayLastUpdateTime,  0,                                       0, 0,     nullptr, nullptr,      false, nullptr},
+  {"timezone",     "Timezone (POSIX TZ)", "mdi:earth",                    HC_TEXT,          CT_STR,      plateCfg.timezone,                sizeof(plateCfg.timezone),               0, 0,     nullptr, nullptr,      false, applyTimezone},
+  {"qr_name",      "Guest WiFi SSID",     "mdi:wifi",                     HC_TEXT,          CT_STR,      plateCfg.qrWifiName,              sizeof(plateCfg.qrWifiName),             0, 0,     nullptr, nullptr,      false, nullptr},
+  {"qr_pass",      "Guest WiFi Password", "mdi:wifi-lock",                HC_TEXT_PASSWORD, CT_STR,      plateCfg.qrWifiPassword,          sizeof(plateCfg.qrWifiPassword),         0, 0,     nullptr, nullptr,      true,  nullptr},
+};
+static constexpr size_t configEntitiesCount = sizeof(configEntities) / sizeof(configEntities[0]);
+
+static const char *haComponentStr(HAComp c)
+{
+  switch (c)
+  {
+  case HC_NUMBER:        return "number";
+  case HC_SELECT:        return "select";
+  case HC_TEXT:
+  case HC_TEXT_PASSWORD: return "text";
+  case HC_SWITCH:        return "switch";
+  }
+  return "";
+}
+
+static void cfgStateTopic(char *buf, size_t sz, const char *key)
+{
+  snprintf(buf, sz, "homeplate/%s/config/%s/state", plateCfg.mqttNodeId, key);
+}
+static void cfgCmdTopic(char *buf, size_t sz, const char *key)
+{
+  snprintf(buf, sz, "homeplate/%s/config/%s/set", plateCfg.mqttNodeId, key);
+}
+static void cfgDiscoveryTopic(char *buf, size_t sz, HAComp comp, const char *key)
+{
+  snprintf(buf, sz, "%s/%s/%s/cfg_%s/config", MQTT_DISCOVERY_TOPIC, haComponentStr(comp), plateCfg.mqttNodeId, key);
+}
+
+static void publishConfigState(const ConfigEntity &e)
+{
+  char stTopic[128];
+  char payload[260];
+  cfgStateTopic(stTopic, sizeof(stTopic), e.key);
+  switch (e.type)
+  {
+  case CT_U16:
+    snprintf(payload, sizeof(payload), "%u", *(uint16_t *)e.valPtr);
+    break;
+  case CT_BOOL:
+    snprintf(payload, sizeof(payload), "%s", *(bool *)e.valPtr ? "ON" : "OFF");
+    break;
+  case CT_STR:
+  case CT_ENUM_STR:
+    strlcpy(payload, (const char *)e.valPtr, sizeof(payload));
+    break;
+  case CT_DITHER:
+    strlcpy(payload, ditherKernelName(*(uint8_t *)e.valPtr), sizeof(payload));
+    break;
+  }
+  if (e.sensitive)
+    Serial.printf("[MQTT] Publish config state: [%s] ***(%d)\n", stTopic, (int)strlen(payload));
+  else
+    Serial.printf("[MQTT] Publish config state: [%s] %s\n", stTopic, payload);
+  mqttClient.publish(stTopic, 1, true, payload);
+}
+
+static void publishConfigDiscovery(const ConfigEntity &e, JsonDocument &deviceInfo, char *buff, size_t buffSz)
+{
+  JsonDocument doc;
+  char stTopic[128], cmdTopic[128], discTopic[160], uniqueId[80];
+  cfgStateTopic(stTopic, sizeof(stTopic), e.key);
+  cfgCmdTopic(cmdTopic, sizeof(cmdTopic), e.key);
+  cfgDiscoveryTopic(discTopic, sizeof(discTopic), e.comp, e.key);
+  snprintf(uniqueId, sizeof(uniqueId), "%s_cfg_%s", plateCfg.mqttNodeId, e.key);
+
+  doc["unique_id"] = uniqueId;
+  doc["name"] = e.name;
+  if (e.icon) doc["icon"] = e.icon;
+  doc["state_topic"] = stTopic;
+  doc["command_topic"] = cmdTopic;
+  doc["entity_category"] = "config";
+  doc["device"] = deviceInfo;
+
+  switch (e.comp)
+  {
+  case HC_NUMBER:
+    doc["min"] = e.numMin;
+    doc["max"] = e.numMax;
+    doc["step"] = 1;
+    doc["mode"] = "box";
+    if (e.unit) doc["unit_of_measurement"] = e.unit;
+    break;
+  case HC_SELECT:
+  {
+    JsonArray arr = doc["options"].to<JsonArray>();
+    if (e.type == CT_DITHER)
+    {
+      arr.add(ditherKernelName(0)); // "None"
+      for (uint8_t i = 1; i <= DITHER_KERNEL_COUNT; i++)
+        arr.add(ditherKernelName(i));
+    }
+    else if (e.options)
+    {
+      for (const char *const *p = e.options; *p; p++)
+        arr.add(*p);
+    }
+    break;
+  }
+  case HC_TEXT:
+    doc["min"] = 0;
+    doc["max"] = (uint32_t)(e.valSize - 1);
+    doc["mode"] = "text";
+    break;
+  case HC_TEXT_PASSWORD:
+    doc["min"] = 0;
+    doc["max"] = (uint32_t)(e.valSize - 1);
+    doc["mode"] = "password";
+    break;
+  case HC_SWITCH:
+    doc["payload_on"]  = "ON";
+    doc["payload_off"] = "OFF";
+    doc["state_on"]    = "ON";
+    doc["state_off"]   = "OFF";
+    break;
+  }
+  serializeJson(doc, buff, buffSz);
+  mqttClient.publish(discTopic, 1, true, buff);
+}
+
+static void publishConfigButtons(JsonDocument &deviceInfo, char *buff, size_t buffSz)
+{
+  // Reboot button
+  {
+    JsonDocument doc;
+    char uniqueId[80], discTopic[160];
+    snprintf(uniqueId, sizeof(uniqueId), "%s_cmd_reboot", plateCfg.mqttNodeId);
+    snprintf(discTopic, sizeof(discTopic), "%s/button/%s/cmd_reboot/config", MQTT_DISCOVERY_TOPIC, plateCfg.mqttNodeId);
+    doc["unique_id"] = uniqueId;
+    doc["name"] = "Reboot";
+    doc["command_topic"] = btnRebootTopic;
+    doc["payload_press"] = "PRESS";
+    doc["device_class"] = "restart";
+    doc["entity_category"] = "config";
+    doc["icon"] = "mdi:restart";
+    doc["device"] = deviceInfo;
+    serializeJson(doc, buff, buffSz);
+    mqttClient.publish(discTopic, 1, true, buff);
+  }
+  // Setup-mode button
+  {
+    JsonDocument doc;
+    char uniqueId[80], discTopic[160];
+    snprintf(uniqueId, sizeof(uniqueId), "%s_cmd_setup_mode", plateCfg.mqttNodeId);
+    snprintf(discTopic, sizeof(discTopic), "%s/button/%s/cmd_setup_mode/config", MQTT_DISCOVERY_TOPIC, plateCfg.mqttNodeId);
+    doc["unique_id"] = uniqueId;
+    doc["name"] = "Enter Setup Mode";
+    doc["command_topic"] = btnSetupTopic;
+    doc["payload_press"] = "PRESS";
+    doc["entity_category"] = "config";
+    doc["icon"] = "mdi:cog-play";
+    doc["device"] = deviceInfo;
+    serializeJson(doc, buff, buffSz);
+    mqttClient.publish(discTopic, 1, true, buff);
+  }
+}
+
+static void publishAllConfigStates()
+{
+  for (size_t i = 0; i < configEntitiesCount; i++)
+    publishConfigState(configEntities[i]);
+}
+
+static void subscribeConfigCommands()
+{
+  char cmdTopic[128];
+  for (size_t i = 0; i < configEntitiesCount; i++)
+  {
+    cfgCmdTopic(cmdTopic, sizeof(cmdTopic), configEntities[i].key);
+    mqttClient.subscribe(cmdTopic, 1);
+  }
+  mqttClient.subscribe(btnRebootTopic, 1);
+  mqttClient.subscribe(btnSetupTopic, 1);
+}
+
+// Return true if the topic was handled by the config command dispatcher.
+static bool handleConfigCommand(const char *topic, const char *payload, size_t len)
+{
+  char cmdTopic[128];
+  for (size_t i = 0; i < configEntitiesCount; i++)
+  {
+    const ConfigEntity &e = configEntities[i];
+    cfgCmdTopic(cmdTopic, sizeof(cmdTopic), e.key);
+    if (strcmp(topic, cmdTopic) != 0)
+      continue;
+
+    // Payload is not NUL-terminated; copy into a local buffer.
+    char buf[320];
+    size_t copyLen = len < sizeof(buf) - 1 ? len : sizeof(buf) - 1;
+    memcpy(buf, payload, copyLen);
+    buf[copyLen] = '\0';
+
+    if (e.sensitive)
+      Serial.printf("[MQTT][CFG] Received: %s = ***(%d)\n", e.key, (int)copyLen);
+    else
+      Serial.printf("[MQTT][CFG] Received: %s = %s\n", e.key, buf);
+
+    bool dirty = false;
+    bool invalid = false;
+    switch (e.type)
+    {
+    case CT_U16:
+    {
+      int32_t v = atoi(buf);
+      if (v < e.numMin) v = e.numMin;
+      if (v > e.numMax) v = e.numMax;
+      uint16_t *p = (uint16_t *)e.valPtr;
+      if (*p != (uint16_t)v) { *p = (uint16_t)v; dirty = true; }
+      break;
+    }
+    case CT_BOOL:
+    {
+      bool v = (strcasecmp(buf, "ON") == 0 || strcasecmp(buf, "true") == 0 || strcasecmp(buf, "1") == 0);
+      bool *p = (bool *)e.valPtr;
+      if (*p != v) { *p = v; dirty = true; }
+      break;
+    }
+    case CT_ENUM_STR:
+    {
+      bool valid = false;
+      for (const char *const *q = e.options; q && *q; q++)
+        if (strcmp(buf, *q) == 0) { valid = true; break; }
+      if (!valid) { invalid = true; break; }
+      char *p = (char *)e.valPtr;
+      if (strcmp(p, buf) != 0) { strlcpy(p, buf, e.valSize); dirty = true; }
+      break;
+    }
+    case CT_STR:
+    {
+      char *p = (char *)e.valPtr;
+      if (strcmp(p, buf) != 0) { strlcpy(p, buf, e.valSize); dirty = true; }
+      break;
+    }
+    case CT_DITHER:
+    {
+      int8_t v = parseDitherName(buf);
+      if (v < 0)
+      {
+        // also accept a numeric index
+        char *endp = nullptr;
+        long n = strtol(buf, &endp, 10);
+        if (endp != buf && *endp == '\0' && n >= 0 && n <= DITHER_KERNEL_COUNT)
+          v = (int8_t)n;
+      }
+      if (v < 0) { invalid = true; break; }
+      uint8_t *p = (uint8_t *)e.valPtr;
+      if (*p != (uint8_t)v) { *p = (uint8_t)v; dirty = true; }
+      break;
+    }
+    }
+
+    if (invalid)
+    {
+      Serial.printf("[MQTT][CFG][ERROR] invalid value for %s\n", e.key);
+    }
+    else if (dirty)
+    {
+      Serial.printf("[MQTT][CFG] %s changed, persisting to NVS\n", e.key);
+      if (e.applyFn) e.applyFn();
+      saveConfig();
+    }
+    else
+    {
+      Serial.printf("[MQTT][CFG] %s unchanged, skipping NVS write\n", e.key);
+    }
+    publishConfigState(e); // always echo current value
+    return true;
+  }
+  return false;
+}
+
+static bool handleCmdButton(const char *topic, const char *payload, size_t len)
+{
+  if (strcmp(topic, btnRebootTopic) == 0)
+  {
+    Serial.println("[MQTT][CMD] Reboot requested via MQTT");
+    vTaskDelay(500 / portTICK_PERIOD_MS);
+    ESP.restart();
+    return true;
+  }
+  if (strcmp(topic, btnSetupTopic) == 0)
+  {
+    Serial.println("[MQTT][CMD] Setup mode requested via MQTT");
+    setForcePortalFlag(true);
+    vTaskDelay(500 / portTICK_PERIOD_MS);
+    ESP.restart();
+    return true;
+  }
+  return false;
+}
+
+static void sendConfigDiscovery(JsonDocument &deviceInfo, char *buff, size_t buffSz)
+{
+  for (size_t i = 0; i < configEntitiesCount; i++)
+    publishConfigDiscovery(configEntities[i], deviceInfo, buff, buffSz);
+  publishConfigButtons(deviceInfo, buff, buffSz);
 }
 
 void connectToMqtt(void *params)
@@ -413,10 +775,15 @@ void onMqttConnect(bool sessionPresent)
   Serial.print("[MQTT] Subscribing at QoS 2, packetId: ");
   Serial.println(packetIdSub);
 
+  subscribeConfigCommands();
+
   if (!sleepBoot || (bootCount % MQTT_RESEND_CONFIG_EVERY) == 0) {
     sendHAConfig();
     mqttPublishDitherOptions();
   }
+
+  // Always publish current config state (retained) so HA stays in sync.
+  publishAllConfigStates();
 }
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
@@ -459,7 +826,15 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
   Serial.print("  len: ");
   Serial.println(len);
 
-  if (strncmp(topic, mqttActionTopic, strlen(mqttActionTopic)) != 0)
+  // Dispatch to config/button handlers first (exact topic match). These
+  // accept zero-length payloads (e.g. retained-clear for buttons) and return
+  // true once a topic matches.
+  if (handleCmdButton(topic, payload, len))
+    return;
+  if (handleConfigCommand(topic, payload, len))
+    return;
+
+  if (strcmp(topic, mqttActionTopic) != 0)
   {
     return;
   }
