@@ -4,6 +4,8 @@
 
 ![Trmnl](screenshots/trmnl.jpeg)
 
+![Trmnl Inkplate 6 Color](screenshots/inkplate6color_trmnl.jpeg)
+
 ## Home Assistant Dashboard Screenshot
 
 ![Home Assistant](screenshots/hass.jpeg)
