@@ -23,6 +23,7 @@ HomePlate supports multiple display modes called activities. See [activities.md]
 
 * **Home Assistant** — Display a Home Assistant dashboard screenshot
 * **Trmnl** — Display a [Trmnl](https://trmnl.com/?ref=mrlanrat) mashup
+* **OpenDisplay** — Receive images from an [OpenDisplay](https://opendisplay.org) controller (e.g. Home Assistant)
 * **Guest WiFi** — Show a QR code for guests to join your WiFi
 * **Info** — Device info screen (battery, IP, version, etc.)
 * **Message** — Display text messages sent via MQTT
@@ -30,6 +31,7 @@ HomePlate supports multiple display modes called activities. See [activities.md]
 ## Features
 
 * [Trmnl](https://trmnl.com/?ref=mrlanrat) support
+* [OpenDisplay](https://opendisplay.org) support (Flex profile, WiFi LAN) — receive images from Home Assistant or any other OpenDisplay-compatible server
 * Display Home Assistant dashboards on a beautiful e-ink display
 * Display WiFi QR Codes for guests/friends to connect to home/guest wifi
 * Display messages directly from Home Assistant over MQTT
@@ -87,6 +89,12 @@ Set the `TRMNL ID` and `TRMNL Token` in the WiFi setup portal, and set the Defau
 The [Alias Plugin](https://help.trmnl.com/en/articles/10701448-alias-plugin?ref=mrlanrat) can be used to display images from your local network, such as a Home Assistant Dashboard.
 
 See [trmnl.md](trmnl.md) for more information.
+
+### [OpenDisplay](opendisplay.md)
+
+Set the Default Activity to `OpenDisplay` in the WiFi setup portal. HomePlate will advertise itself via mDNS as an OpenDisplay device and accept image uploads from any [OpenDisplay](https://opendisplay.org)-compatible controller (Home Assistant's OpenDisplay integration, [py-opendisplay](https://github.com/OpenDisplay/py-opendisplay), etc.).
+
+See [opendisplay.md](opendisplay.md) for setup details and known limitations.
 
 ### Home Assistant Dashboard
 

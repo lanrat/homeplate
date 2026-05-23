@@ -230,11 +230,15 @@ enum Activity
     NONE,
     HomeAssistant,
     Trmnl,
+    OpenDisplay,
     GuestWifi,
     Info,
     Message,
     IMG,
 };
+
+// OpenDisplay activity entry point. See opendisplay.md.
+bool openDisplayActivity();
 
 Activity activityFromString(const char *s);
 const char *activityToString(Activity a);

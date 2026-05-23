@@ -18,6 +18,7 @@ Activity activityFromString(const char *s)
     if (!s) return HomeAssistant;
     if (strcmp(s, "HomeAssistant") == 0) return HomeAssistant;
     if (strcmp(s, "Trmnl") == 0) return Trmnl;
+    if (strcmp(s, "OpenDisplay") == 0) return OpenDisplay;
     if (strcmp(s, "GuestWifi") == 0) return GuestWifi;
     if (strcmp(s, "Info") == 0) return Info;
     if (strcmp(s, "Message") == 0) return Message;
@@ -30,6 +31,7 @@ const char *activityToString(Activity a)
     switch (a) {
         case HomeAssistant: return "HomeAssistant";
         case Trmnl: return "Trmnl";
+        case OpenDisplay: return "OpenDisplay";
         case GuestWifi: return "GuestWifi";
         case Info: return "Info";
         case Message: return "Message";
@@ -190,6 +192,19 @@ void runActivities(void *params)
                 continue;
             }
             trmnlDisplay(plateCfg.trmnlUrl);
+            break;
+        }
+        case OpenDisplay:
+        {
+            WakeLock lock("activity-opendisplay", 180);
+            setSleepDuration(timeToSleep);
+            waitForWiFiOrActivityChange();
+            if (getResetActivity())
+            {
+                Serial.printf("[ACTIVITY][ERROR] OpenDisplay Activity reset while waiting, aborting...\n");
+                continue;
+            }
+            openDisplayActivity();
             break;
         }
         case GuestWifi:

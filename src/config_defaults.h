@@ -61,6 +61,12 @@
 #ifndef TRMNL_ENABLE_LOG_DEFAULT
 #define TRMNL_ENABLE_LOG_DEFAULT true
 #endif
+#ifndef OD_LISTEN_PORT
+#define OD_LISTEN_PORT 2446  // matches OpenDisplay manufacturer ID
+#endif
+#ifndef OD_LISTEN_SEC
+#define OD_LISTEN_SEC 60
+#endif
 #ifndef QR_WIFI_NAME
 #define QR_WIFI_NAME ""
 #endif

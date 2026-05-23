@@ -414,7 +414,7 @@ struct ConfigEntity {
   void (*applyFn)();           // optional post-write hook
 };
 
-static const char *const activityOpts[] = {"HomeAssistant", "Trmnl", "Info", "GuestWifi", nullptr};
+static const char *const activityOpts[] = {"HomeAssistant", "Trmnl", "OpenDisplay", "Info", "GuestWifi", nullptr};
 
 static const ConfigEntity configEntities[] = {
   {"sleep_min",    "Sleep Minutes",       "mdi:timer-sand",               HC_NUMBER,        CT_U16,      &plateCfg.sleepMinutes,           0,                                       1, 1440,  "min", nullptr,      false, nullptr},
@@ -425,6 +425,8 @@ static const ConfigEntity configEntities[] = {
   {"trmnl_id",     "TRMNL ID",            "mdi:identifier",               HC_TEXT,          CT_STR,      plateCfg.trmnlId,                 sizeof(plateCfg.trmnlId),                0, 0,     nullptr, nullptr,      false, nullptr},
   {"trmnl_token",  "TRMNL Token",         "mdi:key",                      HC_TEXT_PASSWORD, CT_STR,      plateCfg.trmnlToken,              sizeof(plateCfg.trmnlToken),             0, 0,     nullptr, nullptr,      true,  nullptr},
   {"trmnl_log",    "TRMNL Logging",       "mdi:text-box-outline",         HC_SWITCH,        CT_BOOL,     &plateCfg.trmnlEnableLog,         0,                                       0, 0,     nullptr, nullptr,      false, nullptr},
+  {"od_port",      "OpenDisplay Port",    "mdi:numeric",                  HC_NUMBER,        CT_U16,      &plateCfg.odListenPort,           0,                                       1, 65535, nullptr, nullptr,      false, nullptr},
+  {"od_listen_s",  "OpenDisplay Listen",  "mdi:timer-sync",               HC_NUMBER,        CT_U16,      &plateCfg.odListenSec,            0,                                       1, 3600,  "s",   nullptr,      false, nullptr},
   {"dither_kern",  "Dither Kernel",       "mdi:image-filter-black-white", HC_SELECT,        CT_DITHER,   &plateCfg.ditherKernel,           0,                                       0, 0,     nullptr, nullptr,      false, nullptr},
   {"disp_time",    "Show Update Time",    "mdi:clock-outline",            HC_SWITCH,        CT_BOOL,     &plateCfg.displayLastUpdateTime,  0,                                       0, 0,     nullptr, nullptr,      false, nullptr},
   {"timezone",     "Timezone (POSIX TZ)", "mdi:earth",                    HC_TEXT,          CT_STR,      plateCfg.timezone,                sizeof(plateCfg.timezone),               0, 0,     nullptr, nullptr,      false, applyTimezone},

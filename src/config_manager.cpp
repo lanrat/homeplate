@@ -106,6 +106,8 @@ void loadConfig()
     strlcpy(plateCfg.trmnlId, TRMNL_ID, sizeof(plateCfg.trmnlId));
     strlcpy(plateCfg.trmnlToken, TRMNL_TOKEN, sizeof(plateCfg.trmnlToken));
     plateCfg.trmnlEnableLog = TRMNL_ENABLE_LOG_DEFAULT;
+    plateCfg.odListenPort = OD_LISTEN_PORT;
+    plateCfg.odListenSec = OD_LISTEN_SEC;
     strlcpy(plateCfg.qrWifiName, QR_WIFI_NAME, sizeof(plateCfg.qrWifiName));
     strlcpy(plateCfg.qrWifiPassword, QR_WIFI_PASSWORD, sizeof(plateCfg.qrWifiPassword));
     strlcpy(plateCfg.mqttHost, MQTT_HOST, sizeof(plateCfg.mqttHost));
@@ -137,6 +139,8 @@ void loadConfig()
     loadString("trmnl_id", plateCfg.trmnlId, sizeof(plateCfg.trmnlId), plateCfg.trmnlId);
     loadString("trmnl_token", plateCfg.trmnlToken, sizeof(plateCfg.trmnlToken), plateCfg.trmnlToken);
     plateCfg.trmnlEnableLog = preferences.getBool("trmnl_log", plateCfg.trmnlEnableLog);
+    plateCfg.odListenPort = preferences.getUShort("od_port", plateCfg.odListenPort);
+    plateCfg.odListenSec = preferences.getUShort("od_listen_s", plateCfg.odListenSec);
     loadString("qr_name", plateCfg.qrWifiName, sizeof(plateCfg.qrWifiName), plateCfg.qrWifiName);
     loadString("qr_pass", plateCfg.qrWifiPassword, sizeof(plateCfg.qrWifiPassword), plateCfg.qrWifiPassword);
     loadString("mqtt_host", plateCfg.mqttHost, sizeof(plateCfg.mqttHost), plateCfg.mqttHost);
@@ -203,6 +207,8 @@ void saveConfig()
     saveString("trmnl_id", plateCfg.trmnlId);
     saveString("trmnl_token", plateCfg.trmnlToken);
     preferences.putBool("trmnl_log", plateCfg.trmnlEnableLog);
+    preferences.putUShort("od_port", plateCfg.odListenPort);
+    preferences.putUShort("od_listen_s", plateCfg.odListenSec);
     saveString("qr_name", plateCfg.qrWifiName);
     saveString("qr_pass", plateCfg.qrWifiPassword);
     saveString("mqtt_host", plateCfg.mqttHost);
@@ -415,11 +421,13 @@ bool startWiFiManager(bool forcePortal)
         "<select name='def_activity' id='def_activity' class='button'>"
         "<option value='HomeAssistant'%s>HomeAssistant</option>"
         "<option value='Trmnl'%s>Trmnl</option>"
+        "<option value='OpenDisplay'%s>OpenDisplay</option>"
         "<option value='Info'%s>Info</option>"
         "<option value='GuestWifi'%s>GuestWifi</option>"
         "</select>",
         strcmp(plateCfg.defaultActivityStr, "HomeAssistant") == 0 ? " selected" : "",
         strcmp(plateCfg.defaultActivityStr, "Trmnl") == 0 ? " selected" : "",
+        strcmp(plateCfg.defaultActivityStr, "OpenDisplay") == 0 ? " selected" : "",
         strcmp(plateCfg.defaultActivityStr, "Info") == 0 ? " selected" : "",
         strcmp(plateCfg.defaultActivityStr, "GuestWifi") == 0 ? " selected" : ""
     );
@@ -431,6 +439,15 @@ bool startWiFiManager(bool forcePortal)
     WiFiManagerParameter p_tid("trmnl_id", "TRMNL ID", plateCfg.trmnlId, sizeof(plateCfg.trmnlId) - 1);
     WiFiManagerParameter p_ttoken("trmnl_token", "TRMNL Token", plateCfg.trmnlToken, sizeof(plateCfg.trmnlToken) - 1);
     WiFiManagerParameter p_tlog("trmnl_log", "TRMNL Logging", "T", 2, plateCfg.trmnlEnableLog ? "type=\"checkbox\" style=\"margin-top:0.5em\" checked" : "type=\"checkbox\" style=\"margin-top:0.5em\"", WFM_LABEL_AFTER);
+
+    // Section: OpenDisplay
+    WiFiManagerParameter h_od("<hr><h3>OpenDisplay</h3>");
+    char odPortStr[8];
+    snprintf(odPortStr, sizeof(odPortStr), "%u", plateCfg.odListenPort);
+    WiFiManagerParameter p_odport("od_port", "OpenDisplay Port", odPortStr, 7, "type=\"number\" min=\"1\" max=\"65535\"");
+    char odListenStr[8];
+    snprintf(odListenStr, sizeof(odListenStr), "%u", plateCfg.odListenSec);
+    WiFiManagerParameter p_odlisten("od_listen_s", "OpenDisplay Listen Seconds", odListenStr, 7, "type=\"number\" min=\"1\" max=\"3600\"");
 
     // Section: QR WiFi
     WiFiManagerParameter h_qr("<hr><h3>Guest WiFi QR Code</h3>");
@@ -519,6 +536,10 @@ bool startWiFiManager(bool forcePortal)
     wm.addParameter(&p_ttoken);
     wm.addParameter(&p_tlog);
 
+    wm.addParameter(&h_od);
+    wm.addParameter(&p_odport);
+    wm.addParameter(&p_odlisten);
+
     wm.addParameter(&h_qr);
     wm.addParameter(&p_qrname);
     wm.addParameter(&p_qrpass);
@@ -560,6 +581,12 @@ bool startWiFiManager(bool forcePortal)
         strlcpy(plateCfg.trmnlId, p_tid.getValue(), sizeof(plateCfg.trmnlId));
         strlcpy(plateCfg.trmnlToken, p_ttoken.getValue(), sizeof(plateCfg.trmnlToken));
         plateCfg.trmnlEnableLog = (strncmp(p_tlog.getValue(), "T", 1) == 0);
+        {
+            int op = atoi(p_odport.getValue());
+            plateCfg.odListenPort = (op > 0 && op <= 65535) ? (uint16_t)op : OD_LISTEN_PORT;
+            int ol = atoi(p_odlisten.getValue());
+            plateCfg.odListenSec = (ol > 0 && ol <= 3600) ? (uint16_t)ol : OD_LISTEN_SEC;
+        }
         strlcpy(plateCfg.qrWifiName, p_qrname.getValue(), sizeof(plateCfg.qrWifiName));
         strlcpy(plateCfg.qrWifiPassword, p_qrpass.getValue(), sizeof(plateCfg.qrWifiPassword));
         strlcpy(plateCfg.mqttHost, p_mqhost.getValue(), sizeof(plateCfg.mqttHost));
