@@ -20,7 +20,7 @@ There is no token / secret to configure — the LAN connection is unauthenticate
 
 On every wake cycle the device:
 
-1. Starts a TCP listener on the configured port and advertises `_opendisplay._tcp.local` via mDNS so the server can discover it.
+1. Starts a TCP listener on the configured port and advertises `_opendisplay._tcp.local` via mDNS so the server can discover it. The mDNS record includes a `msd` TXT entry with the device's battery voltage, temperature, and reboot/loop-counter status — controllers can read these without opening a TCP connection. On boards without a temperature sensor (Inkplate 6 COLOR), the temperature byte is left at the encoded floor (-40°C) as a "no real reading" sentinel — the OpenDisplay wire format has no dedicated missing-temperature code.
 2. Displays `Waiting for controller (60s)` on the panel.
 3. Blocks until either a controller connects or the listen window expires.
 4. If a controller connects, runs the OpenDisplay direct-write upload (`0x70` → N×`0x71` → `0x72`), renders the received image, and signals refresh complete (`0x73`).

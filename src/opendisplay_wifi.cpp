@@ -26,6 +26,13 @@ bool ODWiFiTransport::begin()
     return true;
 }
 
+void ODWiFiTransport::setMsdTxt(const char *hex)
+{
+    if (!mdnsStarted_ || !hex) return;
+    // ESPmDNS replaces the value if the key already exists.
+    MDNS.addServiceTxt("opendisplay", "tcp", "msd", hex);
+}
+
 bool ODWiFiTransport::waitForClient(uint32_t timeoutMs)
 {
     uint32_t start = millis();

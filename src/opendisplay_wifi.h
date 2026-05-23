@@ -17,6 +17,12 @@ public:
     // Start listening + advertise mDNS. Returns false if listener
     // couldn't bind.
     bool begin();
+    // Update the mDNS service's "msd" TXT record. This is the
+    // manufacturer-specific data blob (battery, temperature, status) that
+    // controllers can read without opening a TCP connection. See py-opendisplay
+    // AdvertisementData for the byte layout. `hex` must be NUL-terminated;
+    // length must be even (lower-case hex of the binary payload).
+    void setMsdTxt(const char *hex);
     // Block until a client connects or timeoutMs elapses.
     // Returns true if a client was accepted.
     bool waitForClient(uint32_t timeoutMs);
