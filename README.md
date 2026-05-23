@@ -31,7 +31,7 @@ HomePlate supports multiple display modes called activities. See [activities.md]
 ## Features
 
 * [Trmnl](https://trmnl.com/?ref=mrlanrat) support
-* [OpenDisplay](https://opendisplay.org) support (Flex profile, WiFi LAN) — receive images from Home Assistant or any other OpenDisplay-compatible server
+* [OpenDisplay](https://opendisplay.org) support (Flex profile, WiFi LAN) — receive images from Home Assistant or any other OpenDisplay-compatible server (WIP)
 * Display Home Assistant dashboards on a beautiful e-ink display
 * Display WiFi QR Codes for guests/friends to connect to home/guest wifi
 * Display messages directly from Home Assistant over MQTT
