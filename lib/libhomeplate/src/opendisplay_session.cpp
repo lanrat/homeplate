@@ -1,6 +1,7 @@
 #include "opendisplay_session.h"
 #include "opendisplay_proto.h"
 #include "opendisplay_decompress.h"
+#include "opendisplay_config.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -98,7 +99,8 @@ bool finalizeAndRender(UploadCtx &up, IRenderer &r, LogFn log, char *dbg, size_t
 
 } // namespace
 
-bool runSession(ITransport &t, IRenderer &r, LogFn log, uint32_t loopTimeoutMs)
+bool runSession(ITransport &t, IRenderer &r, LogFn log,
+                uint32_t loopTimeoutMs, uint32_t deepSleepSec)
 {
     UploadCtx up = {nullptr, 0, 0, false};
     uint8_t frame[WIFI_LAN_MAX_PAYLOAD];
@@ -234,13 +236,30 @@ bool runSession(ITransport &t, IRenderer &r, LogFn log, uint32_t loopTimeoutMs)
             return rendered;
         }
 
+        case CMD_READ_CONFIG: {
+            // Build the minimum-required 4-packet TLV blob (SYSTEM,
+            // MANUFACTURER, POWER, DISPLAY) and reply in a single frame.
+            uint8_t resp[READ_CONFIG_RESPONSE_BYTES];
+            size_t n = buildReadConfigResponse(resp, sizeof(resp), r, deepSleepSec);
+            if (n == 0) {
+                if (log) log("[OD] READ_CONFIG: builder produced 0 bytes, sending bare ACK");
+                sendAck(t, cmd);
+                break;
+            }
+            if (log) {
+                snprintf(dbg, sizeof(dbg), "[OD] READ_CONFIG: sending %u-byte response",
+                         (unsigned)n);
+                log(dbg);
+            }
+            t.sendFrame(resp, (uint16_t)n);
+            break;
+        }
+
         case CMD_READ_FW_VERSION:
-        case CMD_READ_CONFIG:
         default: {
             // Anything we don't explicitly handle gets a bare ACK so the
             // controller doesn't hang waiting on us. The ACK has no
-            // payload — controllers that strictly require config / fw
-            // version data will fail here. Documented limitation.
+            // payload — strict controllers may still fail here.
             if (log) {
                 snprintf(dbg, sizeof(dbg), "[OD] unhandled cmd 0x%04x, sending bare ACK", cmd);
                 log(dbg);

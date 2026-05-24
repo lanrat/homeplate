@@ -32,6 +32,9 @@ public:
     virtual ImageFormat format() const = 0;
     // Total expected raw image bytes per upload (width*height*bpp/8).
     virtual uint32_t expectedBytes() const = 0;
+    // Reported to controllers in the DisplayConfig packet of READ_CONFIG
+    // responses so they know whether to issue 0x76 partial updates.
+    virtual bool supportsPartialUpdate() const = 0;
     // Render a complete image buffer + refresh the panel.
     // buf is owned by the session and remains valid until this call returns.
     virtual bool renderImage(const uint8_t *buf, uint32_t len) = 0;
@@ -66,6 +69,9 @@ void setSessionAllocator(AllocFn alloc, FreeFn free);
 
 // Returns true if an image was successfully received and rendered.
 // loopTimeoutMs is the inactivity timeout between frames within one session.
-bool runSession(ITransport &t, IRenderer &r, LogFn log, uint32_t loopTimeoutMs);
+// deepSleepSec is reported to controllers in the READ_CONFIG response so
+// they know how long until our next wake; pass 0 if unknown.
+bool runSession(ITransport &t, IRenderer &r, LogFn log,
+                uint32_t loopTimeoutMs, uint32_t deepSleepSec = 0);
 
 } // namespace od

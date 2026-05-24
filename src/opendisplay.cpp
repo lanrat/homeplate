@@ -112,12 +112,11 @@ bool openDisplayActivity()
         [](size_t n) -> void * { return ps_malloc(n); },
         [](void *p)            { free(p); });
 
-    // Derive an mDNS service name: "od-<hostname>" so it's distinguishable
-    // from HomePlate's own hostname while still being human-readable.
-    char serviceName[64];
-    snprintf(serviceName, sizeof(serviceName), "od-%s", plateCfg.hostname);
-
-    ODWiFiTransport transport(plateCfg.odListenPort, serviceName);
+    // Use HomePlate's own hostname for mDNS so `<hostname>.local` keeps
+    // resolving during the OpenDisplay session — controllers find us via
+    // the _opendisplay._tcp service browse regardless of host name, but
+    // tools / users that hand-type the hostname expect the standard form.
+    ODWiFiTransport transport(plateCfg.odListenPort, plateCfg.hostname);
     if (!transport.begin()) {
         Serial.println("[OD] transport begin() failed");
         return false;
@@ -141,8 +140,10 @@ bool openDisplayActivity()
 
     ODInkplateRenderer renderer;
     // Per-frame inactivity timeout. 15s is generous for a slow LAN +
-    // chunked transfers up to ~125 KB.
-    bool ok = od::runSession(transport, renderer, odLog, 15000);
+    // chunked transfers up to ~125 KB. deepSleepSec is advertised in the
+    // READ_CONFIG response so controllers know when to come back.
+    bool ok = od::runSession(transport, renderer, odLog, 15000,
+                             (uint32_t)plateCfg.sleepMinutes * 60);
     transport.end();
 
     if (ok) {

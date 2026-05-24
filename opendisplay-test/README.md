@@ -4,20 +4,21 @@
 
 ## Setup
 
-Requires Python 3.10+, `Pillow`. A `.venv` is already provisioned in this directory:
+Requires Python 3.10+ and [`py-opendisplay`](https://github.com/OpenDisplay/py-opendisplay) (which transitively pulls in Pillow + `epaper-dithering` — the same library Home Assistant's OpenDisplay integration uses for protocol constants, dithering, and the `READ_CONFIG` TLV parser):
 
 ```sh
+python -m venv .venv
 source .venv/bin/activate
-pip install pillow            # if not already installed
+pip install -r requirements.txt
 ```
 
 ## Usage
 
 ```sh
-./opendisplay_test.py <image>                              # default: homeplate.local:2446, mono, compressed
-./opendisplay_test.py inkplate10.png --format gray16       # 4bpp grayscale for B&W boards
-./opendisplay_test.py inkplate6-color.png --format color6  # 4bpp 6-color for Inkplate 6 COLOR
-./opendisplay_test.py inkplate10.png --ip 192.168.1.42
+./opendisplay_test.py <image>                              # default: auto-detect format from device
+./opendisplay_test.py inkplate10.png                       # uses READ_CONFIG to pick format
+./opendisplay_test.py inkplate6-color.png --ip 192.168.1.42
+./opendisplay_test.py inkplate10.png --format mono         # force mono (skip auto-detect)
 ./opendisplay_test.py inkplate10.png --uncompressed
 ./opendisplay_test.py inkplate10.png --wait 300
 ./opendisplay_test.py inkplate10.png --no-wait-done
@@ -30,21 +31,22 @@ pip install pillow            # if not already installed
 | `image` (positional) | — | Path to the source image. Any PIL-supported format. Re-encoded as a bitplane sized for the panel per `--format`. |
 | `--ip` / `--host` | `homeplate.local` | Device hostname or IP. |
 | `--port` | `2446` | OpenDisplay TCP port. Must match the device's `OpenDisplay Port` setting. |
-| `--format` | `mono` | Wire format: `mono` (1bpp B/W, works on any board), `gray16` (4bpp 16-level grayscale, B&W boards in 3-bit mode), `color6` (4bpp 6-color BWGBRY, Inkplate 6 COLOR). The firmware auto-detects mono vs 4bpp from byte count, so `mono` is always safe; the higher-bit formats match what the firmware advertises and give better fidelity. |
+| `--format` | `auto` | Wire format selection. `auto` (default) queries the device via `READ_CONFIG (0x0040)` and picks the format that matches its advertised color scheme — this is the recommended path and matches how a real controller (HA, py-opendisplay) would work. Override with `mono` (1bpp B/W; safe fallback for any board), `gray16` (4bpp 16-level grayscale; Inkplate B&W boards in 3-bit mode), or `color6` (4bpp 6-color BWGBRY; Inkplate 6 COLOR). The firmware also auto-detects mono uploads by byte count, so `mono` is always rendered correctly even on 4bpp-advertising panels. |
 | `--wait` | `180` | Max seconds to keep retrying TCP connect while the device is asleep / not yet advertising. |
 | `--uncompressed` | off | Skip zlib compression — useful for isolating "is the framing right?" from "is decompression right?". |
 | `--no-wait-done` | off | Don't wait for the device's `0x73` refresh-complete notification after `END`. |
+| `--fit` | `contain` | How to fit the source image to the panel when sizes differ. `contain` scales to fit (pads with white), `cover` scales to fill (crops overflow), `stretch` distorts to exact size, `crop` doesn't scale (center-crops). Only applied when `--format=auto` (when we know the panel size from `READ_CONFIG`). |
 
 ## Image sizing
 
-The script encodes the image as a 1-bit-per-pixel bitplane at the resolution of the source PNG, packed MSB-first row-major. **The image dimensions must match the panel exactly** — the firmware allocates a buffer sized to its own panel and an oversized or undersized image will produce a misaligned or partial render.
+In `--format=auto` mode the script queries the device for its panel dimensions and uses py-opendisplay's `fit_image()` to resize the source to match — so you can hand it any image and it'll render. Adjust the fit strategy with `--fit`.
+
+If you override with `--format mono|gray16|color6`, no fitting happens — the source image must already match panel dimensions, otherwise the firmware will render a partial or misaligned image.
 
 Two sample images are included:
 
-- `inkplate10.png` — 1200×825 (for Inkplate 10 / 10v2)
-- `inkplate6-color.png` — 600×448 (for Inkplate 6 COLOR)
-
-Add your own sized to your board's panel.
+- `inkplate10.png` — 1200×825 (Inkplate 10 / 10v2)
+- `inkplate6-color.png` — 600×448 (Inkplate 6 COLOR)
 
 ## What success looks like
 

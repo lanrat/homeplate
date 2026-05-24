@@ -41,6 +41,19 @@ ODInkplateRenderer::ODInkplateRenderer()
 #endif
 }
 
+bool ODInkplateRenderer::supportsPartialUpdate() const
+{
+#ifdef INKPLATE_HAS_PARTIAL_UPDATE
+    // HomePlate doesn't yet implement the 0x76 partial-update protocol path
+    // (see opendisplay.md "Known Limitations"). Report unsupported until that
+    // lands, even though the panel hardware can do partial refreshes for
+    // other activities (Trmnl, HA dashboards).
+    return false;
+#else
+    return false;
+#endif
+}
+
 // --- Nibble -> Inkplate color helpers --------------------------------------
 
 #if defined(INKPLATE_IS_COLOR)

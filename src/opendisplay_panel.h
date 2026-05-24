@@ -19,6 +19,7 @@ public:
     uint16_t height() const override { return h_; }
     od::ImageFormat format() const override { return fmt_; }
     uint32_t expectedBytes() const override { return expected_; }
+    bool supportsPartialUpdate() const override;
     bool renderImage(const uint8_t *buf, uint32_t len) override;
 
 private:

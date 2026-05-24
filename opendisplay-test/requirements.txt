@@ -1,0 +1,9 @@
+# opendisplay_test.py dependencies.
+#
+# py-opendisplay transitively pulls in pillow + epaper-dithering + numpy +
+# bleak (BLE deps come along even though we don't use them — it's the same
+# package HA's OpenDisplay integration uses). Pinned with ~= so patch /
+# minor updates from py-opendisplay flow through, but breaking 8.x bumps
+# require manual review (wire-format constants live in this package).
+
+py-opendisplay ~= 7.2

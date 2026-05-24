@@ -81,4 +81,19 @@ inline size_t buildAck(uint8_t *out, uint16_t cmd) {
     return 2;
 }
 
+// CRC16-CCITT (poly 0x1021, init 0xFFFF, no reflection, no final XOR).
+// Used for the READ_CONFIG response wrapper. Most parsers (incl. py-
+// opendisplay) ignore the trailing checksum, but we emit a valid value
+// for stricter integrations.
+inline uint16_t crc16ccitt(const uint8_t *buf, size_t len) {
+    uint16_t crc = 0xFFFF;
+    for (size_t i = 0; i < len; i++) {
+        crc ^= (uint16_t)buf[i] << 8;
+        for (int b = 0; b < 8; b++) {
+            crc = (crc & 0x8000) ? (uint16_t)((crc << 1) ^ 0x1021) : (uint16_t)(crc << 1);
+        }
+    }
+    return crc;
+}
+
 } // namespace od

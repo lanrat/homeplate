@@ -28,6 +28,7 @@
         "DVERSION",
         "EEPROM",
         "eink",
+        "epaper",
         "espota",
         "espressif",
         "esptool",
