@@ -1,4 +1,5 @@
 #include <WiFi.h>
+#include <ESPmDNS.h>
 #include <HTTPClient.h>
 #include "homeplate.h"
 #include "bufferstream.h"
@@ -29,12 +30,31 @@ void WiFiStationConnected(WiFiEvent_t event, WiFiEventInfo_t info)
     Serial.println("[WIFI] Connected to AP successfully!");
 }
 
+// Owns the mDNS responder for the whole device. Started once on first
+// WiFi connect and never stopped — components that want to advertise a
+// service just call MDNS.addService(...) / MDNS.removeService(...) on
+// top of this. Centralized so OpenDisplay and ArduinoOTA don't fight
+// over MDNS.begin() (which resets the responder and wipes all services).
+static bool s_mdnsStarted = false;
+
+void mdnsStart()
+{
+    if (s_mdnsStarted) return;
+    if (MDNS.begin(plateCfg.hostname)) {
+        s_mdnsStarted = true;
+        Serial.printf("[MDNS] responder up as %s.local\n", plateCfg.hostname);
+    } else {
+        Serial.println("[MDNS] responder failed to start");
+    }
+}
+
 void WiFiGotIP(WiFiEvent_t event, WiFiEventInfo_t info)
 {
     wifiFailed = false;
     char ip_str[16];
     WiFi.localIP().toString().toCharArray(ip_str, sizeof(ip_str));
     Serial.printf("[WIFI] IP address: %s\n", ip_str);
+    mdnsStart();
     displayStatusMessage("WiFi connected");
 }
 

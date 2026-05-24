@@ -112,11 +112,10 @@ bool openDisplayActivity()
         [](size_t n) -> void * { return ps_malloc(n); },
         [](void *p)            { free(p); });
 
-    // Use HomePlate's own hostname for mDNS so `<hostname>.local` keeps
-    // resolving during the OpenDisplay session — controllers find us via
-    // the _opendisplay._tcp service browse regardless of host name, but
-    // tools / users that hand-type the hostname expect the standard form.
-    ODWiFiTransport transport(plateCfg.odListenPort, plateCfg.hostname);
+    // mDNS host name is owned by network.cpp's shared responder (set to
+    // plateCfg.hostname at WiFi-connect time). The transport only adds /
+    // removes the _opendisplay._tcp service entry on top of it.
+    ODWiFiTransport transport(plateCfg.odListenPort);
     if (!transport.begin()) {
         Serial.println("[OD] transport begin() failed");
         return false;

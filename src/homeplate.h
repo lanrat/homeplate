@@ -116,6 +116,11 @@ void wifiStopTask();
 void waitForWiFi();
 bool getWifIFailed();
 
+// Start the shared mDNS responder. Owns the responder for the whole
+// device — other components just call MDNS.addService() on top.
+// Idempotent; called automatically from WiFiGotIP() once per boot.
+void mdnsStart();
+
 // QR
 void displayWiFiQR();
 

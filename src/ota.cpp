@@ -1,4 +1,5 @@
 #include <ArduinoOTA.h>
+#include <ESPmDNS.h>
 #include "homeplate.h"
 
 #define OTA_TASK_PRIORITY 2
@@ -20,6 +21,11 @@ void ota_handle(void *parameter)
     while (true)
     {
         waitForWiFi();
+        // mDNS is owned by network.cpp; ArduinoOTA is configured below with
+        // setMdnsEnabled(false), so we add the _arduino._tcp advertisement
+        // ourselves on the shared responder. Re-added on every reconnect in
+        // case the responder was reinitialized.
+        MDNS.enableArduino(3232 /* OTA default port */);
         ArduinoOTA.begin();
         Serial.println("[OTA] OTA ready");
 
@@ -38,7 +44,11 @@ void ota_handle(void *parameter)
 
 void startOTATask()
 {
-    ArduinoOTA.setHostname(plateCfg.hostname);
+    // mDNS (including the hostname record) is owned by network.cpp's
+    // shared responder. Tell ArduinoOTA not to touch it — otherwise
+    // ArduinoOTA.begin() calls MDNS.begin() internally which resets the
+    // responder and wipes any other services (notably _opendisplay._tcp).
+    ArduinoOTA.setMdnsEnabled(false);
 
     ArduinoOTA
         .onStart([]()

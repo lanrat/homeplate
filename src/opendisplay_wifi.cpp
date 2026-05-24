@@ -1,11 +1,14 @@
 #include "opendisplay_wifi.h"
 #include "opendisplay_proto.h"
+#include "homeplate.h"
 
 #include <Arduino.h>
 #include <ESPmDNS.h>
+#include <mdns.h>   // for mdns_service_remove(); Arduino-ESP32's ESPmDNS
+                     // wraps esp-idf mdns but doesn't expose removeService
 
-ODWiFiTransport::ODWiFiTransport(uint16_t port, const char *serviceName)
-    : port_(port), serviceName_(serviceName), server_(port) {}
+ODWiFiTransport::ODWiFiTransport(uint16_t port)
+    : port_(port), server_(port) {}
 
 ODWiFiTransport::~ODWiFiTransport() { end(); }
 
@@ -13,24 +16,17 @@ bool ODWiFiTransport::begin()
 {
     server_.begin(port_);
     server_.setNoDelay(true);
-    // mDNS: register a host of <serviceName>.local and advertise the
-    // _opendisplay._tcp service so controllers can discover this device.
-    if (MDNS.begin(serviceName_)) {
-        MDNS.addService("opendisplay", "tcp", port_);
-        mdnsStarted_ = true;
+    // mDNS responder is owned by network.cpp's mdnsStart() — we just
+    // layer the _opendisplay._tcp service on top. Make sure it's running
+    // (no-op if mdnsStart already ran on WiFi connect).
+    mdnsStart();
+    if (MDNS.addService("opendisplay", "tcp", port_)) {
+        serviceAdded_ = true;
     } else {
-        // Non-fatal: caller can still connect via plain IP. Log only.
-        Serial.println("[OD] mDNS responder begin() failed");
+        Serial.println("[OD] MDNS.addService(opendisplay/tcp) failed");
     }
-    Serial.printf("[OD] listening on port %u, mDNS name=%s.local\n", port_, serviceName_);
+    Serial.printf("[OD] listening on port %u, mDNS service _opendisplay._tcp\n", port_);
     return true;
-}
-
-void ODWiFiTransport::setMsdTxt(const char *hex)
-{
-    if (!mdnsStarted_ || !hex) return;
-    // ESPmDNS replaces the value if the key already exists.
-    MDNS.addServiceTxt("opendisplay", "tcp", "msd", hex);
 }
 
 bool ODWiFiTransport::waitForClient(uint32_t timeoutMs)
@@ -48,15 +44,22 @@ bool ODWiFiTransport::waitForClient(uint32_t timeoutMs)
     return false;
 }
 
+void ODWiFiTransport::setMsdTxt(const char *hex)
+{
+    if (!serviceAdded_ || !hex) return;
+    // ESPmDNS replaces the value if the key already exists.
+    MDNS.addServiceTxt("opendisplay", "tcp", "msd", hex);
+}
+
 void ODWiFiTransport::end()
 {
     if (client_) {
         client_.stop();
     }
     server_.stop();
-    if (mdnsStarted_) {
-        MDNS.end();
-        mdnsStarted_ = false;
+    if (serviceAdded_) {
+        mdns_service_remove("_opendisplay", "_tcp");
+        serviceAdded_ = false;
     }
 }
 

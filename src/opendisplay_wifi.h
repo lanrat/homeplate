@@ -1,7 +1,8 @@
 // OpenDisplay WiFi/LAN transport for HomePlate.
 //
 // Implements od::ITransport over a single WiFiClient accepted by a
-// WiFiServer listener. Also handles mDNS service advertisement.
+// WiFiServer listener. Adds / removes the `_opendisplay._tcp` advertisement
+// on the shared mDNS responder owned by network.cpp.
 
 #pragma once
 
@@ -11,22 +12,21 @@
 
 class ODWiFiTransport : public od::ITransport {
 public:
-    ODWiFiTransport(uint16_t port, const char *serviceName);
+    explicit ODWiFiTransport(uint16_t port);
     ~ODWiFiTransport();
 
-    // Start listening + advertise mDNS. Returns false if listener
+    // Start listening + advertise mDNS service. Returns false if listener
     // couldn't bind.
     bool begin();
-    // Update the mDNS service's "msd" TXT record. This is the
-    // manufacturer-specific data blob (battery, temperature, status) that
-    // controllers can read without opening a TCP connection. See py-opendisplay
-    // AdvertisementData for the byte layout. `hex` must be NUL-terminated;
-    // length must be even (lower-case hex of the binary payload).
+    // Update / add the mDNS service's "msd" TXT record (battery, temp,
+    // status — see opendisplay.cpp buildOdMsdHex). hex must be NUL-
+    // terminated lowercase hex of the 14-byte MSD payload.
     void setMsdTxt(const char *hex);
     // Block until a client connects or timeoutMs elapses.
     // Returns true if a client was accepted.
     bool waitForClient(uint32_t timeoutMs);
-    // Stop listener + unadvertise mDNS.
+    // Stop listener + remove the OpenDisplay mDNS service. Leaves the
+    // shared mDNS responder running (other services like OTA persist).
     void end();
 
     // od::ITransport ----------------------------------------------------
@@ -36,8 +36,7 @@ public:
 
 private:
     uint16_t port_;
-    const char *serviceName_; // e.g. "od-XXXXXX"
     WiFiServer server_;
     WiFiClient client_;
-    bool       mdnsStarted_ = false;
+    bool       serviceAdded_ = false;
 };
