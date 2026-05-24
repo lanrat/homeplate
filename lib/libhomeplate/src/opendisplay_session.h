@@ -12,9 +12,14 @@
 namespace od {
 
 // Bitplane formats the session may hand to the renderer.
+// All formats are row-major. For multi-pixel-per-byte formats the
+// highest bits hold the leftmost pixel (MSB-first).
 enum class ImageFormat : uint8_t {
-    Monochrome1bppMSB, // 1 bit per pixel, row-major, MSB-first within byte
-    Color6bpp4bit,     // 4 bits per pixel, palette index (Inkplate 6 COLOR)
+    Monochrome1bppMSB,   // 1 bpp; bit=1 white, bit=0 black
+    Grayscale16_4bppMSB, // 4 bpp; nibble 0=black .. 15=white (linear gray)
+    Color6_4bppMSB,      // 4 bpp; OpenDisplay BWGBRY firmware values
+                         //   0=black, 1=white, 2=yellow, 3=red,
+                         //   5=blue, 6=green (4 reserved/unused)
 };
 
 // Renderer interface — implemented in src/opendisplay_panel.cpp.
@@ -48,6 +53,16 @@ public:
 // Logger callback for diagnostics — kept simple so the lib doesn't
 // depend on Serial / ESP_LOG.
 using LogFn = void (*)(const char *msg);
+
+// Optional override for upload-buffer allocation. The session needs
+// allocations large enough to hold a whole compressed-or-raw image
+// (up to ~500 KB for the largest Inkplate 4bpp framebuffer), which
+// won't fit in ESP32 internal heap. Activity glue passes a function
+// that allocates from PSRAM (e.g. ps_malloc). Default (nullptr) uses
+// plain malloc — works for small panels, fails for large ones.
+using AllocFn = void *(*)(size_t bytes);
+using FreeFn  = void  (*)(void *ptr);
+void setSessionAllocator(AllocFn alloc, FreeFn free);
 
 // Returns true if an image was successfully received and rendered.
 // loopTimeoutMs is the inactivity timeout between frames within one session.

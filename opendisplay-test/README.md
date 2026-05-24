@@ -14,10 +14,10 @@ pip install pillow            # if not already installed
 ## Usage
 
 ```sh
-./opendisplay_test.py <image>                  # default: homeplate.local:2446, compressed
-./opendisplay_test.py inkplate10.png
+./opendisplay_test.py <image>                              # default: homeplate.local:2446, mono, compressed
+./opendisplay_test.py inkplate10.png --format gray16       # 4bpp grayscale for B&W boards
+./opendisplay_test.py inkplate6-color.png --format color6  # 4bpp 6-color for Inkplate 6 COLOR
 ./opendisplay_test.py inkplate10.png --ip 192.168.1.42
-./opendisplay_test.py inkplate6-color.png --port 2446
 ./opendisplay_test.py inkplate10.png --uncompressed
 ./opendisplay_test.py inkplate10.png --wait 300
 ./opendisplay_test.py inkplate10.png --no-wait-done
@@ -27,9 +27,10 @@ pip install pillow            # if not already installed
 
 | Flag | Default | Purpose |
 | --- | --- | --- |
-| `image` (positional) | — | Path to the source image. Any PIL-supported format. Converted to 1-bit MSB-first row-major bitplane sized for the panel. |
+| `image` (positional) | — | Path to the source image. Any PIL-supported format. Re-encoded as a bitplane sized for the panel per `--format`. |
 | `--ip` / `--host` | `homeplate.local` | Device hostname or IP. |
 | `--port` | `2446` | OpenDisplay TCP port. Must match the device's `OpenDisplay Port` setting. |
+| `--format` | `mono` | Wire format: `mono` (1bpp B/W, works on any board), `gray16` (4bpp 16-level grayscale, B&W boards in 3-bit mode), `color6` (4bpp 6-color BWGBRY, Inkplate 6 COLOR). The firmware auto-detects mono vs 4bpp from byte count, so `mono` is always safe; the higher-bit formats match what the firmware advertises and give better fidelity. |
 | `--wait` | `180` | Max seconds to keep retrying TCP connect while the device is asleep / not yet advertising. |
 | `--uncompressed` | off | Skip zlib compression — useful for isolating "is the framing right?" from "is decompression right?". |
 | `--no-wait-done` | off | Don't wait for the device's `0x73` refresh-complete notification after `END`. |
@@ -47,7 +48,7 @@ Add your own sized to your board's panel.
 
 ## What success looks like
 
-```
+```text
 [15:50:50] target: homeplate.local:2446
 [15:50:50] image:  inkplate10.png
 [15:50:50] mode:   compressed (zlib)

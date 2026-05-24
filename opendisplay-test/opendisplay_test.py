@@ -38,6 +38,21 @@ ACK_FLAG               = 0x8000
 CHUNK_SIZE     = 230   # per OpenDisplay spec (BLE-derived; LAN tolerates more)
 START_PAYLOAD  = 200   # max bytes in the 0x70 START packet (controller-side cap)
 
+# Color scheme integer values (firmware convention; verified from
+# epaper_dithering.palettes.ColorScheme).
+SCHEME_MONO         = 0
+SCHEME_BWGBRY       = 4   # 6-color (Inkplate 6 COLOR)
+SCHEME_GRAYSCALE_16 = 6   # 4bpp grayscale (B&W boards in 3-bit mode)
+
+# OpenDisplay BWGBRY firmware palette: which 4-bit value encodes which color.
+# Source: py-opendisplay/encoding/images.py BWGBRY_MAP.
+BWGBRY_BLACK  = 0
+BWGBRY_WHITE  = 1
+BWGBRY_YELLOW = 2
+BWGBRY_RED    = 3
+BWGBRY_BLUE   = 5   # note: 4 is reserved
+BWGBRY_GREEN  = 6
+
 
 # ---------------------------------------------------------------------------
 # Logging helpers
@@ -139,11 +154,8 @@ def recv_exact(sock: socket.socket, n: int) -> bytes:
 # ---------------------------------------------------------------------------
 
 def load_mono_bitplane(path: Path) -> tuple[bytes, tuple[int, int]]:
-    """Return (raw_bytes, (width, height)) packed as 1bpp MSB-first row-major."""
-    if not path.exists():
-        raise SystemExit(f"image not found: {path}")
-    img = Image.open(path)
-    log(f"loaded {path.name}: mode={img.mode} size={img.size}")
+    """Return (raw_bytes, (w, h)) packed as 1bpp MSB-first row-major."""
+    img = _open(path)
     img1 = img.convert("1")  # PIL packs 1-bit as MSB-first, row-major
     raw = img1.tobytes()
     w, h = img1.size
@@ -151,6 +163,78 @@ def load_mono_bitplane(path: Path) -> tuple[bytes, tuple[int, int]]:
     if len(raw) != expected:
         log(f"WARN: PIL produced {len(raw)} bytes; expected {expected} for {w}x{h}")
     return raw, img1.size
+
+
+def load_grayscale16_bitplane(path: Path) -> tuple[bytes, tuple[int, int]]:
+    """Return (raw_bytes, (w, h)) packed as 4bpp grayscale (16 levels).
+
+    Format matches OpenDisplay GRAYSCALE_16: 2 pixels per byte, high
+    nibble = leftmost pixel, value 0=black .. 15=white (linear).
+    """
+    img = _open(path).convert("L")  # 8-bit grayscale
+    w, h = img.size
+    pixels = img.tobytes()
+    # Quantize 0..255 -> 0..15 by right-shift; round-up by adding 8 first.
+    # 255 -> 15, 0 -> 0, midpoints clean.
+    nibbles = bytes((min(p + 8, 255) >> 4) for p in pixels)
+    # Pack two nibbles per byte, high nibble first.
+    out = bytearray((w * h + 1) // 2)
+    for i in range(0, len(nibbles), 2):
+        hi = nibbles[i]
+        lo = nibbles[i + 1] if i + 1 < len(nibbles) else 0
+        out[i // 2] = (hi << 4) | lo
+    return bytes(out), (w, h)
+
+
+# 6-color BWGBRY palette in RGB; ordering doesn't matter for PIL's quantizer
+# but the index in this list must equal the wire BWGBRY_* value used below.
+_BWGBRY_PIL_PALETTE = [
+    (0, 0, 0),       # idx 0 -> BLACK
+    (255, 255, 255), # idx 1 -> WHITE
+    (255, 255, 0),   # idx 2 -> YELLOW
+    (255, 0, 0),     # idx 3 -> RED
+    (0, 0, 0),       # idx 4 -> unused (mapped to black; should never appear)
+    (0, 0, 255),     # idx 5 -> BLUE
+    (0, 255, 0),     # idx 6 -> GREEN
+]
+
+
+def load_bwgbry_bitplane(path: Path) -> tuple[bytes, tuple[int, int]]:
+    """Return (raw_bytes, (w, h)) packed as 4bpp 6-color BWGBRY.
+
+    Format matches OpenDisplay BWGBRY: 2 pixels per byte, high nibble =
+    leftmost pixel, nibble value is the firmware palette index per
+    BWGBRY_* constants above.
+    """
+    img = _open(path).convert("RGB")
+    w, h = img.size
+    # Build a PIL palette image with the 6 OpenDisplay BWGBRY colors so
+    # PIL's quantize() does perceptual nearest-color mapping for us.
+    # PIL palette is flat RGB triples padded to 256 entries.
+    pal_img = Image.new("P", (1, 1))
+    flat = []
+    for rgb in _BWGBRY_PIL_PALETTE:
+        flat += list(rgb)
+    flat += [0] * (768 - len(flat))
+    pal_img.putpalette(flat)
+    quant = img.quantize(palette=pal_img, dither=Image.FLOYDSTEINBERG)
+    # PIL palette indices are 0..6 matching _BWGBRY_PIL_PALETTE order, which
+    # we deliberately chose to equal the BWGBRY firmware wire values.
+    indices = quant.tobytes()
+    out = bytearray((w * h + 1) // 2)
+    for i in range(0, len(indices), 2):
+        hi = indices[i] & 0x0F
+        lo = (indices[i + 1] & 0x0F) if i + 1 < len(indices) else 0
+        out[i // 2] = (hi << 4) | lo
+    return bytes(out), (w, h)
+
+
+def _open(path: Path) -> Image.Image:
+    if not path.exists():
+        raise SystemExit(f"image not found: {path}")
+    img = Image.open(path)
+    log(f"loaded {path.name}: mode={img.mode} size={img.size}")
+    return img
 
 
 # ---------------------------------------------------------------------------
@@ -256,6 +340,11 @@ def parse_args() -> argparse.Namespace:
                     help="Skip zlib compression (useful for diagnosing decompress issues)")
     ap.add_argument("--no-wait-done", action="store_true",
                     help="Skip waiting for the 0x73 REFRESH_DONE notification")
+    ap.add_argument("--format", choices=("mono", "gray16", "color6"), default="mono",
+                    help="Wire format to encode the image as. "
+                         "mono = 1bpp B/W (default; safe for any board), "
+                         "gray16 = 4bpp 16-level grayscale (Inkplate 3-bit B&W boards), "
+                         "color6 = 4bpp 6-color BWGBRY (Inkplate 6 COLOR)")
     return ap.parse_args()
 
 
@@ -263,10 +352,21 @@ def main() -> int:
     args = parse_args()
     log(f"target: {args.ip}:{args.port}")
     log(f"image:  {args.image}")
+    log(f"format: {args.format}")
     log(f"mode:   {'uncompressed' if args.uncompressed else 'compressed (zlib)'}")
 
-    raw, (w, h) = load_mono_bitplane(Path(args.image))
-    log(f"bitplane: {len(raw)}B ({w}x{h}, 1bpp MSB-first)")
+    if args.format == "mono":
+        raw, (w, h) = load_mono_bitplane(Path(args.image))
+        desc = "1bpp MSB-first"
+    elif args.format == "gray16":
+        raw, (w, h) = load_grayscale16_bitplane(Path(args.image))
+        desc = "4bpp grayscale, 16 levels"
+    elif args.format == "color6":
+        raw, (w, h) = load_bwgbry_bitplane(Path(args.image))
+        desc = "4bpp BWGBRY 6-color"
+    else:
+        raise SystemExit(f"unknown format: {args.format}")
+    log(f"bitplane: {len(raw)}B ({w}x{h}, {desc})")
 
     sock = wait_for_device(args.ip, args.port, args.wait)
     try:

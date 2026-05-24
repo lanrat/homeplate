@@ -104,6 +104,14 @@ bool openDisplayActivity()
         return false;
     }
 
+    // Route session allocations through PSRAM. Internal heap is ~300 KB
+    // total and can't accommodate the largest panel's 4bpp framebuffer
+    // (Inkplate 10: 495 KB compressed-or-raw). ps_malloc() comes from
+    // Arduino-ESP32 when BOARD_HAS_PSRAM is set (see platformio.ini).
+    od::setSessionAllocator(
+        [](size_t n) -> void * { return ps_malloc(n); },
+        [](void *p)            { free(p); });
+
     // Derive an mDNS service name: "od-<hostname>" so it's distinguishable
     // from HomePlate's own hostname while still being human-readable.
     char serviceName[64];

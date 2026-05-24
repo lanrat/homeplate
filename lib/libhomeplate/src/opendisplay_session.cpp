@@ -8,9 +8,23 @@
 
 namespace od {
 
+// 1 MB covers the largest Inkplate framebuffer at 4bpp (Inkplate 10:
+// 1200*825/2 = 495 KB), with headroom for future panels. Anything beyond
+// this is rejected as garbage.
+constexpr uint32_t MAX_RAW_IMAGE_BYTES = 1024 * 1024;
+
+static AllocFn s_alloc = nullptr;
+static FreeFn  s_free  = nullptr;
+
+void setSessionAllocator(AllocFn alloc, FreeFn freeFn) {
+    s_alloc = alloc;
+    s_free  = freeFn;
+}
+
 namespace {
 
-constexpr uint32_t MAX_RAW_IMAGE_BYTES = 256 * 1024; // covers all Inkplates
+void *odAlloc(size_t n) { return s_alloc ? s_alloc(n) : malloc(n); }
+void  odFree(void *p)   { if (s_free) s_free(p); else free(p); }
 
 struct UploadCtx {
     uint8_t *buf;          // accumulator (compressed bytes if compressed, raw bytes otherwise)
@@ -23,7 +37,7 @@ struct UploadCtx {
 
 void resetUpload(UploadCtx &u) {
     if (u.buf) {
-        free(u.buf);
+        odFree(u.buf);
         u.buf = nullptr;
     }
     u.bufCap = 0;
@@ -47,9 +61,9 @@ bool finalizeAndRender(UploadCtx &up, IRenderer &r, LogFn log, char *dbg, size_t
     }
     // Compressed path. Allocate a decompression target sized to the
     // declared uncompressed length.
-    uint8_t *raw = (uint8_t *)malloc(up.uncompressedSize);
+    uint8_t *raw = (uint8_t *)odAlloc(up.uncompressedSize);
     if (!raw) {
-        if (log) log("[OD] malloc failed for decompressed buffer");
+        if (log) log("[OD] alloc failed for decompressed buffer");
         return false;
     }
     size_t produced = 0;
@@ -68,7 +82,7 @@ bool finalizeAndRender(UploadCtx &up, IRenderer &r, LogFn log, char *dbg, size_t
                      (unsigned)produced, (unsigned)up.uncompressedSize);
             log(dbg);
         }
-        free(raw);
+        odFree(raw);
         return false;
     }
     if (log) {
@@ -78,7 +92,7 @@ bool finalizeAndRender(UploadCtx &up, IRenderer &r, LogFn log, char *dbg, size_t
         log(dbg);
     }
     bool rendered = r.renderImage(raw, (uint32_t)produced);
-    free(raw);
+    odFree(raw);
     return rendered;
 }
 
@@ -155,9 +169,9 @@ bool runSession(ITransport &t, IRenderer &r, LogFn log, uint32_t loopTimeoutMs)
                 sendAck(t, cmd);
                 break;
             }
-            up.buf = (uint8_t *)malloc(up.bufCap);
+            up.buf = (uint8_t *)odAlloc(up.bufCap);
             if (!up.buf) {
-                if (log) log("[OD] malloc failed for upload buffer");
+                if (log) log("[OD] alloc failed for upload buffer");
                 sendAck(t, cmd);
                 break;
             }
