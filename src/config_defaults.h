@@ -67,6 +67,9 @@
 #ifndef OD_LISTEN_SEC
 #define OD_LISTEN_SEC 60
 #endif
+#ifndef OD_ENABLE_BLE
+#define OD_ENABLE_BLE true
+#endif
 #ifndef QR_WIFI_NAME
 #define QR_WIFI_NAME ""
 #endif

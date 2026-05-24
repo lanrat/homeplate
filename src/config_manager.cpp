@@ -62,6 +62,9 @@ void logConfig()
     Serial.printf("[CONFIG]   trmnlId           = %s\n", plateCfg.trmnlId);
     Serial.printf("[CONFIG]   trmnlToken        = %s\n", maskValue(plateCfg.trmnlToken));
     Serial.printf("[CONFIG]   trmnlEnableLog    = %s\n", plateCfg.trmnlEnableLog ? "true" : "false");
+    Serial.printf("[CONFIG]   odListenPort      = %u\n", plateCfg.odListenPort);
+    Serial.printf("[CONFIG]   odListenSec       = %u\n", plateCfg.odListenSec);
+    Serial.printf("[CONFIG]   odEnableBle       = %s\n", plateCfg.odEnableBle ? "true" : "false");
 
     // Guest WiFi QR
     Serial.printf("[CONFIG]   qrWifiName        = %s\n", plateCfg.qrWifiName);
@@ -108,6 +111,7 @@ void loadConfig()
     plateCfg.trmnlEnableLog = TRMNL_ENABLE_LOG_DEFAULT;
     plateCfg.odListenPort = OD_LISTEN_PORT;
     plateCfg.odListenSec = OD_LISTEN_SEC;
+    plateCfg.odEnableBle = OD_ENABLE_BLE;
     strlcpy(plateCfg.qrWifiName, QR_WIFI_NAME, sizeof(plateCfg.qrWifiName));
     strlcpy(plateCfg.qrWifiPassword, QR_WIFI_PASSWORD, sizeof(plateCfg.qrWifiPassword));
     strlcpy(plateCfg.mqttHost, MQTT_HOST, sizeof(plateCfg.mqttHost));
@@ -141,6 +145,7 @@ void loadConfig()
     plateCfg.trmnlEnableLog = preferences.getBool("trmnl_log", plateCfg.trmnlEnableLog);
     plateCfg.odListenPort = preferences.getUShort("od_port", plateCfg.odListenPort);
     plateCfg.odListenSec = preferences.getUShort("od_listen_s", plateCfg.odListenSec);
+    plateCfg.odEnableBle = preferences.getBool("od_ble", plateCfg.odEnableBle);
     loadString("qr_name", plateCfg.qrWifiName, sizeof(plateCfg.qrWifiName), plateCfg.qrWifiName);
     loadString("qr_pass", plateCfg.qrWifiPassword, sizeof(plateCfg.qrWifiPassword), plateCfg.qrWifiPassword);
     loadString("mqtt_host", plateCfg.mqttHost, sizeof(plateCfg.mqttHost), plateCfg.mqttHost);
@@ -209,6 +214,7 @@ void saveConfig()
     preferences.putBool("trmnl_log", plateCfg.trmnlEnableLog);
     preferences.putUShort("od_port", plateCfg.odListenPort);
     preferences.putUShort("od_listen_s", plateCfg.odListenSec);
+    preferences.putBool("od_ble", plateCfg.odEnableBle);
     saveString("qr_name", plateCfg.qrWifiName);
     saveString("qr_pass", plateCfg.qrWifiPassword);
     saveString("mqtt_host", plateCfg.mqttHost);
@@ -448,6 +454,7 @@ bool startWiFiManager(bool forcePortal)
     char odListenStr[8];
     snprintf(odListenStr, sizeof(odListenStr), "%u", plateCfg.odListenSec);
     WiFiManagerParameter p_odlisten("od_listen_s", "OpenDisplay Listen Seconds", odListenStr, 7, "type=\"number\" min=\"1\" max=\"3600\"");
+    WiFiManagerParameter p_odble("od_ble", "Enable BLE Transport", "T", 2, plateCfg.odEnableBle ? "type=\"checkbox\" style=\"margin-top:0.5em\" checked" : "type=\"checkbox\" style=\"margin-top:0.5em\"", WFM_LABEL_AFTER);
 
     // Section: QR WiFi
     WiFiManagerParameter h_qr("<hr><h3>Guest WiFi QR Code</h3>");
@@ -539,6 +546,7 @@ bool startWiFiManager(bool forcePortal)
     wm.addParameter(&h_od);
     wm.addParameter(&p_odport);
     wm.addParameter(&p_odlisten);
+    wm.addParameter(&p_odble);
 
     wm.addParameter(&h_qr);
     wm.addParameter(&p_qrname);
@@ -586,6 +594,7 @@ bool startWiFiManager(bool forcePortal)
             plateCfg.odListenPort = (op > 0 && op <= 65535) ? (uint16_t)op : OD_LISTEN_PORT;
             int ol = atoi(p_odlisten.getValue());
             plateCfg.odListenSec = (ol > 0 && ol <= 3600) ? (uint16_t)ol : OD_LISTEN_SEC;
+            plateCfg.odEnableBle = (strncmp(p_odble.getValue(), "T", 1) == 0);
         }
         strlcpy(plateCfg.qrWifiName, p_qrname.getValue(), sizeof(plateCfg.qrWifiName));
         strlcpy(plateCfg.qrWifiPassword, p_qrpass.getValue(), sizeof(plateCfg.qrWifiPassword));

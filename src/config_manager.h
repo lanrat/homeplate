@@ -28,9 +28,10 @@ struct HomePlateConfig {
     char trmnlToken[65];
     bool trmnlEnableLog;
 
-    // OpenDisplay (Flex profile, WiFi LAN)
+    // OpenDisplay (Flex profile, WiFi LAN + BLE)
     uint16_t odListenPort;  // TCP port to advertise + listen on
     uint16_t odListenSec;   // seconds to wait for a controller connection per wake
+    bool     odEnableBle;   // also advertise + accept BLE GATT controllers during listen window
 
     // Guest WiFi QR
     char qrWifiName[65];

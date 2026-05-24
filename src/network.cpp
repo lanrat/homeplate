@@ -48,6 +48,19 @@ void mdnsStart()
     }
 }
 
+// Tear down the mDNS responder. Used by the OpenDisplay activity when BLE
+// is enabled: BLE+WiFi share internal DRAM, and an mDNS UDP packet burst
+// while BLE is active starves lwip pbufs, which both spams the log AND
+// disrupts BLE scan-response broadcasts. Callers should mdnsStart() again
+// when they no longer need to suppress it.
+void mdnsStop()
+{
+    if (!s_mdnsStarted) return;
+    MDNS.end();
+    s_mdnsStarted = false;
+    Serial.println("[MDNS] responder stopped");
+}
+
 void WiFiGotIP(WiFiEvent_t event, WiFiEventInfo_t info)
 {
     wifiFailed = false;

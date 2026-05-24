@@ -74,10 +74,18 @@ inline void wrU16LE(uint8_t *b, uint16_t v) {
     b[1] = (uint8_t)(v >> 8);
 }
 
-// Build a 2-byte ACK payload (just the echoed command with high bit set).
+// Build a 2-byte ACK payload — the echoed command, *without* the
+// RESPONSE_ACK_FLAG high bit set. The OpenDisplay spec describes the
+// high bit as "set on ACK", and py-opendisplay's validate_ack_response
+// accepts either form. However, the official web Bluetooth utility at
+// opendisplay.org/firmware/display strictly checks for the unflagged
+// form (`0x00 0x7X`) when matching direct-write responses, and rejects
+// `0x80 0x7X`. Sending the bare echo is the compatible-with-both choice.
+// See opendisplay-ble-handoff.md "Web utility quirks".
+//
 // Returns bytes written (always 2).
 inline size_t buildAck(uint8_t *out, uint16_t cmd) {
-    wrU16BE(out, cmd | RESPONSE_ACK_FLAG);
+    wrU16BE(out, cmd);
     return 2;
 }
 

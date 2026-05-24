@@ -50,6 +50,20 @@ public:
     virtual int recvFrame(uint8_t *out, size_t outCap, uint32_t timeoutMs) = 0;
     // Send one frame payload (transport adds the length prefix).
     virtual bool sendFrame(const uint8_t *payload, uint16_t len) = 0;
+    // Send a "chunked" response — payload is [echo:2 BE][tlv...]. On
+    // transports that have a single-frame contract (WiFi LAN, default
+    // impl), this is equivalent to sendFrame(payload, len). On BLE,
+    // which expects a controller-side chunked-response framing on top
+    // of the TLV (see py-opendisplay device.py interrogate()), the BLE
+    // transport overrides this to inject [chunk_idx:2 LE][total_len:2 LE]
+    // and fragment across notifications as needed.
+    //
+    // Used for responses that may exceed a single ATT notification's
+    // capacity (currently just READ_CONFIG's ~135-byte TLV blob).
+    virtual bool sendChunked(const uint8_t *payload, uint32_t len) {
+        if (len > 0xFFFF) return false;
+        return sendFrame(payload, (uint16_t)len);
+    }
     virtual bool connected() const = 0;
 };
 
@@ -66,6 +80,11 @@ using LogFn = void (*)(const char *msg);
 using AllocFn = void *(*)(size_t bytes);
 using FreeFn  = void  (*)(void *ptr);
 void setSessionAllocator(AllocFn alloc, FreeFn free);
+
+// Optional firmware version string returned by READ_FW_VERSION (0x0043) as
+// the SHA field. Typically the build's VERSION (git describe output). Set
+// once at boot; safe to leave nullptr (sends a placeholder string).
+void setSessionFirmwareVersion(const char *v);
 
 // Returns true if an image was successfully received and rendered.
 // loopTimeoutMs is the inactivity timeout between frames within one session.

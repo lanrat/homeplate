@@ -117,6 +117,21 @@ void lowBatteryCheck()
     }
 }
 
+void printDramHeap(const char *tag)
+{
+    // Internal-DRAM matters because FreeRTOS objects (mutexes, queues) and
+    // lwip pbufs can only come from there, not PSRAM. The largest-free-block
+    // is the one that really gates new allocations under fragmentation.
+    size_t internalFree = heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    size_t internalLargest = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    size_t internalMin = heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    size_t psramFree = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
+    Serial.printf("[HEAP][%s] DRAM free=%u largest=%u min_ever=%u   PSRAM free=%u\n",
+                  tag,
+                  (unsigned)internalFree, (unsigned)internalLargest,
+                  (unsigned)internalMin, (unsigned)psramFree);
+}
+
 void printDebugStackSpace()
 {
     if (DEBUG_STACK)

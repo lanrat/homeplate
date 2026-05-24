@@ -120,6 +120,7 @@ bool getWifIFailed();
 // device — other components just call MDNS.addService() on top.
 // Idempotent; called automatically from WiFiGotIP() once per boot.
 void mdnsStart();
+void mdnsStop();
 
 // QR
 void displayWiFiQR();
@@ -204,6 +205,10 @@ uint getBatteryPercent(double voltage);
 void printChipInfo();
 void lowBatteryCheck();
 void printDebugStackSpace();
+// Print internal-DRAM free + largest contiguous block + PSRAM free, tagged
+// with the supplied label. Used to chase BLE/WiFi/mDNS DRAM leaks per wake
+// cycle — see opendisplay-ble-handoff.md "DRAM watch".
+void printDramHeap(const char *tag);
 void displayBatteryWarning();
 void printDebug(const char *s);
 

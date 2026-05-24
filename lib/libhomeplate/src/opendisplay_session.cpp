@@ -16,10 +16,15 @@ constexpr uint32_t MAX_RAW_IMAGE_BYTES = 1024 * 1024;
 
 static AllocFn s_alloc = nullptr;
 static FreeFn  s_free  = nullptr;
+static const char *fwVersionStr = nullptr;
 
 void setSessionAllocator(AllocFn alloc, FreeFn freeFn) {
     s_alloc = alloc;
     s_free  = freeFn;
+}
+
+void setSessionFirmwareVersion(const char *v) {
+    fwVersionStr = v;
 }
 
 namespace {
@@ -251,11 +256,32 @@ bool runSession(ITransport &t, IRenderer &r, LogFn log,
                          (unsigned)n);
                 log(dbg);
             }
-            t.sendFrame(resp, (uint16_t)n);
+            // sendChunked() so BLE can inject its chunked-response
+            // framing (chunk index + total length per py-opendisplay).
+            // On WiFi the default impl just calls sendFrame().
+            t.sendChunked(resp, (uint32_t)n);
             break;
         }
 
-        case CMD_READ_FW_VERSION:
+        case CMD_READ_FW_VERSION: {
+            // Format expected by py-opendisplay parse_firmware_version:
+            //   [echo:2 BE][major:1][minor:1][shaLength:1][sha:N ASCII]
+            // sha is opaque to controllers; we put the build's VERSION
+            // string there (git describe output). Major/minor are
+            // protocol-version-ish; HomePlate is at v1.0.
+            uint8_t resp[8 + 40];
+            wrU16BE(resp, (uint16_t)CMD_READ_FW_VERSION | RESPONSE_ACK_FLAG);
+            resp[2] = 1; // major
+            resp[3] = 0; // minor
+            const char *sha = fwVersionStr ? fwVersionStr : "homeplate";
+            size_t shaLen = strlen(sha);
+            if (shaLen > 40) shaLen = 40;
+            resp[4] = (uint8_t)shaLen;
+            memcpy(resp + 5, sha, shaLen);
+            t.sendFrame(resp, (uint16_t)(5 + shaLen));
+            break;
+        }
+
         default: {
             // Anything we don't explicitly handle gets a bare ACK so the
             // controller doesn't hang waiting on us. The ACK has no
