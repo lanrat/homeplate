@@ -1,41 +1,45 @@
 #!/usr/bin/env python3
 """
-Push an image to a HomePlate device running the OpenDisplay (Flex profile,
-WiFi LAN) activity. Useful for testing without a full Home Assistant /
-py-opendisplay setup.
+Push an image to a HomePlate device running the OpenDisplay (Flex profile)
+activity. Supports both WiFi LAN (default) and BLE transports. Useful for
+testing without a full Home Assistant / py-opendisplay setup.
 
-Wire format (verified from py-opendisplay + the OpenDisplay reference
-firmware):
-  - WiFi LAN frame:  [length:u16 LE][payload bytes]
-  - Inside payload, command code is u16 BIG-endian, followed by
-    command-specific bytes.
-  - ACK responses echo the command with the high bit set (CMD | 0x8000).
+WiFi wire format (verified from py-opendisplay + OpenDisplay reference):
+  - LAN frame: [length:u16 LE][payload bytes]
+  - payload starts with u16 BIG-endian command code, followed by args
+  - ACK responses echo the command, optionally with the high bit set
+    (CMD | 0x8000). validate_ack_response accepts either form.
+
+BLE transport delegates to py-opendisplay's OpenDisplayDevice — the same
+code path Home Assistant's OpenDisplay integration takes.
 
 Usage:
   ./opendisplay_test.py inkplate10.png
-  ./opendisplay_test.py inkplate10.png --ip 192.168.1.42
-  ./opendisplay_test.py inkplate10.png --port 2446 --uncompressed
+  ./opendisplay_test.py inkplate10.png --ip 192.168.1.42 --uncompressed
+  ./opendisplay_test.py inkplate10.png --transport ble
+  ./opendisplay_test.py inkplate10.png --transport ble --mac AA:BB:CC:DD:EE:FF
 """
 
 import argparse
+import asyncio
 import socket
 import struct
 import sys
 import time
-import zlib
 from pathlib import Path
 
 from PIL import Image
 
-# Pull protocol primitives + image pipeline from py-opendisplay (the
-# MIT-licensed reference implementation). Same code path Home Assistant's
-# OpenDisplay integration uses — if our firmware works with these helpers,
-# it should work with HA. Submodule imports only.
+# Lean on py-opendisplay for everything we can: command builders, response
+# validators, config parsing, and the image pipeline (fit/dither/encode/
+# compress). Same code path HA's OpenDisplay integration uses.
+from opendisplay.device import prepare_image
+from opendisplay.discovery import discover_devices_with_adv
+from opendisplay.models.enums import FitMode
 from opendisplay.protocol.commands import (
     CHUNK_SIZE,
     CommandCode,
     MAX_START_PAYLOAD,
-    RESPONSE_HIGH_BIT_FLAG as ACK_FLAG,
     build_direct_write_data_command,
     build_direct_write_end_command,
     build_direct_write_start_compressed,
@@ -44,109 +48,33 @@ from opendisplay.protocol.commands import (
 )
 from opendisplay.protocol.config_parser import parse_config_response
 from opendisplay.protocol.responses import validate_ack_response
-from opendisplay.encoding.images import encode_image, fit_image
-from opendisplay.models.enums import FitMode
-from epaper_dithering import ColorScheme, dither_image
 
 DEFAULT_HOST = "homeplate.local"
 DEFAULT_PORT = 2446
 
-# Command codes kept as ints for the legacy log lines; everything else
-# uses the library's CommandCode enum directly.
-CMD_READ_CONFIG        = int(CommandCode.READ_CONFIG)
-CMD_DIRECT_WRITE_START = int(CommandCode.DIRECT_WRITE_START)
-CMD_DIRECT_WRITE_DATA  = int(CommandCode.DIRECT_WRITE_DATA)
-CMD_DIRECT_WRITE_END   = int(CommandCode.DIRECT_WRITE_END)
-
-
-# ---------------------------------------------------------------------------
-# Logging helpers
-# ---------------------------------------------------------------------------
 
 def log(msg: str) -> None:
-    ts = time.strftime("%H:%M:%S")
-    print(f"[{ts}] {msg}", flush=True)
+    """Print a wall-clock-timestamped line, flushed immediately.
 
-
-def hexdump(data: bytes, prefix: str = "  ", limit: int = 32) -> str:
-    take = data[:limit]
-    hexs = " ".join(f"{b:02x}" for b in take)
-    suffix = f" ... (+{len(data) - limit} bytes)" if len(data) > limit else ""
-    return f"{prefix}{hexs}{suffix}"
-
-
-# ---------------------------------------------------------------------------
-# Reachability + connection
-# ---------------------------------------------------------------------------
-
-def wait_for_device(host: str, port: int, total_timeout: float) -> socket.socket:
-    """Poll-connect to (host, port) until success or total_timeout elapses.
-
-    Returns a connected socket. HomePlate may be asleep when this script
-    starts, then wake on schedule, advertise mDNS, and accept connections.
+    flush=True matters when piping output (e.g. `| tee`) — otherwise stdout
+    buffers and you can't tell whether the script is stuck or making progress.
     """
-    log(f"connecting to {host}:{port} (max wait {int(total_timeout)}s)")
-    deadline = time.monotonic() + total_timeout
-    attempt = 0
-    last_err: Exception | None = None
-    while time.monotonic() < deadline:
-        attempt += 1
-        try:
-            sock = socket.create_connection((host, port), timeout=3)
-            sock.settimeout(15)
-            log(f"connected on attempt {attempt} (remote={sock.getpeername()})")
-            return sock
-        except (OSError, socket.gaierror) as e:
-            last_err = e
-            remaining = int(deadline - time.monotonic())
-            log(f"attempt {attempt} failed: {type(e).__name__}: {e} (retry, {remaining}s left)")
-            time.sleep(2)
-    raise SystemExit(f"device unreachable after {int(total_timeout)}s: {last_err}")
+    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
 
 
 # ---------------------------------------------------------------------------
-# Frame I/O
+# WiFi transport
 # ---------------------------------------------------------------------------
 
-def wrap_frame(payload: bytes) -> bytes:
-    return struct.pack("<H", len(payload)) + payload
+def _recv_exact(sock: socket.socket, n: int) -> bytes:
+    """Block until exactly n bytes have been received from sock.
 
-
-def send_frame(sock: socket.socket, payload: bytes, label: str) -> None:
-    frame = wrap_frame(payload)
-    sock.sendall(frame)
-    cmd = struct.unpack(">H", payload[:2])[0] if len(payload) >= 2 else 0
-    log(f"-> {label}: cmd=0x{cmd:04x} frame={len(frame)}B payload={len(payload)}B")
-
-
-def recv_ack(sock: socket.socket, expected_cmd: int) -> bool:
-    """Read one [len LE][payload] response and validate via py-opendisplay.
-
-    Defers acceptance criteria (echo vs echo|ACK_FLAG) to the library so
-    we stay aligned with what HA's integration expects.
+    socket.recv() may return fewer bytes than requested (short reads are
+    legal whenever the kernel's receive buffer is partial), so a single
+    recv() can't be trusted for protocol framing. Loops until satisfied or
+    the peer closes the connection mid-frame (raised as OSError so callers
+    can distinguish "partial response" from "valid bare ACK").
     """
-    try:
-        hdr = recv_exact(sock, 2)
-        (flen,) = struct.unpack("<H", hdr)
-        if flen == 0 or flen > 4096:
-            log(f"<- bad response length {flen}")
-            return False
-        body = recv_exact(sock, flen)
-    except OSError as e:
-        log(f"<- ack read failed: {e}")
-        return False
-    try:
-        validate_ack_response(body, expected_cmd)
-    except Exception as e:
-        log(f"<- ack mismatch ({len(body)}B): {e}")
-        log(hexdump(body))
-        return False
-    code = struct.unpack(">H", body[:2])[0]
-    log(f"<- ack ok: 0x{code:04x}{' (ack-flag)' if code & ACK_FLAG else ''} ({len(body)}B body)")
-    return True
-
-
-def recv_exact(sock: socket.socket, n: int) -> bytes:
     out = bytearray()
     while len(out) < n:
         chunk = sock.recv(n - len(out))
@@ -156,192 +84,270 @@ def recv_exact(sock: socket.socket, n: int) -> bytes:
     return bytes(out)
 
 
-# ---------------------------------------------------------------------------
-# READ_CONFIG (0x0040) — ask the device what it is
-# ---------------------------------------------------------------------------
+def _send(sock: socket.socket, payload: bytes, label: str) -> None:
+    """Wrap `payload` in the LAN [u16 LE length][payload] frame and send.
 
-def query_config(sock: socket.socket) -> dict | None:
-    """Send READ_CONFIG and return the parsed DisplayConfig fields, or None.
-
-    Returns a dict with keys: width, height, color_scheme, partial_update,
-    trans_modes. Returns None on bare ACK / parse error / timeout (the
-    caller can fall back to defaults / explicit --format).
+    payload is the OpenDisplay command body, starting with a u16-BE command
+    code. `label` is a human-readable tag (e.g. "READ_CONFIG", "DATA #3/12")
+    used only for logging — picking a good label here makes serial output
+    much easier to correlate with the device's log.
     """
-    send_frame(sock, build_read_config_command(), "READ_CONFIG")
+    sock.sendall(struct.pack("<H", len(payload)) + payload)
+    cmd = struct.unpack(">H", payload[:2])[0]
+    log(f"-> {label} (cmd=0x{cmd:04x}, {len(payload)}B)")
 
-    # Read the raw frame; we need both the echo header and the TLV
-    # wrapper to hand to py-opendisplay's parser.
-    try:
-        hdr = recv_exact(sock, 2)
-    except OSError as e:
-        log(f"<- READ_CONFIG: read failed: {e}")
-        return None
-    (flen,) = struct.unpack("<H", hdr)
+
+def _recv_response(sock: socket.socket) -> bytes:
+    """Read one LAN response frame ([len LE][payload]) and return the payload.
+
+    Bounds: at minimum 2 bytes (a bare ACK is just a 2-byte command echo);
+    at most 4096 (sanity cap to refuse runaway sizes that might indicate
+    a framing-corruption bug rather than a real response).
+    """
+    (flen,) = struct.unpack("<H", _recv_exact(sock, 2))
     if flen < 2 or flen > 4096:
-        log(f"<- READ_CONFIG: invalid frame length {flen}")
-        return None
-    body = recv_exact(sock, flen)
-
-    # Bare ACK (2 bytes echo, nothing else) = device doesn't expose TLV.
-    if len(body) <= 2:
-        log(f"<- READ_CONFIG: bare ACK ({len(body)}B), device doesn't expose config")
-        return None
-
-    code = struct.unpack(">H", body[:2])[0]
-    log(f"<- READ_CONFIG: echo=0x{code:04x} body={len(body)}B")
-
-    # Hand the wrapper bytes (after the 2-byte echo) to py-opendisplay's
-    # parser. parse_config_response handles the [length][version][...][crc]
-    # envelope + walks every TLV packet for us. Same code path HA's
-    # OpenDisplay integration uses, so if we make this happy, HA should
-    # be happy too.
-    try:
-        cfg = parse_config_response(body[2:])
-    except Exception as e:
-        log(f"<- READ_CONFIG: parse failed: {type(e).__name__}: {e}")
-        return None
-
-    if not cfg.displays:
-        log("<- READ_CONFIG: parsed OK but no DISPLAY packet present")
-        return None
-
-    d = cfg.displays[0]
-    out = {
-        "width": d.pixel_width,
-        "height": d.pixel_height,
-        "color_scheme": d.color_scheme,
-        "partial_update": bool(d.partial_update_support),
-        "trans_modes": d.transmission_modes,
-    }
-    log(f"   DISPLAY: {out['width']}x{out['height']} "
-        f"color_scheme={out['color_scheme']} "
-        f"partial={out['partial_update']} trans_modes=0x{out['trans_modes']:02x}")
-    return out
+        raise OSError(f"bad response length {flen}")
+    return _recv_exact(sock, flen)
 
 
-def format_for_color_scheme(scheme: int) -> str:
-    """Map device-reported color_scheme byte to our --format string."""
-    return {
-        int(ColorScheme.MONO.value):         "mono",
-        int(ColorScheme.BWGBRY.value):       "color6",
-        int(ColorScheme.GRAYSCALE_16.value): "gray16",
-    }.get(scheme, "mono")
+def _expect_ack(sock: socket.socket, cmd: CommandCode, label: str) -> None:
+    """Read the next frame and verify it's an ACK for `cmd`, or raise.
 
-
-# ---------------------------------------------------------------------------
-# Image prep
-# ---------------------------------------------------------------------------
-
-_FORMAT_TO_SCHEME = {
-    "mono":   ColorScheme.MONO,
-    "gray16": ColorScheme.GRAYSCALE_16,
-    "color6": ColorScheme.BWGBRY,
-}
-
-
-def encode_for_wire(path: Path,
-                    fmt: str,
-                    panel_size: tuple[int, int] | None,
-                    fit_mode: FitMode) -> tuple[bytes, tuple[int, int]]:
-    """Load + dither + encode the source image for the given wire format.
-
-    Pipeline (all from py-opendisplay so it matches HA's path):
-        PIL.Image.open -> fit_image (optional) -> dither_image -> encode_image
-
-    Returns (encoded_bytes, (width, height)).
+    Delegates the echo-vs-echo|ACK_FLAG decision to py-opendisplay's
+    validate_ack_response so we stay aligned with HA's tolerance. `label`
+    is only for logging; the actual matching is on `cmd`.
     """
-    if not path.exists():
-        raise SystemExit(f"image not found: {path}")
-    img = Image.open(path)
-    log(f"loaded {path.name}: mode={img.mode} size={img.size}")
+    body = _recv_response(sock)
+    validate_ack_response(body, cmd)  # raises InvalidResponseError on mismatch
+    log(f"<- ACK {label} (0x{struct.unpack('>H', body[:2])[0]:04x})")
 
-    if panel_size is not None and img.size != panel_size:
-        log(f"fitting {img.size} -> {panel_size} (mode={fit_mode.name})")
-        img = fit_image(img.convert("RGB"), panel_size, fit_mode)
+
+def wait_for_device(host: str, port: int, total_timeout: float) -> socket.socket:
+    """Poll-connect to (host, port) until success, or SystemExit on total_timeout.
+
+    HomePlate spends most of its time in deep sleep — when the user runs
+    this script they typically don't know whether the device is currently
+    awake. Polling lets you run the script and walk over to press the wake
+    button. 3s per attempt gives slow DNS time to resolve; 2s between
+    attempts keeps the loop responsive without hammering. Per-socket
+    timeout bumps to 15s after connect so the subsequent protocol I/O has
+    headroom for slow LAN + chunked transfers.
+    """
+    log(f"connecting to {host}:{port} (max {int(total_timeout)}s)")
+    deadline = time.monotonic() + total_timeout
+    last_err: Exception | None = None
+    while time.monotonic() < deadline:
+        try:
+            sock = socket.create_connection((host, port), timeout=3)
+            sock.settimeout(15)
+            log(f"connected ({sock.getpeername()})")
+            return sock
+        except OSError as e:
+            last_err = e
+            time.sleep(2)
+    raise SystemExit(f"device unreachable after {int(total_timeout)}s: {last_err}")
+
+
+def query_config(sock: socket.socket):
+    """Send READ_CONFIG (0x0040), parse the TLV response, return GlobalConfig.
+
+    Returns None if the device replies with a bare 2-byte ACK — that means
+    the firmware doesn't expose READ_CONFIG and the caller has no info to
+    drive prepare_image() with. Older HomePlate firmware did this; current
+    builds always send a full TLV.
+
+    The 2-byte echo prefix is stripped before handing the body to
+    parse_config_response, which expects the wrapper bytes directly. The
+    summary log line is the easy-to-spot success signal when triaging.
+    """
+    _send(sock, build_read_config_command(), "READ_CONFIG")
+    body = _recv_response(sock)
+    if len(body) <= 2:
+        log(f"<- READ_CONFIG: bare ACK, device doesn't expose config")
+        return None
+    cfg = parse_config_response(body[2:])
+    d = cfg.displays[0]
+    log(f"<- READ_CONFIG: {d.pixel_width}x{d.pixel_height} "
+        f"color_scheme={d.color_scheme} trans_modes=0x{d.transmission_modes:02x}")
+    return cfg
+
+
+def upload_wifi(sock: socket.socket, image_path: Path, compress: bool,
+                fit_mode: FitMode) -> None:
+    """End-to-end WiFi upload: READ_CONFIG → prepare → START → DATA × N → END.
+
+    Flow mirrors what py-opendisplay's OpenDisplayDevice.upload_image() does
+    over BLE — same command codes, same chunk size, same ACK-per-chunk
+    pipelining — just on a TCP socket with the [u16 LE len][payload] LAN
+    framing wrapping each command.
+
+    The image pipeline (fit / dither / encode / compress) is delegated to
+    prepare_image() so a tweak in py-opendisplay (e.g. dither algorithm
+    bump) automatically flows through here too. We pass the GlobalConfig
+    from query_config() so prepare_image picks the right color scheme and
+    panel dimensions without us hard-coding anything.
+
+    If compress=True but prepare_image returns no compressed payload (e.g.
+    image already smaller than the compression header overhead), falls
+    back to uncompressed transparently.
+
+    Raises SystemExit if READ_CONFIG didn't expose a usable config (no way
+    to encode without knowing panel format) or InvalidResponseError on any
+    unexpected ACK.
+    """
+    cfg = query_config(sock)
+    if cfg is None:
+        raise SystemExit("device didn't expose config; can't pick wire format")
+
+    img = Image.open(image_path)
+    log(f"loaded {image_path.name}: mode={img.mode} size={img.size}")
+
+    # py-opendisplay does fit + dither + encode + compress for us.
+    raw, compressed, _ = prepare_image(img, config=cfg, compress=compress,
+                                       fit=fit_mode)
+    if compress and compressed:
+        log(f"encoded: {len(raw)}B raw / {len(compressed)}B compressed "
+            f"(ratio {len(compressed)/len(raw):.1%})")
+        start, rest = build_direct_write_start_compressed(
+            len(raw), compressed, MAX_START_PAYLOAD)
+        _send(sock, start, "START (compressed)")
     else:
-        img = img.convert("RGB")
+        log(f"encoded: {len(raw)}B raw, uncompressed")
+        _send(sock, build_direct_write_start_uncompressed(), "START")
+        rest = raw
 
-    scheme = _FORMAT_TO_SCHEME[fmt]
-    dithered = dither_image(img, scheme)
-    raw = encode_image(dithered, scheme)
-    return raw, img.size
+    _expect_ack(sock, CommandCode.DIRECT_WRITE_START, "START")
 
+    nchunks = (len(rest) + CHUNK_SIZE - 1) // CHUNK_SIZE
+    for i in range(nchunks):
+        chunk = rest[i * CHUNK_SIZE : (i + 1) * CHUNK_SIZE]
+        _send(sock, build_direct_write_data_command(chunk),
+              f"DATA #{i+1}/{nchunks}")
+        _expect_ack(sock, CommandCode.DIRECT_WRITE_DATA, f"DATA #{i+1}")
+    log(f"streamed {nchunks} DATA chunks ({len(rest)}B)")
 
-# ---------------------------------------------------------------------------
-# Upload flows
-# ---------------------------------------------------------------------------
+    _send(sock, build_direct_write_end_command(refresh_mode=0), "END")
+    _expect_ack(sock, CommandCode.DIRECT_WRITE_END, "END")
 
-def _stream_data_chunks(sock: socket.socket, payload: bytes) -> None:
-    """Send `payload` in CHUNK_SIZE-sized 0x71 DATA frames with per-chunk ACK."""
-    total = (len(payload) + CHUNK_SIZE - 1) // CHUNK_SIZE
-    sent = 0
-    nchunks = 0
-    rest = payload
-    while rest:
-        chunk, rest = rest[:CHUNK_SIZE], rest[CHUNK_SIZE:]
-        nchunks += 1
-        send_frame(sock, build_direct_write_data_command(chunk),
-                   f"DATA #{nchunks}/{total}")
-        if not recv_ack(sock, CMD_DIRECT_WRITE_DATA):
-            raise SystemExit(f"device did not ACK DATA chunk #{nchunks}/{total}")
-        sent += len(chunk)
-    log(f"streamed {nchunks} DATA chunks ({sent}B)")
-
-
-def upload_compressed(sock: socket.socket, raw: bytes) -> None:
-    compressed = zlib.compress(raw, level=9)
-    log(f"compressed {len(raw)}B -> {len(compressed)}B "
-        f"(ratio {len(compressed) / max(1, len(raw)):.1%})")
-
-    # py-opendisplay packs uncompressed_size + as much of the first chunk
-    # as fits inside MAX_START_PAYLOAD, returns the leftover for streaming.
-    start_packet, rest = build_direct_write_start_compressed(
-        len(raw), compressed, MAX_START_PAYLOAD)
-    send_frame(sock, start_packet, "START (compressed)")
-    if not recv_ack(sock, CMD_DIRECT_WRITE_START):
-        raise SystemExit("device did not ACK START")
-
-    _stream_data_chunks(sock, rest)
-
-    send_frame(sock, build_direct_write_end_command(refresh_mode=0), "END")
-    if not recv_ack(sock, CMD_DIRECT_WRITE_END):
-        raise SystemExit("device did not ACK END")
-
-
-def upload_uncompressed(sock: socket.socket, raw: bytes) -> None:
-    send_frame(sock, build_direct_write_start_uncompressed(), "START (uncompressed)")
-    if not recv_ack(sock, CMD_DIRECT_WRITE_START):
-        raise SystemExit("device did not ACK START")
-
-    _stream_data_chunks(sock, raw)
-
-    send_frame(sock, build_direct_write_end_command(refresh_mode=0), "END")
-    if not recv_ack(sock, CMD_DIRECT_WRITE_END):
-        raise SystemExit("device did not ACK END")
-
-
-# ---------------------------------------------------------------------------
-# Optional: listen for device-initiated 0x73 REFRESH_DONE / 0x74 TIMEOUT
-# ---------------------------------------------------------------------------
 
 def wait_for_refresh_done(sock: socket.socket, timeout: float) -> None:
-    """Poll for a 0x73 (done) or 0x74 (timeout) frame from the device."""
-    log(f"waiting up to {int(timeout)}s for refresh completion notice...")
+    """Block waiting for the device's spontaneous post-render notification.
+
+    After END (0x72), the device drives the e-ink panel. When the refresh
+    finishes, the firmware emits an unprompted 0x73 (REFRESH_DONE) or 0x74
+    (REFRESH_TIMEOUT) frame on the same connection. This is useful for
+    timing benchmarks; not essential for the upload itself (the panel
+    refreshes whether we wait or not).
+
+    Mask `& 0x7FFF` strips the ACK flag if present so the dispatch table
+    matches either echo form. Swallows timeout/EOF as a non-fatal "no
+    notification" log line — this function is best-effort.
+    """
+    log(f"waiting up to {int(timeout)}s for refresh completion...")
     sock.settimeout(timeout)
     try:
-        hdr = recv_exact(sock, 2)
-        (flen,) = struct.unpack("<H", hdr)
-        body = recv_exact(sock, flen)
-        code = struct.unpack(">H", body[:2])[0]
-        masked = code & ~ACK_FLAG
-        if masked == 0x0073:
-            log(f"<- refresh done (0x{code:04x})")
-        elif masked == 0x0074:
-            log(f"<- refresh TIMEOUT (0x{code:04x})")
-        else:
-            log(f"<- unexpected device frame: 0x{code:04x}")
+        body = _recv_response(sock)
+        code = struct.unpack(">H", body[:2])[0] & 0x7FFF
+        kind = {0x73: "DONE", 0x74: "TIMEOUT"}.get(code, f"unexpected 0x{code:04x}")
+        log(f"<- refresh {kind}")
     except (OSError, socket.timeout) as e:
         log(f"no refresh notification: {type(e).__name__}: {e}")
+
+
+# ---------------------------------------------------------------------------
+# BLE transport (delegates to py-opendisplay's OpenDisplayDevice)
+# ---------------------------------------------------------------------------
+
+async def _ble_pick_mac(scan_timeout: float) -> str:
+    """Scan for advertising OpenDisplay devices and return the chosen MAC.
+
+    Filtering is by manufacturer ID 0x2446 (the OpenDisplay company ID we
+    embed in the BLE advertisement), NOT by device name — name is just a
+    user-facing label and isn't load-bearing for discovery.
+
+    Behavior by match count:
+      0 → SystemExit with hint to extend the scan window or wake the device
+      1 → auto-select, log and return the MAC
+      N → list all matches with `--mac` snippets, SystemExit(2) so the
+          user picks one explicitly. Silently picking the strongest RSSI
+          would target the wrong device in a multi-Inkplate household.
+    """
+    log(f"scanning for OpenDisplay BLE devices ({int(scan_timeout)}s)...")
+    found = await discover_devices_with_adv(timeout=scan_timeout)
+    if not found:
+        raise SystemExit(
+            "no OpenDisplay BLE devices found. Confirm the device is in its "
+            "OpenDisplay listen window, then retry with a larger --scan-timeout.")
+    if len(found) == 1:
+        name, (mac, _) = next(iter(found.items()))
+        log(f"auto-selected {name} @ {mac}")
+        return mac
+    print("multiple OpenDisplay devices found; re-run with --mac:", file=sys.stderr)
+    for name, (mac, _) in sorted(found.items()):
+        print(f"  --mac {mac}   # {name}", file=sys.stderr)
+    raise SystemExit(2)
+
+
+async def _ble_upload(mac: str, image_path: Path, compress: bool,
+                      fit_mode: FitMode, scan_timeout: float) -> None:
+    """Connect to `mac` via BLE GATT, upload `image_path`, then disconnect.
+
+    Everything protocol-level (interrogation, fit/dither/encode/compress,
+    chunking, ACK pipelining) is delegated to OpenDisplayDevice — same
+    code path Home Assistant's OpenDisplay integration takes. The async
+    context manager handles connect on __aenter__ (which interrogates and
+    populates dev.width / dev.height / dev.color_scheme) and disconnect
+    on __aexit__ even if upload_image raises.
+
+    Local import of OpenDisplayDevice keeps the bleak dependency out of
+    the import path when the user runs --transport=wifi (bleak pulls in
+    dbus / bluez bindings that aren't needed there).
+    """
+    from opendisplay.device import OpenDisplayDevice
+
+    img = Image.open(image_path)
+    log(f"loaded {image_path.name}: mode={img.mode} size={img.size}")
+
+    log(f"connecting BLE to {mac} ...")
+    async with OpenDisplayDevice(mac_address=mac,
+                                  discovery_timeout=scan_timeout) as dev:
+        log(f"connected ({dev.width}x{dev.height}, {dev.color_scheme.name})")
+
+        # Throttled progress reporter: OpenDisplayDevice calls this after
+        # every DATA chunk ACK (~hundreds of times for a full image), so
+        # we rate-limit to once per 5% of total to keep the log readable.
+        # last_pct is wrapped in a list because Python closures can't
+        # rebind a plain int from the enclosing scope.
+        last_pct = [-1]
+        start = time.monotonic()
+        def progress(sent: int, total: int) -> None:
+            pct = (sent * 100) // total if total else 0
+            if pct >= last_pct[0] + 5 or sent == total:
+                rate_kb = sent / max(0.001, time.monotonic() - start) / 1024
+                log(f"upload: {pct:3d}%  {sent}/{total} B  ({rate_kb:.1f} KB/s)")
+                last_pct[0] = pct
+
+        await dev.upload_image(img, compress=compress, fit=fit_mode,
+                               progress_callback=progress)
+        log("upload complete")
+
+
+def run_ble(args: argparse.Namespace) -> int:
+    """Sync entry point for the BLE path: resolve MAC, run upload, return 0.
+
+    Wraps the async pipeline in asyncio.run() so main() stays plain
+    blocking code — the WiFi path is socket I/O and shouldn't pay an
+    event-loop tax. Uncaught async exceptions surface as a normal Python
+    traceback, which is the right UX for a CLI utility.
+    """
+    async def _run() -> None:
+        mac = args.mac or await _ble_pick_mac(args.scan_timeout)
+        await _ble_upload(mac, Path(args.image),
+                          compress=not args.uncompressed,
+                          fit_mode=FitMode[args.fit.upper()],
+                          scan_timeout=args.scan_timeout)
+    asyncio.run(_run())
+    return 0
 
 
 # ---------------------------------------------------------------------------
@@ -349,77 +355,62 @@ def wait_for_refresh_done(sock: socket.socket, timeout: float) -> None:
 # ---------------------------------------------------------------------------
 
 def parse_args() -> argparse.Namespace:
+    """Parse CLI args. Defaults match common HomePlate usage: WiFi to the
+    canonical hostname/port, compressed upload, contain-fit, 180s wake wait.
+    BLE-specific flags (`--mac`, `--scan-timeout`) are ignored when
+    `--transport=wifi`, and vice versa for `--ip`/`--port`/`--wait`."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("image", help="Path to image file (PNG/JPG/etc.)")
+    ap.add_argument("--transport", choices=("wifi", "ble"), default="wifi",
+                    help="Transport to use (default: wifi). BLE requires bluetooth perms.")
+    ap.add_argument("--mac", default=None,
+                    help="BLE MAC (e.g. AA:BB:CC:DD:EE:FF). Omit to auto-scan.")
+    ap.add_argument("--scan-timeout", type=float, default=8.0,
+                    help="BLE scan window in seconds (default: 8).")
     ap.add_argument("--ip", "--host", default=DEFAULT_HOST,
-                    help=f"HomePlate hostname or IP (default: {DEFAULT_HOST})")
+                    help=f"HomePlate hostname/IP for WiFi (default: {DEFAULT_HOST}).")
     ap.add_argument("--port", type=int, default=DEFAULT_PORT,
-                    help=f"OpenDisplay TCP port (default: {DEFAULT_PORT})")
+                    help=f"OpenDisplay TCP port (default: {DEFAULT_PORT}).")
     ap.add_argument("--wait", type=int, default=180,
-                    help="Max seconds to wait for the device to come online "
-                         "(default: 180)")
+                    help="Max seconds to wait for the WiFi device to come online (default: 180).")
     ap.add_argument("--uncompressed", action="store_true",
-                    help="Skip zlib compression (useful for diagnosing decompress issues)")
+                    help="Skip zlib compression (useful for diagnosing decompress issues).")
     ap.add_argument("--no-wait-done", action="store_true",
-                    help="Skip waiting for the 0x73 REFRESH_DONE notification")
-    ap.add_argument("--format", choices=("auto", "mono", "gray16", "color6"), default="auto",
-                    help="Wire format to encode the image as. "
-                         "auto = query the device via READ_CONFIG and pick the format that "
-                         "matches its advertised color scheme (default; recommended). "
-                         "mono = 1bpp B/W (safe fallback for any board), "
-                         "gray16 = 4bpp 16-level grayscale (Inkplate 3-bit B&W boards), "
-                         "color6 = 4bpp 6-color BWGBRY (Inkplate 6 COLOR)")
-    ap.add_argument("--fit", choices=("contain", "cover", "stretch", "crop"), default="contain",
-                    help="How to fit the source image to the panel when sizes differ. "
-                         "contain = scale to fit, pad with white (default), "
-                         "cover = scale to fill, crop overflow, "
-                         "stretch = distort to exact size, "
-                         "crop = no scale, center-crop at native resolution. "
-                         "Only applied when --format=auto (which queries panel dims).")
+                    help="Skip waiting for the 0x73 REFRESH_DONE notification on WiFi.")
+    ap.add_argument("--fit", choices=("contain", "cover", "stretch", "crop"),
+                    default="contain",
+                    help="How to fit the source image to the panel (default: contain).")
     return ap.parse_args()
 
 
 def main() -> int:
+    """CLI dispatcher: route to BLE or WiFi path based on --transport.
+
+    WiFi path uses try/finally so the socket is closed even if upload
+    fails — partially-uploaded sessions on the device side end on a
+    15-second per-frame timeout. BLE path manages its own connection
+    lifecycle via OpenDisplayDevice's async context manager.
+
+    Returns 0 on success. Any error path raises SystemExit (preserves
+    exit code) or lets the traceback propagate naturally.
+    """
     args = parse_args()
-    log(f"target: {args.ip}:{args.port}")
-    log(f"image:  {args.image}")
-    log(f"format: {args.format}")
-    log(f"mode:   {'uncompressed' if args.uncompressed else 'compressed (zlib)'}")
+    log(f"transport: {args.transport}, image: {args.image}, "
+        f"mode: {'uncompressed' if args.uncompressed else 'compressed'}")
+
+    if args.transport == "ble":
+        return run_ble(args)
 
     sock = wait_for_device(args.ip, args.port, args.wait)
     try:
-        # Auto-detect: query the device for its panel dimensions + color
-        # scheme via READ_CONFIG, then pick a matching wire format. Falls
-        # back to mono if the device doesn't expose config (bare ACK).
-        fmt = args.format
-        cfg = None
-        if fmt == "auto":
-            cfg = query_config(sock)
-            if cfg is None:
-                log("auto-detect: no device config, falling back to mono")
-                fmt = "mono"
-            else:
-                fmt = format_for_color_scheme(cfg["color_scheme"])
-                log(f"auto-detect: device color_scheme={cfg['color_scheme']} -> format={fmt}")
-
-        # Encode the image. When we know the panel size from READ_CONFIG,
-        # fit the source to it first so users don't have to hand-size every
-        # image. Otherwise pass image through as-is (caller's responsibility).
-        panel_size = (cfg["width"], cfg["height"]) if cfg else None
-        fit_mode = FitMode[args.fit.upper()]
-        raw, (w, h) = encode_for_wire(Path(args.image), fmt, panel_size, fit_mode)
-        log(f"bitplane: {len(raw)}B ({w}x{h}, format={fmt})")
-
-        if args.uncompressed:
-            upload_uncompressed(sock, raw)
-        else:
-            upload_compressed(sock, raw)
+        upload_wifi(sock, Path(args.image),
+                    compress=not args.uncompressed,
+                    fit_mode=FitMode[args.fit.upper()])
         if not args.no_wait_done:
             wait_for_refresh_done(sock, timeout=60)
     finally:
         sock.close()
-        log("connection closed")
     return 0
 
 
