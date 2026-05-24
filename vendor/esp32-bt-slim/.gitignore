@@ -1,0 +1,3 @@
+# Docker scratch dir (hundreds of MB of intermediates) — only prebuilt/ ships.
+out/
+*.log

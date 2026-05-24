@@ -1,0 +1,41 @@
+# Slim BT config for HomePlate's OpenDisplay BLE transport.
+#
+# Goal: rebuild the framework's libbt.a so a BLE GATT server fits in
+# classic ESP32's 128KB IRAM alongside WiFi + Inkplate driver. The stock
+# pioarduino prebuilt overflows by ~4KB because it ships with Classic BT,
+# A2DP, AVRCP, SPP, HFP, BLE Mesh, BLUFI all enabled.
+#
+# Strategy: keep the Bluedroid host (so pioarduino's hardcoded `-lbt`
+# link line keeps working unchanged), but disable everything we don't
+# need, and switch the BT controller from BTDM (BLE+Classic combined) to
+# BLE-only — that controller change is the biggest single IRAM win.
+#
+# We do NOT switch to NimBLE here because pioarduino's pioarduino-build.py
+# hardcodes Bluedroid-style library names; switching hosts would require
+# patching that file too. Slimming Bluedroid gives us enough.
+
+# --- Controller: BLE only -------------------------------------------------
+# Drops BR/EDR controller code from libbtdm_app.a — biggest IRAM saving.
+# CONFIG_BTDM_CTRL_MODE_BTDM is not set
+# CONFIG_BTDM_CTRL_MODE_BR_EDR_ONLY is not set
+CONFIG_BTDM_CTRL_MODE_BLE_ONLY=y
+
+# --- Host: keep Bluedroid, drop everything we don't need ------------------
+# CONFIG_BT_CLASSIC_ENABLED is not set
+# CONFIG_BT_A2DP_ENABLE is not set
+# CONFIG_BT_AVRCP_ENABLED is not set
+# CONFIG_BT_SPP_ENABLED is not set
+# CONFIG_BT_HFP_ENABLE is not set
+# CONFIG_BT_HFP_CLIENT_ENABLE is not set
+# CONFIG_BT_HFP_AG_ENABLE is not set
+# CONFIG_BT_GOEPC_ENABLED is not set
+
+# NOTE: GATTC stays enabled. We don't need it, but Arduino-ESP32's bundled
+# BLE library's BLEClient.cpp hardcodes esp_ble_gattc_* calls and won't
+# compile out, so disabling GATTC fails the firmware link. The IRAM saving
+# from disabling it would be small (host-side only — controller is unaffected).
+
+# Extras we don't use.
+# CONFIG_BLE_MESH is not set
+# CONFIG_BT_BLE_BLUFI_ENABLE is not set
+# CONFIG_USE_BLE_ONLY_FOR_COMMISSIONING is not set
