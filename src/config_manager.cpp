@@ -508,7 +508,7 @@ bool startWiFiManager(bool forcePortal)
     int dn = snprintf(dp, dremaining,
         "<br/><label for='dither_kern'>Dither Kernel</label>"
         "<select name='dither_kern' id='dither_kern' class='button'>"
-        "<option value='0'%s>None</option>",
+        "<option value='0'%s>none</option>",
         plateCfg.ditherKernel == 0 ? " selected" : "");
     advance(dn);
     for (uint8_t i = 0; i < DITHER_KERNEL_COUNT; i++)

@@ -243,6 +243,7 @@ void sendHAConfig()
   doc["value_template"] = "{{ value_json.signal }}";
   doc["expire_after"] = expireAfter;
   doc["entity_category"] = "diagnostic";
+  doc["enabled_by_default"] = false;
   doc["device"] = deviceInfo;
   serializeJson(doc, buff);
   snprintf(configTopic, sizeof(configTopic), "%s/config", mqttBaseSensor("wifi_signal"));
@@ -275,6 +276,8 @@ void sendHAConfig()
   doc["unit_of_measurement"] = "V";
   doc["value_template"] = "{{ value_json.voltage }}";
   doc["expire_after"] = expireAfter;
+  doc["entity_category"] = "diagnostic";
+  doc["enabled_by_default"] = false;
   doc["device"] = deviceInfo;
   serializeJson(doc, buff);
   snprintf(configTopic, sizeof(configTopic), "%s/config", mqttBaseSensor("voltage"));
@@ -369,6 +372,7 @@ void sendHAConfig()
   doc["json_attributes_topic"] = state_topic_low_battery_alert;
   doc["icon"] = "mdi:battery-alert";
   doc["entity_category"] = "diagnostic";
+  doc["enabled_by_default"] = false;
   doc["device"] = deviceInfo;
   serializeJson(doc, buff);
   snprintf(configTopic, sizeof(configTopic), "%s/config", mqttBaseSensor("low_battery_alert"));
@@ -412,26 +416,27 @@ struct ConfigEntity {
   const char *const *options;  // null-terminated for CT_ENUM_STR
   bool sensitive;              // mask in serial logs
   void (*applyFn)();           // optional post-write hook
+  bool diagnostic;             // entity_category=diagnostic instead of config
 };
 
 static const char *const activityOpts[] = {"HomeAssistant", "Trmnl", "OpenDisplay", "Info", "GuestWifi", nullptr};
 
 static const ConfigEntity configEntities[] = {
-  {"sleep_min",    "Sleep Minutes",       "mdi:timer-sand",               HC_NUMBER,        CT_U16,      &plateCfg.sleepMinutes,           0,                                       1, 1440,  "min", nullptr,      false, nullptr},
-  {"quick_sleep",  "Quick Sleep Seconds", "mdi:timer",                    HC_NUMBER,        CT_U16,      &plateCfg.quickSleepSec,          0,                                       0, 86400, "s",   nullptr,      false, nullptr},
-  {"def_activity", "Default Activity",    "mdi:application",              HC_SELECT,        CT_ENUM_STR, plateCfg.defaultActivityStr,      sizeof(plateCfg.defaultActivityStr),     0, 0,     nullptr, activityOpts, false, nullptr},
-  {"image_url",    "Image URL",           "mdi:link-variant",             HC_TEXT,          CT_STR,      plateCfg.imageUrl,                sizeof(plateCfg.imageUrl),               0, 0,     nullptr, nullptr,      false, nullptr},
-  {"trmnl_url",    "TRMNL URL",           "mdi:link-variant",             HC_TEXT,          CT_STR,      plateCfg.trmnlUrl,                sizeof(plateCfg.trmnlUrl),               0, 0,     nullptr, nullptr,      false, nullptr},
-  {"trmnl_id",     "TRMNL ID",            "mdi:identifier",               HC_TEXT,          CT_STR,      plateCfg.trmnlId,                 sizeof(plateCfg.trmnlId),                0, 0,     nullptr, nullptr,      false, nullptr},
-  {"trmnl_token",  "TRMNL Token",         "mdi:key",                      HC_TEXT_PASSWORD, CT_STR,      plateCfg.trmnlToken,              sizeof(plateCfg.trmnlToken),             0, 0,     nullptr, nullptr,      true,  nullptr},
-  {"trmnl_log",    "TRMNL Logging",       "mdi:text-box-outline",         HC_SWITCH,        CT_BOOL,     &plateCfg.trmnlEnableLog,         0,                                       0, 0,     nullptr, nullptr,      false, nullptr},
-  {"od_port",      "OpenDisplay Port",    "mdi:numeric",                  HC_NUMBER,        CT_U16,      &plateCfg.odListenPort,           0,                                       1, 65535, nullptr, nullptr,      false, nullptr},
-  {"od_listen_s",  "OpenDisplay Listen",  "mdi:timer-sync",               HC_NUMBER,        CT_U16,      &plateCfg.odListenSec,            0,                                       1, 3600,  "s",   nullptr,      false, nullptr},
-  {"dither_kern",  "Dither Kernel",       "mdi:image-filter-black-white", HC_SELECT,        CT_DITHER,   &plateCfg.ditherKernel,           0,                                       0, 0,     nullptr, nullptr,      false, nullptr},
-  {"disp_time",    "Show Update Time",    "mdi:clock-outline",            HC_SWITCH,        CT_BOOL,     &plateCfg.displayLastUpdateTime,  0,                                       0, 0,     nullptr, nullptr,      false, nullptr},
-  {"timezone",     "Timezone (POSIX TZ)", "mdi:earth",                    HC_TEXT,          CT_STR,      plateCfg.timezone,                sizeof(plateCfg.timezone),               0, 0,     nullptr, nullptr,      false, applyTimezone},
-  {"qr_name",      "Guest WiFi SSID",     "mdi:wifi",                     HC_TEXT,          CT_STR,      plateCfg.qrWifiName,              sizeof(plateCfg.qrWifiName),             0, 0,     nullptr, nullptr,      false, nullptr},
-  {"qr_pass",      "Guest WiFi Password", "mdi:wifi-lock",                HC_TEXT_PASSWORD, CT_STR,      plateCfg.qrWifiPassword,          sizeof(plateCfg.qrWifiPassword),         0, 0,     nullptr, nullptr,      true,  nullptr},
+  // key            name                   icon                            comp              type         valPtr                            valSize                                  min max    unit   options       sens   applyFn        diag
+  {"sleep_min",    "Sleep Minutes",       "mdi:timer-sand",               HC_NUMBER,        CT_U16,      &plateCfg.sleepMinutes,           0,                                       1, 1440,  "min", nullptr,      false, nullptr,       false},
+  {"quick_sleep",  "Quick Sleep Seconds", "mdi:timer",                    HC_NUMBER,        CT_U16,      &plateCfg.quickSleepSec,          0,                                       0, 86400, "s",   nullptr,      false, nullptr,       false},
+  {"def_activity", "Default Activity",    "mdi:application",              HC_SELECT,        CT_ENUM_STR, plateCfg.defaultActivityStr,      sizeof(plateCfg.defaultActivityStr),     0, 0,     nullptr, activityOpts, false, nullptr,       false},
+  {"image_url",    "Image URL",           "mdi:link-variant",             HC_TEXT,          CT_STR,      plateCfg.imageUrl,                sizeof(plateCfg.imageUrl),               0, 0,     nullptr, nullptr,      false, nullptr,       false},
+  {"trmnl_url",    "TRMNL URL",           "mdi:link-variant",             HC_TEXT,          CT_STR,      plateCfg.trmnlUrl,                sizeof(plateCfg.trmnlUrl),               0, 0,     nullptr, nullptr,      false, nullptr,       false},
+  {"trmnl_id",     "TRMNL ID",            "mdi:identifier",               HC_TEXT,          CT_STR,      plateCfg.trmnlId,                 sizeof(plateCfg.trmnlId),                0, 0,     nullptr, nullptr,      false, nullptr,       false},
+  {"trmnl_token",  "TRMNL Token",         "mdi:key",                      HC_TEXT_PASSWORD, CT_STR,      plateCfg.trmnlToken,              sizeof(plateCfg.trmnlToken),             0, 0,     nullptr, nullptr,      true,  nullptr,       false},
+  {"trmnl_log",    "TRMNL Logging",       "mdi:text-box-outline",         HC_SWITCH,        CT_BOOL,     &plateCfg.trmnlEnableLog,         0,                                       0, 0,     nullptr, nullptr,      false, nullptr,       false},
+  {"od_listen_s",  "OpenDisplay Listen",  "mdi:timer-sync",               HC_NUMBER,        CT_U16,      &plateCfg.odListenSec,            0,                                       1, 3600,  "s",   nullptr,      false, nullptr,       false},
+  {"dither_kern",  "Dither Kernel",       "mdi:image-filter-black-white", HC_SELECT,        CT_DITHER,   &plateCfg.ditherKernel,           0,                                       0, 0,     nullptr, nullptr,      false, nullptr,       false},
+  {"disp_time",    "Show Update Time",    "mdi:clock-outline",            HC_SWITCH,        CT_BOOL,     &plateCfg.displayLastUpdateTime,  0,                                       0, 0,     nullptr, nullptr,      false, nullptr,       true},
+  {"timezone",     "Timezone (POSIX TZ)", "mdi:earth",                    HC_TEXT,          CT_STR,      plateCfg.timezone,                sizeof(plateCfg.timezone),               0, 0,     nullptr, nullptr,      false, applyTimezone, false},
+  {"qr_name",      "Guest WiFi SSID",     "mdi:wifi",                     HC_TEXT,          CT_STR,      plateCfg.qrWifiName,              sizeof(plateCfg.qrWifiName),             0, 0,     nullptr, nullptr,      false, nullptr,       false},
+  {"qr_pass",      "Guest WiFi Password", "mdi:wifi-lock",                HC_TEXT_PASSWORD, CT_STR,      plateCfg.qrWifiPassword,          sizeof(plateCfg.qrWifiPassword),         0, 0,     nullptr, nullptr,      true,  nullptr,       false},
 };
 static constexpr size_t configEntitiesCount = sizeof(configEntities) / sizeof(configEntities[0]);
 
@@ -503,7 +508,7 @@ static void publishConfigDiscovery(const ConfigEntity &e, JsonDocument &deviceIn
   if (e.icon) doc["icon"] = e.icon;
   doc["state_topic"] = stTopic;
   doc["command_topic"] = cmdTopic;
-  doc["entity_category"] = "config";
+  doc["entity_category"] = e.diagnostic ? "diagnostic" : "config";
   doc["device"] = deviceInfo;
 
   switch (e.comp)
@@ -520,7 +525,7 @@ static void publishConfigDiscovery(const ConfigEntity &e, JsonDocument &deviceIn
     JsonArray arr = doc["options"].to<JsonArray>();
     if (e.type == CT_DITHER)
     {
-      arr.add(ditherKernelName(0)); // "None"
+      arr.add(ditherKernelName(0)); // "none"
       for (uint8_t i = 1; i <= DITHER_KERNEL_COUNT; i++)
         arr.add(ditherKernelName(i));
     }
@@ -565,7 +570,7 @@ static void publishConfigButtons(JsonDocument &deviceInfo, char *buff, size_t bu
     doc["command_topic"] = btnRebootTopic;
     doc["payload_press"] = "PRESS";
     doc["device_class"] = "restart";
-    doc["entity_category"] = "config";
+    doc["entity_category"] = "diagnostic";
     doc["icon"] = "mdi:restart";
     doc["device"] = deviceInfo;
     serializeJson(doc, buff, buffSz);
