@@ -507,6 +507,11 @@ static void publishConfigDiscovery(const ConfigEntity &e, JsonDocument &deviceIn
   if (e.icon) doc["icon"] = e.icon;
   doc["state_topic"] = stTopic;
   doc["command_topic"] = cmdTopic;
+  // Retain HA's command publishes so a change made while the device is asleep
+  // is delivered on the next subscribe; otherwise the command is dropped and
+  // the device's state-on-connect publish makes the change look like it
+  // reverted. handleConfigCommand() dirty-checks, so retained replays are no-ops.
+  doc["retain"] = true;
   doc["entity_category"] = e.diagnostic ? "diagnostic" : "config";
   doc["device"] = deviceInfo;
 
@@ -585,7 +590,7 @@ static void publishConfigButtons(JsonDocument &deviceInfo, char *buff, size_t bu
     doc["name"] = "Enter Setup Mode";
     doc["command_topic"] = btnSetupTopic;
     doc["payload_press"] = "PRESS";
-    doc["entity_category"] = "config";
+    doc["entity_category"] = "diagnostic";
     doc["icon"] = "mdi:cog-play";
     doc["device"] = deviceInfo;
     serializeJson(doc, buff, buffSz);
@@ -612,7 +617,7 @@ static void subscribeConfigCommands()
 }
 
 // Return true if the topic was handled by the config command dispatcher.
-static bool handleConfigCommand(const char *topic, const char *payload, size_t len)
+static bool handleConfigCommand(const char *topic, const char *payload, size_t len, bool isRetained)
 {
   char cmdTopic[128];
   for (size_t i = 0; i < configEntitiesCount; i++)
@@ -621,6 +626,27 @@ static bool handleConfigCommand(const char *topic, const char *payload, size_t l
     cfgCmdTopic(cmdTopic, sizeof(cmdTopic), e.key);
     if (strcmp(topic, cmdTopic) != 0)
       continue;
+
+    // Retained-clear marker (empty payload). Without this guard the empty
+    // string would parse as 0 / false / "" and silently wipe the setting.
+    if (isRetained && len == 0)
+    {
+      Serial.printf("[MQTT][CFG] Skipping empty retained for %s\n", e.key);
+      return true;
+    }
+
+    // Fresh boot policy: NVS wins. A retained /set is a stale instruction
+    // from a previous HA session; applying it would revert WiFi-manager
+    // portal changes (the portal saves to NVS then ESP.restart()s, so the
+    // post-save boot is sleepBoot==false). On sleep-wake we still apply
+    // retained commands — that's how HA-while-asleep changes propagate.
+    if (isRetained && !sleepBoot)
+    {
+      Serial.printf("[MQTT][CFG] Fresh boot, clearing stale retained set for %s\n", e.key);
+      mqttClient.publish(cmdTopic, 1, true, "");
+      publishConfigState(e);
+      return true;
+    }
 
     // Payload is not NUL-terminated; copy into a local buffer.
     char buf[320];
@@ -837,7 +863,7 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
   // true once a topic matches.
   if (handleCmdButton(topic, payload, len))
     return;
-  if (handleConfigCommand(topic, payload, len))
+  if (handleConfigCommand(topic, payload, len, properties.retain))
     return;
 
   if (strcmp(topic, mqttActionTopic) != 0)
