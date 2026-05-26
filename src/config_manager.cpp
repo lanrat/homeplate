@@ -473,7 +473,7 @@ bool startWiFiManager(bool forcePortal)
 
     // Dither kernel dropdown. ditherKernel == 0 means no dithering;
     // values 1..DITHER_KERNEL_COUNT map to Image::DitherKernel + 1. Both the
-    // labels and the "none" entry come from ditherKernelName(), so adding or
+    // labels and the "off" entry come from ditherKernelName(), so adding or
     // renaming a kernel only requires updating DITHER_KERNEL_NAMES.
     char ditherKernelHtml[768];
     char *dp = ditherKernelHtml;

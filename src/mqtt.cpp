@@ -225,7 +225,7 @@ void sendHAConfig()
   // deviceinfo
   JsonDocument deviceInfo;
   deviceInfo.clear();
-  deviceInfo["manufacturer"] = "e-radionica";
+  deviceInfo["manufacturer"] = "Soldered";
   deviceInfo["model"] = DEVICE_MODEL;
   deviceInfo["name"] = plateCfg.mqttDeviceName;
   deviceInfo["sw_version"] = VERSION;
@@ -512,6 +512,12 @@ static void publishConfigDiscovery(const ConfigEntity &e, JsonDocument &deviceIn
   // the device's state-on-connect publish makes the change look like it
   // reverted. handleConfigCommand() dirty-checks, so retained replays are no-ops.
   doc["retain"] = true;
+  // Optimistic UI updates: HA snaps the entity to the new value on command
+  // publish without waiting for the device's state echo (which won't arrive
+  // until the device next wakes from deep sleep). The post-subscribe grace
+  // delay in onMqttConnect prevents our state-echo from briefly clobbering
+  // the optimistic value. Ignored by HA for components that don't support it.
+  doc["optimistic"] = true;
   doc["entity_category"] = e.diagnostic ? "diagnostic" : "config";
   doc["device"] = deviceInfo;
 
@@ -529,7 +535,7 @@ static void publishConfigDiscovery(const ConfigEntity &e, JsonDocument &deviceIn
     JsonArray arr = doc["options"].to<JsonArray>();
     if (e.type == CT_DITHER)
     {
-      arr.add(ditherKernelName(0)); // "none"
+      arr.add(ditherKernelName(0)); // "off"
       for (uint8_t i = 1; i <= DITHER_KERNEL_COUNT; i++)
         arr.add(ditherKernelName(i));
     }
@@ -542,12 +548,15 @@ static void publishConfigDiscovery(const ConfigEntity &e, JsonDocument &deviceIn
   }
   case HC_TEXT:
     doc["min"] = 0;
-    doc["max"] = (uint32_t)(e.valSize - 1);
+    // HA's mqtt.text platform rejects entities with max > 255 (silently — the
+    // entity just never appears), so always advertise 255 regardless of the
+    // NVS slot size. Real values are short enough that this isn't a constraint.
+    doc["max"] = 255;
     doc["mode"] = "text";
     break;
   case HC_TEXT_PASSWORD:
     doc["min"] = 0;
-    doc["max"] = (uint32_t)(e.valSize - 1);
+    doc["max"] = 255;
     doc["mode"] = "password";
     break;
   case HC_SWITCH:
@@ -813,6 +822,13 @@ void onMqttConnect(bool sessionPresent)
     sendHAConfig();
     mqttPublishDitherOptions();
   }
+
+  // Brief grace period so the broker can deliver any retained /set commands
+  // (queued by HA while we were asleep) before we re-publish state. Without
+  // this, publishAllConfigStates would echo the pre-command NVS value and
+  // briefly override HA's optimistic UI update before the retained set is
+  // processed and the post-apply state echo arrives.
+  vTaskDelay(200 / portTICK_PERIOD_MS);
 
   // Always publish current config state (retained) so HA stays in sync.
   publishAllConfigStates();

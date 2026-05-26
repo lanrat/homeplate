@@ -135,12 +135,13 @@ void setPendingDitherOverride(int8_t v);
 //           0 = explicit "none" (no dithering),
 //         1-N = library DitherKernel + 1 (matches plateCfg.ditherKernel encoding).
 int8_t parseDitherName(const char *name);
-// Fills out with a JSON array of canonical supported dither names (including "none").
+// Fills out with a JSON array of canonical supported dither names (including "off").
 // Returns bytes written (excluding NUL), or 0 on overflow.
 size_t buildDitherOptionsJson(char *out, size_t outSize);
 // Returns the human-readable name for a ditherKernel config value.
-// 0 → "none"; 1..DITHER_KERNEL_COUNT → the corresponding library kernel
-// name; anything out of range → "(unknown)".
+// 0 → "off" ("none" rendered as Unknown by HA's mqtt.select);
+// 1..DITHER_KERNEL_COUNT → the corresponding library kernel name;
+// anything out of range → "(unknown)".
 const char *ditherKernelName(uint8_t value);
 uint16_t centerTextX(const char *t, int16_t x1, int16_t x2, int16_t y, bool lock = true);
 void displayStatusMessage(const char *format, ...);
