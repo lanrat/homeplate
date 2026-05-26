@@ -1,7 +1,17 @@
 #include <WiFiManager.h>
 #include <Preferences.h>
+#include <esp_mac.h>
 #include <qrcode.h>
 #include "homeplate.h"
+
+// Last 2 bytes of the WiFi STA MAC as lowercase hex, e.g. "a1b2".
+// Used to make per-device defaults unique on networks with multiple HomePlates.
+static void macSuffix(char *out, size_t outSize)
+{
+    uint8_t mac[6] = {0};
+    esp_read_mac(mac, ESP_MAC_WIFI_STA);
+    snprintf(out, outSize, "%02x%02x", mac[4], mac[5]);
+}
 
 void renderQR(QRCode qrcode, uint32_t x, uint32_t y, uint32_t size);
 
@@ -90,8 +100,15 @@ void logConfig()
 
 void loadConfig()
 {
+    char macSfx[5];
+    macSuffix(macSfx, sizeof(macSfx));
+
     // Initialize with compile-time defaults
     strlcpy(plateCfg.hostname, HOSTNAME, sizeof(plateCfg.hostname));
+    // Auto-suffix the project default so multiple stock-flashed devices don't
+    // collide on hostname / MQTT client_id. A user-overridden HOSTNAME wins.
+    if (strcmp(plateCfg.hostname, "homeplate") == 0)
+        snprintf(plateCfg.hostname, sizeof(plateCfg.hostname), "homeplate-%s", macSfx);
     strlcpy(plateCfg.staticIp, STATIC_IP, sizeof(plateCfg.staticIp));
     strlcpy(plateCfg.staticSubnet, STATIC_SUBNET, sizeof(plateCfg.staticSubnet));
     strlcpy(plateCfg.staticGateway, STATIC_GATEWAY, sizeof(plateCfg.staticGateway));
@@ -112,7 +129,9 @@ void loadConfig()
     plateCfg.mqttPort = MQTT_PORT;
     strlcpy(plateCfg.mqttUser, MQTT_USER, sizeof(plateCfg.mqttUser));
     strlcpy(plateCfg.mqttPassword, MQTT_PASSWORD, sizeof(plateCfg.mqttPassword));
-    strlcpy(plateCfg.mqttNodeId, MQTT_NODE_ID, sizeof(plateCfg.mqttNodeId));
+    // mqttNodeId is locked to the MAC — never loaded from NVS, never user-editable.
+    // This makes HA entity_ids stable across hostname/devicename renames.
+    snprintf(plateCfg.mqttNodeId, sizeof(plateCfg.mqttNodeId), "homeplate_%s", macSfx);
     strlcpy(plateCfg.mqttDeviceName, MQTT_DEVICE_NAME, sizeof(plateCfg.mqttDeviceName));
     plateCfg.mqttExpireAfterSec = MQTT_EXPIRE_AFTER_SEC;
     plateCfg.displayLastUpdateTime = DISPLAY_LAST_UPDATE_TIME;
@@ -143,7 +162,6 @@ void loadConfig()
     plateCfg.mqttPort = preferences.getUShort("mqtt_port", plateCfg.mqttPort);
     loadString("mqtt_user", plateCfg.mqttUser, sizeof(plateCfg.mqttUser), plateCfg.mqttUser);
     loadString("mqtt_pass", plateCfg.mqttPassword, sizeof(plateCfg.mqttPassword), plateCfg.mqttPassword);
-    loadString("mqtt_nodeid", plateCfg.mqttNodeId, sizeof(plateCfg.mqttNodeId), plateCfg.mqttNodeId);
     loadString("mqtt_devname", plateCfg.mqttDeviceName, sizeof(plateCfg.mqttDeviceName), plateCfg.mqttDeviceName);
     plateCfg.mqttExpireAfterSec = preferences.getUInt("mqtt_expire", plateCfg.mqttExpireAfterSec);
     plateCfg.displayLastUpdateTime = preferences.getBool("disp_time", plateCfg.displayLastUpdateTime);
@@ -155,9 +173,9 @@ void loadConfig()
     preferences.end();
 
     // Compute derived defaults
-    if (strlen(plateCfg.mqttNodeId) == 0)
+    if (strlen(plateCfg.mqttDeviceName) == 0)
     {
-        strlcpy(plateCfg.mqttNodeId, plateCfg.hostname, sizeof(plateCfg.mqttNodeId));
+        strlcpy(plateCfg.mqttDeviceName, plateCfg.hostname, sizeof(plateCfg.mqttDeviceName));
     }
     if (plateCfg.sleepMinutes < 1)
     {
@@ -209,7 +227,6 @@ void saveConfig()
     preferences.putUShort("mqtt_port", plateCfg.mqttPort);
     saveString("mqtt_user", plateCfg.mqttUser);
     saveString("mqtt_pass", plateCfg.mqttPassword);
-    saveString("mqtt_nodeid", plateCfg.mqttNodeId);
     saveString("mqtt_devname", plateCfg.mqttDeviceName);
     preferences.putUInt("mqtt_expire", plateCfg.mqttExpireAfterSec);
     preferences.putBool("disp_time", plateCfg.displayLastUpdateTime);
@@ -445,8 +462,7 @@ bool startWiFiManager(bool forcePortal)
     WiFiManagerParameter p_mqport("mqtt_port", "MQTT Port", mqttPortStr, 7, "type=\"number\" min=\"1\" max=\"65535\"");
     WiFiManagerParameter p_mquser("mqtt_user", "MQTT User", plateCfg.mqttUser, sizeof(plateCfg.mqttUser) - 1);
     WiFiManagerParameter p_mqpass("mqtt_pass", "MQTT Password", plateCfg.mqttPassword, sizeof(plateCfg.mqttPassword) - 1);
-    WiFiManagerParameter p_mqnid("mqtt_nodeid", "MQTT Node ID (blank=hostname)", plateCfg.mqttNodeId, sizeof(plateCfg.mqttNodeId) - 1);
-    WiFiManagerParameter p_mqdn("mqtt_devname", "MQTT Device Name", plateCfg.mqttDeviceName, sizeof(plateCfg.mqttDeviceName) - 1);
+    WiFiManagerParameter p_mqdn("mqtt_devname", "MQTT Device Name (blank=hostname)", plateCfg.mqttDeviceName, sizeof(plateCfg.mqttDeviceName) - 1);
     char mqttExpStr[12];
     snprintf(mqttExpStr, sizeof(mqttExpStr), "%u", plateCfg.mqttExpireAfterSec);
     WiFiManagerParameter p_mqexp("mqtt_expire", "MQTT Expire After Sec (0=auto)", mqttExpStr, 11, "type=\"number\" min=\"0\"");
@@ -528,7 +544,6 @@ bool startWiFiManager(bool forcePortal)
     wm.addParameter(&p_mqport);
     wm.addParameter(&p_mquser);
     wm.addParameter(&p_mqpass);
-    wm.addParameter(&p_mqnid);
     wm.addParameter(&p_mqdn);
     wm.addParameter(&p_mqexp);
 
@@ -567,7 +582,6 @@ bool startWiFiManager(bool forcePortal)
         plateCfg.mqttPort = (mp > 0) ? mp : 1883;
         strlcpy(plateCfg.mqttUser, p_mquser.getValue(), sizeof(plateCfg.mqttUser));
         strlcpy(plateCfg.mqttPassword, p_mqpass.getValue(), sizeof(plateCfg.mqttPassword));
-        strlcpy(plateCfg.mqttNodeId, p_mqnid.getValue(), sizeof(plateCfg.mqttNodeId));
         strlcpy(plateCfg.mqttDeviceName, p_mqdn.getValue(), sizeof(plateCfg.mqttDeviceName));
         plateCfg.mqttExpireAfterSec = atoi(p_mqexp.getValue());
         plateCfg.displayLastUpdateTime = (strncmp(p_dtime.getValue(), "T", 1) == 0);
@@ -576,8 +590,8 @@ bool startWiFiManager(bool forcePortal)
         plateCfg.enableOta = (strncmp(p_ota.getValue(), "T", 1) == 0);
 
         // Compute derived
-        if (strlen(plateCfg.mqttNodeId) == 0)
-            strlcpy(plateCfg.mqttNodeId, plateCfg.hostname, sizeof(plateCfg.mqttNodeId));
+        if (strlen(plateCfg.mqttDeviceName) == 0)
+            strlcpy(plateCfg.mqttDeviceName, plateCfg.hostname, sizeof(plateCfg.mqttDeviceName));
 
         // Apply timezone
         applyTimezone();
