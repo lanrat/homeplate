@@ -29,7 +29,7 @@ static_assert(sizeof(DITHER_KERNEL_NAMES) / sizeof(DITHER_KERNEL_NAMES[0]) == DI
 const char *ditherKernelName(uint8_t value)
 {
     if (value == 0)
-        return "None";
+        return "none";
     uint8_t index = value - 1;
     if (index < DITHER_KERNEL_COUNT)
         return DITHER_KERNEL_NAMES[index];
