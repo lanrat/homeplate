@@ -88,11 +88,8 @@
 #ifndef MQTT_PASSWORD
 #define MQTT_PASSWORD ""
 #endif
-#ifndef MQTT_NODE_ID
-#define MQTT_NODE_ID ""
-#endif
 #ifndef MQTT_DEVICE_NAME
-#define MQTT_DEVICE_NAME "HomePlate"
+#define MQTT_DEVICE_NAME ""
 #endif
 #ifndef MQTT_EXPIRE_AFTER_SEC
 #define MQTT_EXPIRE_AFTER_SEC 0
