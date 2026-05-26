@@ -471,10 +471,10 @@ bool startWiFiManager(bool forcePortal)
     WiFiManagerParameter h_disp("<hr><h3>Display &amp; OTA</h3>");
     WiFiManagerParameter p_dtime("disp_time", "Show Update Time", "T", 2, plateCfg.displayLastUpdateTime ? "type=\"checkbox\" style=\"margin-top:0.5em\" checked" : "type=\"checkbox\" style=\"margin-top:0.5em\"", WFM_LABEL_AFTER);
 
-    // Dither kernel dropdown. ditherKernel == 0 means "None" (no dithering);
-    // values 1..DITHER_KERNEL_COUNT map to Image::DitherKernel + 1. Options are
-    // built from DITHER_KERNEL_NAMES so adding a kernel only requires updating
-    // that one table.
+    // Dither kernel dropdown. ditherKernel == 0 means no dithering;
+    // values 1..DITHER_KERNEL_COUNT map to Image::DitherKernel + 1. Both the
+    // labels and the "none" entry come from ditherKernelName(), so adding or
+    // renaming a kernel only requires updating DITHER_KERNEL_NAMES.
     char ditherKernelHtml[768];
     char *dp = ditherKernelHtml;
     size_t dremaining = sizeof(ditherKernelHtml);
@@ -490,18 +490,15 @@ bool startWiFiManager(bool forcePortal)
     };
     int dn = snprintf(dp, dremaining,
         "<br/><label for='dither_kern'>Dither Kernel</label>"
-        "<select name='dither_kern' id='dither_kern' class='button'>"
-        "<option value='0'%s>none</option>",
-        plateCfg.ditherKernel == 0 ? " selected" : "");
+        "<select name='dither_kern' id='dither_kern' class='button'>");
     advance(dn);
-    for (uint8_t i = 0; i < DITHER_KERNEL_COUNT; i++)
+    for (uint8_t i = 0; i <= DITHER_KERNEL_COUNT; i++)
     {
-        uint8_t cfgVal = i + 1; // config values are library enum + 1
         dn = snprintf(dp, dremaining,
             "<option value='%u'%s>%s</option>",
-            cfgVal,
-            plateCfg.ditherKernel == cfgVal ? " selected" : "",
-            ditherKernelName(cfgVal));
+            i,
+            plateCfg.ditherKernel == i ? " selected" : "",
+            ditherKernelName(i));
         advance(dn);
     }
     snprintf(dp, dremaining, "</select>");
