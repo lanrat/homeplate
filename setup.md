@@ -118,8 +118,7 @@ All settings below can be configured through the WiFi portal. They are saved to 
 | MQTT Port             | MQTT broker port                           | `1883`      |
 | MQTT User             | MQTT username                              | blank       |
 | MQTT Password         | MQTT password                              | blank       |
-| MQTT Node ID          | Node ID for MQTT topics (blank = hostname) | blank       |
-| MQTT Device Name      | Device name in Home Assistant              | `HomePlate` |
+| MQTT Device Name      | HA device name (blank = hostname)          | blank       |
 | MQTT Expire After Sec | Sensor expiry time in seconds (0 = auto)   | `0`         |
 
 ### Display & OTA

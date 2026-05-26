@@ -41,8 +41,10 @@ struct HomePlateConfig {
     uint16_t mqttPort;
     char mqttUser[65];
     char mqttPassword[65];
+    // Derived from WiFi MAC at boot; not user-configurable. Format: "homeplate_<last2bytesMAC>".
+    // Stable across renames so HA entity history survives hostname / device-name edits.
     char mqttNodeId[33];
-    char mqttDeviceName[33];
+    char mqttDeviceName[33]; // HA device display name; defaults to hostname when blank
     uint32_t mqttExpireAfterSec; // 0 = auto-compute from sleep time
 
     // Display
