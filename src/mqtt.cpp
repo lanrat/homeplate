@@ -231,6 +231,10 @@ void sendHAConfig()
   deviceInfo["sw_version"] = VERSION;
   deviceInfo["identifiers"][0] = plateCfg.mqttNodeId;
   deviceInfo["identifiers"][1] = macaddr;
+  // Surface the WiFi MAC on the HA device card and let HA correlate this
+  // device with DHCP / Zeroconf records.
+  deviceInfo["connections"][0][0] = "mac";
+  deviceInfo["connections"][0][1] = macaddr;
 
   // wifi RSSI
   doc.clear();
