@@ -1007,10 +1007,18 @@ void onMqttUnsubscribe(uint16_t packetId)
 
 void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
 {
-  if (!topic || !payload) {
-    Serial.println("[MQTT] Invalid message: null topic or payload");
+  if (!topic) {
+    Serial.println("[MQTT] Invalid message: null topic");
     return;
   }
+  // AsyncMqttClient delivers empty retained publishes (e.g. the device's
+  // own clear-on-handle publishes to action/<key>/set echoed back via the
+  // subscription) as payload=NULL, len=0. Treat them as legitimate empty
+  // messages — handleConfigCommand / handleActionCommand both early-out
+  // on len==0. Substitute a 1-byte buffer so memcpy(buf, payload, 0) is
+  // strictly defined per C standard.
+  static char emptyPayload[1] = {0};
+  if (!payload) payload = emptyPayload;
 
   const size_t MAX_MQTT_PAYLOAD_SIZE = 8192;
   if (len > MAX_MQTT_PAYLOAD_SIZE) {
