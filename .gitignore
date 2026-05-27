@@ -5,3 +5,4 @@
 .vscode/launch.json
 src/config.h
 src/config.cpp
+vendor/

@@ -74,7 +74,33 @@ The HomePlate makes use of [MQTT Discovery](https://www.home-assistant.io/docs/m
 
 For example dashboard yaml see [dashboard.md](dashboard.md).
 
-### MQTT Commands
+### Activity Actions (HA Discovery)
+
+HomePlate publishes a set of one-shot activity controls via MQTT Discovery. They appear under the existing HomePlate device in HA and are the recommended way to trigger activities from the UI — no automation or template needed.
+
+| Entity | HA component | Topic slug | Effect |
+|---|---|---|---|
+| Show Guest WiFi QR | button | `run_qr` | Starts the GuestWifi activity (renders the configured Wi-Fi QR) |
+| Show Info | button | `run_info` | Starts the Info activity |
+| Show HomeAssistant | button | `run_hass` | Starts the HomeAssistant activity (uses configured Image URL) |
+| Show TRMNL | button | `run_trmnl` | Starts the TRMNL activity |
+| Show OpenDisplay | button | `run_opendisplay` | Starts the OpenDisplay activity (advertises the device for OpenDisplay clients during the configured listen window) |
+| Display Message | text | `run_message` | Renders the typed string as a text message |
+| Display Image URL | text | `run_img` | Downloads and displays the image at the typed URL |
+| Display QR Code | text | `run_qrtext` | Encodes the typed string as a QR code and displays it (auto-sizes to fit content up to ~2.9KB) |
+
+**Topics** (where `<node>` is `mqtt_node_id`, default `homeplate_<mac>`):
+
+- Command: `homeplate/<node>/action/<slug>/set` — retained. For buttons HA sends `PRESS`; for text entities HA sends the typed value as the payload.
+- State (text entities only, retained): `homeplate/<node>/action/<slug>/state` — the device clears this after each action so the same value can be re-submitted in HA.
+
+**One-shot semantics:** the device clears the retained command immediately after handling so the action doesn't refire on reconnect. Triggers received while the device is asleep are delivered on the next wake.
+
+**Multiple actions back-to-back:** each received action bumps the device's sleep deadline by 10 seconds and aborts any in-flight default activity, so chained taps from HA stay inside the wake window without getting stuck behind a stale default render.
+
+### MQTT Commands (raw `activity/run` topic)
+
+The `activity/run` topic is still supported for automations or scripts that need to bundle multiple fields (action + dither + refresh) in one publish. The HA-native action entities above wrap the common cases for interactive use; `activity/run` remains the right tool for everything else.
 
 You can change the activity running on the HomePlate by publishing the following MQTT message to the topic: `homeplate/<mqtt_node_id>/activity/run` which defaults to `homeplate/homeplate/activity/run`
 
@@ -165,7 +191,7 @@ The dither kernel used to convert the image to e-ink can be overridden per-reque
 }
 ```
 
-Accepted names are case-insensitive and ignore spaces, hyphens, and underscores: `none` / `false` / `off` / `""`, `floyd-steinberg`, `jarvis-judice-ninke`, `atkinson`, `burkes`, `stucki`, `sierra-lite`, `reduced-diffusion`. Unknown names log an error and fall back to the configured default.
+Accepted names are case-insensitive and ignore spaces, hyphens, and underscores: `off` / `none` / `false` / `""`, `floyd-steinberg`, `jarvis-judice-ninke`, `atkinson`, `burkes`, `stucki`, `sierra-lite`, `reduced-diffusion`. Unknown names log an error and fall back to the configured default. (The HA `Dither Kernel` select uses `off` as the canonical label for value 0, since HA's `mqtt.select` treats the string `none` as a reset.)
 
 #### HTTP `X-Dither` response header
 
@@ -182,7 +208,7 @@ homeplate/<mqtt_node_id>/dither/options
 Example payload:
 
 ```json
-["none","Floyd-Steinberg","Jarvis-Judice-Ninke","Atkinson","Burkes","Stucki","Sierra-Lite","Reduced-Diffusion"]
+["off","Floyd-Steinberg","Jarvis-Judice-Ninke","Atkinson","Burkes","Stucki","Sierra-Lite","Reduced-Diffusion"]
 ```
 
 Names are matched case-insensitively and ignore hyphens/underscores/spaces, so `"atkinson"`, `"Atkinson"`, and `"AT KIN SON"` all work.
@@ -203,13 +229,13 @@ Settings that previously could only be changed through the WiFiManager setup por
 | TRMNL ID | text | `trmnl_id` | up to 64 chars | next TRMNL activity |
 | TRMNL Token | text (password) | `trmnl_token` | up to 64 chars | next TRMNL activity |
 | TRMNL Logging | switch | `trmnl_log` | ON / OFF | next TRMNL activity |
-| Dither Kernel | select | `dither_kern` | None + each kernel name | next image render |
+| Dither Kernel | select | `dither_kern` | `off` + each kernel name | next image render |
 | Show Update Time | switch | `disp_time` | ON / OFF | next render |
 | Timezone | text | `timezone` | POSIX TZ string | immediate (no reboot) |
 | Guest WiFi SSID | text | `qr_name` | up to 64 chars | next GuestWifi render |
 | Guest WiFi Password | text (password) | `qr_pass` | up to 64 chars | next GuestWifi render |
-| Reboot | button | `cmd/reboot` | — | immediate |
-| Enter Setup Mode | button | `cmd/setup_mode` | — | reboots into WiFiManager portal |
+| Reboot | button (diagnostic) | `cmd/reboot` | — | immediate |
+| Enter Setup Mode | button (diagnostic) | `cmd/setup_mode` | — | reboots into WiFiManager portal |
 
 **Topics** (where `<node>` is `mqtt_node_id`, default `homeplate`):
 
@@ -222,6 +248,16 @@ Settings that previously could only be changed through the WiFiManager setup por
 **Sensitive fields:** `trmnl_token` and `qr_pass` are exposed as HA password-mode text. The values still pass over MQTT in cleartext and are retained on the broker — anyone with broker access can read them. If that is unacceptable, leave them blank in HA and set them only via the WiFiManager portal.
 
 **Idempotency:** every command is value-compared against the current setting before NVS is rewritten, so retained replays on reconnect do not cause repeated flash writes.
+
+### Command retain & boot semantics
+
+The HomePlate sleeps deeply between renders, so commands sent while it's offline need to survive on the broker. The discovery payload tells HA to publish all config commands with `retain: true`, and the device picks them up on the next subscribe.
+
+- **Sleep-wake:** the device honors retained `/set` commands on connect — that's the path your HA changes take.
+- **Fresh boot** (power-on, WiFiManager portal save, HA Reboot button, watchdog): retained `/set` commands are *ignored* and cleared from the broker. NVS wins. This prevents a portal-saved value from being immediately overwritten by a stale HA command that's been sitting on the broker.
+- **Edge case:** if you change a config in HA and then immediately fire the Reboot button before the device's next wake, the change is lost on the fresh-boot clear. Wait one sleep cycle between the change and a manual reboot.
+
+After every wake the device holds 200ms after subscribing before publishing its current state, so HA's optimistic UI update isn't immediately clobbered by an echoed pre-command value. It also holds 250ms before starting the boot-time default activity (when MQTT is configured), giving the broker a window to deliver any retained activity action so the user's HA-side action runs immediately instead of after the default.
 
 ### Home Plate Card Example
 

@@ -225,12 +225,16 @@ void sendHAConfig()
   // deviceinfo
   JsonDocument deviceInfo;
   deviceInfo.clear();
-  deviceInfo["manufacturer"] = "e-radionica";
+  deviceInfo["manufacturer"] = "Soldered";
   deviceInfo["model"] = DEVICE_MODEL;
   deviceInfo["name"] = plateCfg.mqttDeviceName;
   deviceInfo["sw_version"] = VERSION;
   deviceInfo["identifiers"][0] = plateCfg.mqttNodeId;
   deviceInfo["identifiers"][1] = macaddr;
+  // Surface the WiFi MAC on the HA device card and let HA correlate this
+  // device with DHCP / Zeroconf records.
+  deviceInfo["connections"][0][0] = "mac";
+  deviceInfo["connections"][0][1] = macaddr;
 
   // wifi RSSI
   doc.clear();
@@ -509,6 +513,17 @@ static void publishConfigDiscovery(const ConfigEntity &e, JsonDocument &deviceIn
   if (e.icon) doc["icon"] = e.icon;
   doc["state_topic"] = stTopic;
   doc["command_topic"] = cmdTopic;
+  // Retain HA's command publishes so a change made while the device is asleep
+  // is delivered on the next subscribe; otherwise the command is dropped and
+  // the device's state-on-connect publish makes the change look like it
+  // reverted. handleConfigCommand() dirty-checks, so retained replays are no-ops.
+  doc["retain"] = true;
+  // Optimistic UI updates: HA snaps the entity to the new value on command
+  // publish without waiting for the device's state echo (which won't arrive
+  // until the device next wakes from deep sleep). The post-subscribe grace
+  // delay in onMqttConnect prevents our state-echo from briefly clobbering
+  // the optimistic value. Ignored by HA for components that don't support it.
+  doc["optimistic"] = true;
   doc["entity_category"] = e.diagnostic ? "diagnostic" : "config";
   doc["device"] = deviceInfo;
 
@@ -526,7 +541,7 @@ static void publishConfigDiscovery(const ConfigEntity &e, JsonDocument &deviceIn
     JsonArray arr = doc["options"].to<JsonArray>();
     if (e.type == CT_DITHER)
     {
-      arr.add(ditherKernelName(0)); // "none"
+      arr.add(ditherKernelName(0)); // "off"
       for (uint8_t i = 1; i <= DITHER_KERNEL_COUNT; i++)
         arr.add(ditherKernelName(i));
     }
@@ -539,12 +554,15 @@ static void publishConfigDiscovery(const ConfigEntity &e, JsonDocument &deviceIn
   }
   case HC_TEXT:
     doc["min"] = 0;
-    doc["max"] = (uint32_t)(e.valSize - 1);
+    // HA's mqtt.text platform rejects entities with max > 255 (silently — the
+    // entity just never appears), so always advertise 255 regardless of the
+    // NVS slot size. Real values are short enough that this isn't a constraint.
+    doc["max"] = 255;
     doc["mode"] = "text";
     break;
   case HC_TEXT_PASSWORD:
     doc["min"] = 0;
-    doc["max"] = (uint32_t)(e.valSize - 1);
+    doc["max"] = 255;
     doc["mode"] = "password";
     break;
   case HC_SWITCH:
@@ -587,7 +605,7 @@ static void publishConfigButtons(JsonDocument &deviceInfo, char *buff, size_t bu
     doc["name"] = "Enter Setup Mode";
     doc["command_topic"] = btnSetupTopic;
     doc["payload_press"] = "PRESS";
-    doc["entity_category"] = "config";
+    doc["entity_category"] = "diagnostic";
     doc["icon"] = "mdi:cog-play";
     doc["device"] = deviceInfo;
     serializeJson(doc, buff, buffSz);
@@ -599,6 +617,154 @@ static void publishAllConfigStates()
 {
   for (size_t i = 0; i < configEntitiesCount; i++)
     publishConfigState(configEntities[i]);
+}
+
+// ============================================================================
+// Action entities — one-shot HA controls that trigger an Activity on the
+// device. Each entity has its own per-key command topic; the device clears
+// the retained command after handling so it doesn't refire on reconnect.
+// Buttons take no payload. Text entities forward the typed value via
+// setMessage() before starting the activity.
+// ============================================================================
+
+enum ActionComp { AC_BUTTON, AC_TEXT };
+
+struct ActionEntity {
+  const char *key;         // topic slug, e.g. "run_qr"
+  const char *name;        // HA display name
+  const char *icon;
+  ActionComp comp;
+  Activity activity;       // which activity to start when triggered
+  bool wantsPayload;       // true for AC_TEXT (calls setMessage with payload)
+};
+
+static const ActionEntity actionEntities[] = {
+  // key            name                   icon                   comp        activity       wantsPayload
+  {"run_qr",       "Show Guest WiFi QR",  "mdi:qrcode",          AC_BUTTON,  GuestWifi,     false},
+  {"run_info",     "Show Info",           "mdi:information",     AC_BUTTON,  Info,          false},
+  {"run_hass",     "Show HomeAssistant",  "mdi:home-assistant",  AC_BUTTON,  HomeAssistant, false},
+  {"run_trmnl",    "Show TRMNL",          "mdi:newspaper",       AC_BUTTON,  Trmnl,         false},
+  {"run_opendisplay","Show OpenDisplay",  "mdi:cast",            AC_BUTTON,  OpenDisplay,   false},
+  {"run_message",  "Display Message",     "mdi:message-text",    AC_TEXT,    Message,       true},
+  {"run_img",      "Display Image URL",   "mdi:image",           AC_TEXT,    IMG,           true},
+  {"run_qrtext",   "Display QR Code",     "mdi:qrcode-scan",     AC_TEXT,    QRText,        true},
+};
+static constexpr size_t actionEntitiesCount = sizeof(actionEntities) / sizeof(actionEntities[0]);
+
+static void actionCmdTopic(char *buf, size_t sz, const char *key)
+{
+  snprintf(buf, sz, "homeplate/%s/action/%s/set", plateCfg.mqttNodeId, key);
+}
+static void actionStateTopic(char *buf, size_t sz, const char *key)
+{
+  snprintf(buf, sz, "homeplate/%s/action/%s/state", plateCfg.mqttNodeId, key);
+}
+static void actionDiscoveryTopic(char *buf, size_t sz, ActionComp c, const char *key)
+{
+  const char *comp = (c == AC_BUTTON) ? "button" : "text";
+  snprintf(buf, sz, "%s/%s/%s/%s/config", MQTT_DISCOVERY_TOPIC, comp, plateCfg.mqttNodeId, key);
+}
+
+static void publishActionDiscovery(const ActionEntity &e, JsonDocument &deviceInfo, char *buff, size_t buffSz)
+{
+  JsonDocument doc;
+  char cmdTopic[128], stTopic[128], discTopic[160], uniqueId[80];
+  actionCmdTopic(cmdTopic, sizeof(cmdTopic), e.key);
+  actionDiscoveryTopic(discTopic, sizeof(discTopic), e.comp, e.key);
+  snprintf(uniqueId, sizeof(uniqueId), "%s_%s", plateCfg.mqttNodeId, e.key);
+
+  doc["unique_id"] = uniqueId;
+  doc["name"] = e.name;
+  doc["icon"] = e.icon;
+  doc["command_topic"] = cmdTopic;
+  // Retain so a press/send while asleep is delivered on next wake.
+  doc["retain"] = true;
+  doc["device"] = deviceInfo;
+
+  if (e.comp == AC_BUTTON) {
+    doc["payload_press"] = "PRESS";
+  } else {
+    actionStateTopic(stTopic, sizeof(stTopic), e.key);
+    doc["state_topic"] = stTopic;
+    doc["max"] = 255;
+    doc["mode"] = "text";
+  }
+  serializeJson(doc, buff, buffSz);
+  mqttClient.publish(discTopic, 1, true, buff);
+}
+
+static void publishAllActionDiscovery(JsonDocument &deviceInfo, char *buff, size_t buffSz)
+{
+  for (size_t i = 0; i < actionEntitiesCount; i++)
+    publishActionDiscovery(actionEntities[i], deviceInfo, buff, buffSz);
+}
+
+// Publish an empty retained state for every text action entity. Without this,
+// the broker has no retained payload on the state_topic and HA renders the
+// entity as "unknown" until the first action runs.
+static void publishAllActionStates()
+{
+  char stTopic[128];
+  for (size_t i = 0; i < actionEntitiesCount; i++) {
+    const ActionEntity &e = actionEntities[i];
+    if (e.comp != AC_TEXT) continue;
+    actionStateTopic(stTopic, sizeof(stTopic), e.key);
+    mqttClient.publish(stTopic, 1, true, "");
+  }
+}
+
+static void subscribeActionCommands()
+{
+  char cmdTopic[128];
+  for (size_t i = 0; i < actionEntitiesCount; i++) {
+    actionCmdTopic(cmdTopic, sizeof(cmdTopic), actionEntities[i].key);
+    mqttClient.subscribe(cmdTopic, 1);
+  }
+}
+
+// Returns true if the topic matched an action entity.
+static bool handleActionCommand(const char *topic, const char *payload, size_t len)
+{
+  char cmdTopic[128];
+  for (size_t i = 0; i < actionEntitiesCount; i++) {
+    const ActionEntity &e = actionEntities[i];
+    actionCmdTopic(cmdTopic, sizeof(cmdTopic), e.key);
+    if (strcmp(topic, cmdTopic) != 0) continue;
+
+    // Empty payload is either our own retained-clear publish coming back
+    // or a stray clear from somewhere else. Either way, nothing to do.
+    if (len == 0) {
+      return true;
+    }
+
+    char buf[320];
+    size_t copyLen = len < sizeof(buf) - 1 ? len : sizeof(buf) - 1;
+    memcpy(buf, payload, copyLen);
+    buf[copyLen] = '\0';
+
+    Serial.printf("[MQTT][ACT] %s triggered\n", e.key);
+    if (e.wantsPayload) {
+      setMessage(buf);
+    }
+    // Hold sleep longer than startActivity's default 3s bump so a user
+    // firing several actions in a row from HA doesn't fall off the wake
+    // window between them (especially when an activity short-circuits
+    // with no WakeLock, e.g. HomeAssistant with no IMAGE_URL configured).
+    delaySleep(10);
+    startActivity(e.activity);
+
+    // Clear retained command so it doesn't refire on reconnect.
+    mqttClient.publish(cmdTopic, 1, true, "");
+    // For text entities, also clear state so the user can re-submit the
+    // same value (HA dedupes against current state otherwise).
+    if (e.comp == AC_TEXT) {
+      char stTopic[128];
+      actionStateTopic(stTopic, sizeof(stTopic), e.key);
+      mqttClient.publish(stTopic, 1, true, "");
+    }
+    return true;
+  }
+  return false;
 }
 
 static void subscribeConfigCommands()
@@ -614,7 +780,7 @@ static void subscribeConfigCommands()
 }
 
 // Return true if the topic was handled by the config command dispatcher.
-static bool handleConfigCommand(const char *topic, const char *payload, size_t len)
+static bool handleConfigCommand(const char *topic, const char *payload, size_t len, bool isRetained)
 {
   char cmdTopic[128];
   for (size_t i = 0; i < configEntitiesCount; i++)
@@ -623,6 +789,27 @@ static bool handleConfigCommand(const char *topic, const char *payload, size_t l
     cfgCmdTopic(cmdTopic, sizeof(cmdTopic), e.key);
     if (strcmp(topic, cmdTopic) != 0)
       continue;
+
+    // Retained-clear marker (empty payload). Without this guard the empty
+    // string would parse as 0 / false / "" and silently wipe the setting.
+    if (isRetained && len == 0)
+    {
+      Serial.printf("[MQTT][CFG] Skipping empty retained for %s\n", e.key);
+      return true;
+    }
+
+    // Fresh boot policy: NVS wins. A retained /set is a stale instruction
+    // from a previous HA session; applying it would revert WiFi-manager
+    // portal changes (the portal saves to NVS then ESP.restart()s, so the
+    // post-save boot is sleepBoot==false). On sleep-wake we still apply
+    // retained commands — that's how HA-while-asleep changes propagate.
+    if (isRetained && !sleepBoot)
+    {
+      Serial.printf("[MQTT][CFG] Fresh boot, clearing stale retained set for %s\n", e.key);
+      mqttClient.publish(cmdTopic, 1, true, "");
+      publishConfigState(e);
+      return true;
+    }
 
     // Payload is not NUL-terminated; copy into a local buffer.
     char buf[320];
@@ -734,6 +921,7 @@ static void sendConfigDiscovery(JsonDocument &deviceInfo, char *buff, size_t buf
   for (size_t i = 0; i < configEntitiesCount; i++)
     publishConfigDiscovery(configEntities[i], deviceInfo, buff, buffSz);
   publishConfigButtons(deviceInfo, buff, buffSz);
+  publishAllActionDiscovery(deviceInfo, buff, buffSz);
 }
 
 void connectToMqtt(void *params)
@@ -784,14 +972,23 @@ void onMqttConnect(bool sessionPresent)
   Serial.println(packetIdSub);
 
   subscribeConfigCommands();
+  subscribeActionCommands();
 
   if (!sleepBoot || (bootCount % MQTT_RESEND_CONFIG_EVERY) == 0) {
     sendHAConfig();
     mqttPublishDitherOptions();
   }
 
+  // Brief grace period so the broker can deliver any retained /set commands
+  // (queued by HA while we were asleep) before we re-publish state. Without
+  // this, publishAllConfigStates would echo the pre-command NVS value and
+  // briefly override HA's optimistic UI update before the retained set is
+  // processed and the post-apply state echo arrives.
+  vTaskDelay(200 / portTICK_PERIOD_MS);
+
   // Always publish current config state (retained) so HA stays in sync.
   publishAllConfigStates();
+  publishAllActionStates();
 }
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
@@ -813,10 +1010,18 @@ void onMqttUnsubscribe(uint16_t packetId)
 
 void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
 {
-  if (!topic || !payload) {
-    Serial.println("[MQTT] Invalid message: null topic or payload");
+  if (!topic) {
+    Serial.println("[MQTT] Invalid message: null topic");
     return;
   }
+  // AsyncMqttClient delivers empty retained publishes (e.g. the device's
+  // own clear-on-handle publishes to action/<key>/set echoed back via the
+  // subscription) as payload=NULL, len=0. Treat them as legitimate empty
+  // messages — handleConfigCommand / handleActionCommand both early-out
+  // on len==0. Substitute a 1-byte buffer so memcpy(buf, payload, 0) is
+  // strictly defined per C standard.
+  static char emptyPayload[1] = {0};
+  if (!payload) payload = emptyPayload;
 
   const size_t MAX_MQTT_PAYLOAD_SIZE = 8192;
   if (len > MAX_MQTT_PAYLOAD_SIZE) {
@@ -839,7 +1044,9 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
   // true once a topic matches.
   if (handleCmdButton(topic, payload, len))
     return;
-  if (handleConfigCommand(topic, payload, len))
+  if (handleConfigCommand(topic, payload, len, properties.retain))
+    return;
+  if (handleActionCommand(topic, payload, len))
     return;
 
   if (strcmp(topic, mqttActionTopic) != 0)
@@ -899,6 +1106,11 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
       startActivity(Trmnl);
       return;
     }
+    else if (strncmp("opendisplay", action, 12) == 0)
+    {
+      startActivity(OpenDisplay);
+      return;
+    }
     else if (strncmp("message", action, 9) == 0)
     {
       if (!doc["message"].is<JsonVariant>())
@@ -921,6 +1133,17 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
       setPendingDitherOverride(parseDitherName(d));
       setMessage(doc["message"]);
       startActivity(IMG);
+      return;
+    }
+    else if (strncmp("qrtext", action, 7) == 0)
+    {
+      if (!doc["message"].is<JsonVariant>())
+      {
+        Serial.printf("[MQTT][ERROR] qrtext action has no message!\n");
+        return;
+      }
+      setMessage(doc["message"]);
+      startActivity(QRText);
       return;
     }
     Serial.printf("[MQTT][ERROR] unable to handle action %s\n", action);

@@ -12,6 +12,15 @@ QueueHandle_t activityQueue = xQueueCreate(1, sizeof(Activity));
 
 static unsigned long lastActivityTime = 0;
 static Activity activityNext, activityCurrent = NONE;
+// Last activity that painted the e-ink screen. RTC_DATA_ATTR so it survives
+// deep sleep — the e-ink panel retains pixels across sleep, so a render
+// dedupe that compares against the *prior wake's* activity is still valid.
+// NONE = nothing has rendered yet (fresh boot, or only the sleep-prep
+// no-op has run). Read by Trmnl to skip its filename-match shortcut when
+// another activity has repainted the screen between Trmnl runs.
+RTC_DATA_ATTR static Activity lastDisplayedActivity = NONE;
+
+Activity getLastDisplayedActivity() { return lastDisplayedActivity; }
 
 Activity activityFromString(const char *s)
 {
@@ -23,6 +32,7 @@ Activity activityFromString(const char *s)
     if (strcmp(s, "Info") == 0) return Info;
     if (strcmp(s, "Message") == 0) return Message;
     if (strcmp(s, "IMG") == 0) return IMG;
+    if (strcmp(s, "QRText") == 0) return QRText;
     return HomeAssistant;
 }
 
@@ -36,6 +46,7 @@ const char *activityToString(Activity a)
         case Info: return "Info";
         case Message: return "Message";
         case IMG: return "IMG";
+        case QRText: return "QRText";
         case NONE: return "NONE";
         default: return "HomeAssistant";
     }
@@ -111,6 +122,13 @@ void runActivities(void *params)
 {
     uint32_t sleepSec = plateCfg.sleepMinutes * 60;
     uint32_t quickSleepSec = plateCfg.quickSleepSec;
+    // On the first dequeue after boot (fresh power-on or sleep-wake), hold
+    // briefly so MQTT has time to deliver a retained /action/.../set queued
+    // by HA. 250ms is shorter than the typical retained-delivery window
+    // (~500ms in practice), so the default may still get a head start; the
+    // stopActivity() checks in the activity bodies catch up if a retained
+    // action arrives mid-flight. Subsequent activity transitions skip this.
+    bool firstActivity = true;
 
     while (true)
     {
@@ -125,6 +143,22 @@ void runActivities(void *params)
         }
         waitForOTA();
         setResetActivity(false);
+
+        if (firstActivity && strlen(plateCfg.mqttHost) > 0)
+        {
+            firstActivity = false;
+            Serial.println("[ACTIVITY] post-boot: holding 250ms for possible MQTT action override");
+            vTaskDelay(250 / portTICK_PERIOD_MS);
+
+            Activity newer;
+            if (xQueueReceive(activityQueue, &newer, 0) == pdTRUE)
+            {
+                Serial.printf("[ACTIVITY] post-boot: MQTT overrode default %d -> %d\n",
+                              activityNext, newer);
+                activityNext = newer;
+                setResetActivity(false);
+            }
+        }
         printDebug("[ACTIVITY] runActivities ready...");
 
         // activity debounce
@@ -241,8 +275,21 @@ void runActivities(void *params)
             drawImageFromURL(getMessage());
             break;
         }
+        case QRText:
+        {
+            WakeLock lock("activity-qrtext", 15);
+            setSleepDuration(timeToSleep);
+            displayTextQR(getMessage());
+            break;
+        }
         default:
             Serial.printf("[ACTIVITY][ERROR] runActivities() unhandled Activity: %d\n", activityNext);
+        }
+        // Remember whatever just painted (excluding the sleep-prep NONE),
+        // so Trmnl can decide whether its filename-match dedupe is still
+        // meaningful on the next run.
+        if (activityNext != NONE) {
+            lastDisplayedActivity = activityNext;
         }
         displayBatteryWarning();
         sendMQTTStatus();
