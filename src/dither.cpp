@@ -29,7 +29,7 @@ static_assert(sizeof(DITHER_KERNEL_NAMES) / sizeof(DITHER_KERNEL_NAMES[0]) == DI
 const char *ditherKernelName(uint8_t value)
 {
     if (value == 0)
-        return "none";
+        return "off";  // HA's mqtt.select treats "none" / "None" as Unknown
     uint8_t index = value - 1;
     if (index < DITHER_KERNEL_COUNT)
         return DITHER_KERNEL_NAMES[index];
@@ -85,12 +85,12 @@ int8_t parseDitherName(const char *name)
     return -1;
 }
 
-// Build a JSON array of supported canonical dither names, including "none".
+// Build a JSON array of supported canonical dither names, including "off".
 // Returns bytes written (excluding NUL), or 0 on overflow.
 size_t buildDitherOptionsJson(char *out, size_t outSize)
 {
     if (!out || outSize < 3) return 0;
-    int written = snprintf(out, outSize, "[\"none\"");
+    int written = snprintf(out, outSize, "[\"off\"");
     if (written < 0 || (size_t)written >= outSize) return 0;
     size_t pos = (size_t)written;
     for (uint8_t i = 0; i < DITHER_KERNEL_COUNT; i++)

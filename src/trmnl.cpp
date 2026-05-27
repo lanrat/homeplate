@@ -143,9 +143,16 @@ bool trmnlDisplay(const char *url)
     if (!buff)
     {
         Serial.println("[TRMNL] Download failed");
-        displayCriticalMessage("TRMNL Download Failed");
-        trmnlLogAdd("error: download failed");
-        trmnlLogSend();
+        if (!stopActivity()) {
+            displayCriticalMessage("TRMNL Download Failed");
+            trmnlLogAdd("error: download failed");
+            trmnlLogSend();
+        }
+        return false;
+    }
+    // Abort if a new activity has been queued while we were downloading.
+    if (stopActivity()) {
+        free(buff);
         return false;
     }
 
@@ -200,7 +207,13 @@ bool trmnlDisplay(const char *url)
     {
       String filename = doc["filename"].as<String>();
       Serial.printf("[TRMNL] Last filename: %s --> new filename: %s\n", current_filename, filename.c_str());
-      if (filename.length() > 0 && filename.equals(current_filename)) {
+      // Only skip the re-render if the screen *currently* shows this same
+      // TRMNL image. If another activity (Info, Message, QR, ...) painted
+      // since the last TRMNL render, the matching filename is on the
+      // server but not on the e-ink panel, so we must redraw.
+      if (filename.length() > 0
+          && filename.equals(current_filename)
+          && getLastDisplayedActivity() == Trmnl) {
          Serial.printf("[TRMNL] filename unchanged, not refreshing\n");
          trmnlLogAdd("display: filename unchanged, skipped");
          trmnlLogSend();
@@ -218,6 +231,16 @@ bool trmnlDisplay(const char *url)
         displayStatusMessage("Loading next image...");
         bool ret = drawImageFromURL(image_url.c_str());
         if (!ret) {
+            // If a new activity has been queued (e.g. MQTT Display Message),
+            // don't render our error — it would clobber message[] and the
+            // queued activity would inherit our error string instead of the
+            // user's payload. Leave the screen state alone; the next
+            // activity will render shortly.
+            if (stopActivity()) {
+                trmnlLogAdd("error: image render aborted by new activity");
+                trmnlLogSend();
+                return false;
+            }
             char error_msg[256];
             snprintf(error_msg, sizeof(error_msg), "Unable to Display Image\n%s", current_filename);
             displayMessage(error_msg);

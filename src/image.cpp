@@ -196,7 +196,12 @@ bool drawImageFromURL(const char *url) {
     if (!buff)
     {
         Serial.println("[IMAGE] Download failed");
-        displayCriticalMessage("Image Download Failed");
+        // Don't paint the failure banner if a new activity has been queued —
+        // it would briefly show through and (on non-partial-update boards)
+        // clobber message[] via displayCriticalMessage->displayMessage.
+        if (!stopActivity()) {
+            displayCriticalMessage("Image Download Failed");
+        }
         return false;
     }
     // check for stop after download before rendering
@@ -294,13 +299,18 @@ bool drawImageFromBuffer(uint8_t *buff, size_t size, bool center, int8_t ditherO
     }
     else
     {
-        // If is something failed (wrong filename or format), write error message on the screen.
+        // If something failed (wrong filename or format), write error message on
+        // the screen — unless a new activity has been queued, in which case
+        // skip the banner so it doesn't clobber message[] / steal the screen
+        // from the about-to-run activity.
+        if (!stopActivity()) {
 #ifdef INKPLATE_HAS_PARTIAL_UPDATE
-        displayStart();
-        display.clearDisplay();
-        displayEnd();
+            displayStart();
+            display.clearDisplay();
+            displayEnd();
 #endif
-        displayCriticalMessage("Image Display Error");
+            displayCriticalMessage("Image Display Error");
+        }
     }
     // check for stop (could have happened inside drawPngFromBuffer())
     if (stopActivity())
