@@ -109,6 +109,13 @@ void runActivities(void *params)
 {
     uint32_t sleepSec = plateCfg.sleepMinutes * 60;
     uint32_t quickSleepSec = plateCfg.quickSleepSec;
+    // On the first dequeue after boot (fresh power-on or sleep-wake), hold
+    // briefly so MQTT has time to deliver a retained /action/.../set queued
+    // by HA. 250ms is shorter than the typical retained-delivery window
+    // (~500ms in practice), so the default may still get a head start; the
+    // stopActivity() checks in the activity bodies catch up if a retained
+    // action arrives mid-flight. Subsequent activity transitions skip this.
+    bool firstActivity = true;
 
     while (true)
     {
@@ -123,6 +130,22 @@ void runActivities(void *params)
         }
         waitForOTA();
         setResetActivity(false);
+
+        if (firstActivity && strlen(plateCfg.mqttHost) > 0)
+        {
+            firstActivity = false;
+            Serial.println("[ACTIVITY] post-boot: holding 250ms for possible MQTT action override");
+            vTaskDelay(250 / portTICK_PERIOD_MS);
+
+            Activity newer;
+            if (xQueueReceive(activityQueue, &newer, 0) == pdTRUE)
+            {
+                Serial.printf("[ACTIVITY] post-boot: MQTT overrode default %d -> %d\n",
+                              activityNext, newer);
+                activityNext = newer;
+                setResetActivity(false);
+            }
+        }
         printDebug("[ACTIVITY] runActivities ready...");
 
         // activity debounce

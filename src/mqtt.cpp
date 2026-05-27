@@ -613,6 +613,147 @@ static void publishAllConfigStates()
     publishConfigState(configEntities[i]);
 }
 
+// ============================================================================
+// Action entities — one-shot HA controls that trigger an Activity on the
+// device. Each entity has its own per-key command topic; the device clears
+// the retained command after handling so it doesn't refire on reconnect.
+// Buttons take no payload. Text entities forward the typed value via
+// setMessage() before starting the activity.
+// ============================================================================
+
+enum ActionComp { AC_BUTTON, AC_TEXT };
+
+struct ActionEntity {
+  const char *key;         // topic slug, e.g. "run_qr"
+  const char *name;        // HA display name
+  const char *icon;
+  ActionComp comp;
+  Activity activity;       // which activity to start when triggered
+  bool wantsPayload;       // true for AC_TEXT (calls setMessage with payload)
+};
+
+static const ActionEntity actionEntities[] = {
+  // key            name                   icon                   comp        activity       wantsPayload
+  {"run_qr",       "Show Guest WiFi QR",  "mdi:qrcode",          AC_BUTTON,  GuestWifi,     false},
+  {"run_info",     "Show Info",           "mdi:information",     AC_BUTTON,  Info,          false},
+  {"run_hass",     "Show HomeAssistant",  "mdi:home-assistant",  AC_BUTTON,  HomeAssistant, false},
+  {"run_trmnl",    "Show TRMNL",          "mdi:newspaper",       AC_BUTTON,  Trmnl,         false},
+  {"run_message",  "Display Message",     "mdi:message-text",    AC_TEXT,    Message,       true},
+  {"run_img",      "Display Image URL",   "mdi:image",           AC_TEXT,    IMG,           true},
+};
+static constexpr size_t actionEntitiesCount = sizeof(actionEntities) / sizeof(actionEntities[0]);
+
+static void actionCmdTopic(char *buf, size_t sz, const char *key)
+{
+  snprintf(buf, sz, "homeplate/%s/action/%s/set", plateCfg.mqttNodeId, key);
+}
+static void actionStateTopic(char *buf, size_t sz, const char *key)
+{
+  snprintf(buf, sz, "homeplate/%s/action/%s/state", plateCfg.mqttNodeId, key);
+}
+static void actionDiscoveryTopic(char *buf, size_t sz, ActionComp c, const char *key)
+{
+  const char *comp = (c == AC_BUTTON) ? "button" : "text";
+  snprintf(buf, sz, "%s/%s/%s/%s/config", MQTT_DISCOVERY_TOPIC, comp, plateCfg.mqttNodeId, key);
+}
+
+static void publishActionDiscovery(const ActionEntity &e, JsonDocument &deviceInfo, char *buff, size_t buffSz)
+{
+  JsonDocument doc;
+  char cmdTopic[128], stTopic[128], discTopic[160], uniqueId[80];
+  actionCmdTopic(cmdTopic, sizeof(cmdTopic), e.key);
+  actionDiscoveryTopic(discTopic, sizeof(discTopic), e.comp, e.key);
+  snprintf(uniqueId, sizeof(uniqueId), "%s_%s", plateCfg.mqttNodeId, e.key);
+
+  doc["unique_id"] = uniqueId;
+  doc["name"] = e.name;
+  doc["icon"] = e.icon;
+  doc["command_topic"] = cmdTopic;
+  // Retain so a press/send while asleep is delivered on next wake.
+  doc["retain"] = true;
+  doc["device"] = deviceInfo;
+
+  if (e.comp == AC_BUTTON) {
+    doc["payload_press"] = "PRESS";
+  } else {
+    actionStateTopic(stTopic, sizeof(stTopic), e.key);
+    doc["state_topic"] = stTopic;
+    doc["max"] = 255;
+    doc["mode"] = "text";
+  }
+  serializeJson(doc, buff, buffSz);
+  mqttClient.publish(discTopic, 1, true, buff);
+}
+
+static void publishAllActionDiscovery(JsonDocument &deviceInfo, char *buff, size_t buffSz)
+{
+  for (size_t i = 0; i < actionEntitiesCount; i++)
+    publishActionDiscovery(actionEntities[i], deviceInfo, buff, buffSz);
+}
+
+// Publish an empty retained state for every text action entity. Without this,
+// the broker has no retained payload on the state_topic and HA renders the
+// entity as "unknown" until the first action runs.
+static void publishAllActionStates()
+{
+  char stTopic[128];
+  for (size_t i = 0; i < actionEntitiesCount; i++) {
+    const ActionEntity &e = actionEntities[i];
+    if (e.comp != AC_TEXT) continue;
+    actionStateTopic(stTopic, sizeof(stTopic), e.key);
+    mqttClient.publish(stTopic, 1, true, "");
+  }
+}
+
+static void subscribeActionCommands()
+{
+  char cmdTopic[128];
+  for (size_t i = 0; i < actionEntitiesCount; i++) {
+    actionCmdTopic(cmdTopic, sizeof(cmdTopic), actionEntities[i].key);
+    mqttClient.subscribe(cmdTopic, 1);
+  }
+}
+
+// Returns true if the topic matched an action entity.
+static bool handleActionCommand(const char *topic, const char *payload, size_t len)
+{
+  char cmdTopic[128];
+  for (size_t i = 0; i < actionEntitiesCount; i++) {
+    const ActionEntity &e = actionEntities[i];
+    actionCmdTopic(cmdTopic, sizeof(cmdTopic), e.key);
+    if (strcmp(topic, cmdTopic) != 0) continue;
+
+    // Empty payload is either our own retained-clear publish coming back
+    // or a stray clear from somewhere else. Either way, nothing to do.
+    if (len == 0) {
+      return true;
+    }
+
+    char buf[320];
+    size_t copyLen = len < sizeof(buf) - 1 ? len : sizeof(buf) - 1;
+    memcpy(buf, payload, copyLen);
+    buf[copyLen] = '\0';
+
+    Serial.printf("[MQTT][ACT] %s triggered\n", e.key);
+    if (e.wantsPayload) {
+      setMessage(buf);
+    }
+    startActivity(e.activity);
+
+    // Clear retained command so it doesn't refire on reconnect.
+    mqttClient.publish(cmdTopic, 1, true, "");
+    // For text entities, also clear state so the user can re-submit the
+    // same value (HA dedupes against current state otherwise).
+    if (e.comp == AC_TEXT) {
+      char stTopic[128];
+      actionStateTopic(stTopic, sizeof(stTopic), e.key);
+      mqttClient.publish(stTopic, 1, true, "");
+    }
+    return true;
+  }
+  return false;
+}
+
 static void subscribeConfigCommands()
 {
   char cmdTopic[128];
@@ -767,6 +908,7 @@ static void sendConfigDiscovery(JsonDocument &deviceInfo, char *buff, size_t buf
   for (size_t i = 0; i < configEntitiesCount; i++)
     publishConfigDiscovery(configEntities[i], deviceInfo, buff, buffSz);
   publishConfigButtons(deviceInfo, buff, buffSz);
+  publishAllActionDiscovery(deviceInfo, buff, buffSz);
 }
 
 void connectToMqtt(void *params)
@@ -817,6 +959,7 @@ void onMqttConnect(bool sessionPresent)
   Serial.println(packetIdSub);
 
   subscribeConfigCommands();
+  subscribeActionCommands();
 
   if (!sleepBoot || (bootCount % MQTT_RESEND_CONFIG_EVERY) == 0) {
     sendHAConfig();
@@ -832,6 +975,7 @@ void onMqttConnect(bool sessionPresent)
 
   // Always publish current config state (retained) so HA stays in sync.
   publishAllConfigStates();
+  publishAllActionStates();
 }
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
@@ -880,6 +1024,8 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
   if (handleCmdButton(topic, payload, len))
     return;
   if (handleConfigCommand(topic, payload, len, properties.retain))
+    return;
+  if (handleActionCommand(topic, payload, len))
     return;
 
   if (strcmp(topic, mqttActionTopic) != 0)

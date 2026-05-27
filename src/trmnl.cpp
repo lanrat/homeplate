@@ -143,9 +143,16 @@ bool trmnlDisplay(const char *url)
     if (!buff)
     {
         Serial.println("[TRMNL] Download failed");
-        displayCriticalMessage("TRMNL Download Failed");
-        trmnlLogAdd("error: download failed");
-        trmnlLogSend();
+        if (!stopActivity()) {
+            displayCriticalMessage("TRMNL Download Failed");
+            trmnlLogAdd("error: download failed");
+            trmnlLogSend();
+        }
+        return false;
+    }
+    // Abort if a new activity has been queued while we were downloading.
+    if (stopActivity()) {
+        free(buff);
         return false;
     }
 
@@ -218,6 +225,16 @@ bool trmnlDisplay(const char *url)
         displayStatusMessage("Loading next image...");
         bool ret = drawImageFromURL(image_url.c_str());
         if (!ret) {
+            // If a new activity has been queued (e.g. MQTT Display Message),
+            // don't render our error — it would clobber message[] and the
+            // queued activity would inherit our error string instead of the
+            // user's payload. Leave the screen state alone; the next
+            // activity will render shortly.
+            if (stopActivity()) {
+                trmnlLogAdd("error: image render aborted by new activity");
+                trmnlLogSend();
+                return false;
+            }
             char error_msg[256];
             snprintf(error_msg, sizeof(error_msg), "Unable to Display Image\n%s", current_filename);
             displayMessage(error_msg);
