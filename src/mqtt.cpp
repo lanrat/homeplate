@@ -1115,6 +1115,17 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
       startActivity(IMG);
       return;
     }
+    else if (strncmp("qrtext", action, 7) == 0)
+    {
+      if (!doc["message"].is<JsonVariant>())
+      {
+        Serial.printf("[MQTT][ERROR] qrtext action has no message!\n");
+        return;
+      }
+      setMessage(doc["message"]);
+      startActivity(QRText);
+      return;
+    }
     Serial.printf("[MQTT][ERROR] unable to handle action %s\n", action);
   }
 }
