@@ -738,6 +738,11 @@ static bool handleActionCommand(const char *topic, const char *payload, size_t l
     if (e.wantsPayload) {
       setMessage(buf);
     }
+    // Hold sleep longer than startActivity's default 3s bump so a user
+    // firing several actions in a row from HA doesn't fall off the wake
+    // window between them (especially when an activity short-circuits
+    // with no WakeLock, e.g. HomeAssistant with no IMAGE_URL configured).
+    delaySleep(10);
     startActivity(e.activity);
 
     // Clear retained command so it doesn't refire on reconnect.
