@@ -643,6 +643,7 @@ static const ActionEntity actionEntities[] = {
   {"run_info",     "Show Info",           "mdi:information",     AC_BUTTON,  Info,          false},
   {"run_hass",     "Show HomeAssistant",  "mdi:home-assistant",  AC_BUTTON,  HomeAssistant, false},
   {"run_trmnl",    "Show TRMNL",          "mdi:newspaper",       AC_BUTTON,  Trmnl,         false},
+  {"run_opendisplay","Show OpenDisplay",  "mdi:cast",            AC_BUTTON,  OpenDisplay,   false},
   {"run_message",  "Display Message",     "mdi:message-text",    AC_TEXT,    Message,       true},
   {"run_img",      "Display Image URL",   "mdi:image",           AC_TEXT,    IMG,           true},
   {"run_qrtext",   "Display QR Code",     "mdi:qrcode-scan",     AC_TEXT,    QRText,        true},
@@ -1102,6 +1103,11 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
     else if (strncmp("trmnl", action, 6) == 0)
     {
       startActivity(Trmnl);
+      return;
+    }
+    else if (strncmp("opendisplay", action, 12) == 0)
+    {
+      startActivity(OpenDisplay);
       return;
     }
     else if (strncmp("message", action, 9) == 0)

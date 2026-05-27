@@ -84,6 +84,7 @@ HomePlate publishes a set of one-shot activity controls via MQTT Discovery. They
 | Show Info | button | `run_info` | Starts the Info activity |
 | Show HomeAssistant | button | `run_hass` | Starts the HomeAssistant activity (uses configured Image URL) |
 | Show TRMNL | button | `run_trmnl` | Starts the TRMNL activity |
+| Show OpenDisplay | button | `run_opendisplay` | Starts the OpenDisplay activity (advertises the device for OpenDisplay clients during the configured listen window) |
 | Display Message | text | `run_message` | Renders the typed string as a text message |
 | Display Image URL | text | `run_img` | Downloads and displays the image at the typed URL |
 | Display QR Code | text | `run_qrtext` | Encodes the typed string as a QR code and displays it (auto-sizes to fit content up to ~2.9KB) |
