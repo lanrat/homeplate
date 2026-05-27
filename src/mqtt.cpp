@@ -640,6 +640,7 @@ static const ActionEntity actionEntities[] = {
   {"run_trmnl",    "Show TRMNL",          "mdi:newspaper",       AC_BUTTON,  Trmnl,         false},
   {"run_message",  "Display Message",     "mdi:message-text",    AC_TEXT,    Message,       true},
   {"run_img",      "Display Image URL",   "mdi:image",           AC_TEXT,    IMG,           true},
+  {"run_qrtext",   "Display QR Code",     "mdi:qrcode-scan",     AC_TEXT,    QRText,        true},
 };
 static constexpr size_t actionEntitiesCount = sizeof(actionEntities) / sizeof(actionEntities[0]);
 

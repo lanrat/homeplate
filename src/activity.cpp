@@ -22,6 +22,7 @@ Activity activityFromString(const char *s)
     if (strcmp(s, "Info") == 0) return Info;
     if (strcmp(s, "Message") == 0) return Message;
     if (strcmp(s, "IMG") == 0) return IMG;
+    if (strcmp(s, "QRText") == 0) return QRText;
     return HomeAssistant;
 }
 
@@ -34,6 +35,7 @@ const char *activityToString(Activity a)
         case Info: return "Info";
         case Message: return "Message";
         case IMG: return "IMG";
+        case QRText: return "QRText";
         case NONE: return "NONE";
         default: return "HomeAssistant";
     }
@@ -247,6 +249,13 @@ void runActivities(void *params)
                 continue;
             }
             drawImageFromURL(getMessage());
+            break;
+        }
+        case QRText:
+        {
+            WakeLock lock("activity-qrtext", 15);
+            setSleepDuration(timeToSleep);
+            displayTextQR(getMessage());
             break;
         }
         default:

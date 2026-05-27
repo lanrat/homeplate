@@ -118,6 +118,7 @@ bool getWifIFailed();
 
 // QR
 void displayWiFiQR();
+void displayTextQR(const char *text);
 
 // info
 void displayInfoScreen();
@@ -235,6 +236,7 @@ enum Activity
     Info,
     Message,
     IMG,
+    QRText,
 };
 
 Activity activityFromString(const char *s);
