@@ -207,7 +207,13 @@ bool trmnlDisplay(const char *url)
     {
       String filename = doc["filename"].as<String>();
       Serial.printf("[TRMNL] Last filename: %s --> new filename: %s\n", current_filename, filename.c_str());
-      if (filename.length() > 0 && filename.equals(current_filename)) {
+      // Only skip the re-render if the screen *currently* shows this same
+      // TRMNL image. If another activity (Info, Message, QR, ...) painted
+      // since the last TRMNL render, the matching filename is on the
+      // server but not on the e-ink panel, so we must redraw.
+      if (filename.length() > 0
+          && filename.equals(current_filename)
+          && getLastDisplayedActivity() == Trmnl) {
          Serial.printf("[TRMNL] filename unchanged, not refreshing\n");
          trmnlLogAdd("display: filename unchanged, skipped");
          trmnlLogSend();

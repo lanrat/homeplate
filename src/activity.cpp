@@ -12,6 +12,15 @@ QueueHandle_t activityQueue = xQueueCreate(1, sizeof(Activity));
 
 static unsigned long lastActivityTime = 0;
 static Activity activityNext, activityCurrent = NONE;
+// Last activity that painted the e-ink screen. RTC_DATA_ATTR so it survives
+// deep sleep — the e-ink panel retains pixels across sleep, so a render
+// dedupe that compares against the *prior wake's* activity is still valid.
+// NONE = nothing has rendered yet (fresh boot, or only the sleep-prep
+// no-op has run). Read by Trmnl to skip its filename-match shortcut when
+// another activity has repainted the screen between Trmnl runs.
+RTC_DATA_ATTR static Activity lastDisplayedActivity = NONE;
+
+Activity getLastDisplayedActivity() { return lastDisplayedActivity; }
 
 Activity activityFromString(const char *s)
 {
@@ -260,6 +269,12 @@ void runActivities(void *params)
         }
         default:
             Serial.printf("[ACTIVITY][ERROR] runActivities() unhandled Activity: %d\n", activityNext);
+        }
+        // Remember whatever just painted (excluding the sleep-prep NONE),
+        // so Trmnl can decide whether its filename-match dedupe is still
+        // meaningful on the next run.
+        if (activityNext != NONE) {
+            lastDisplayedActivity = activityNext;
         }
         displayBatteryWarning();
         sendMQTTStatus();

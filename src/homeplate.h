@@ -241,6 +241,9 @@ enum Activity
 
 Activity activityFromString(const char *s);
 const char *activityToString(Activity a);
+// Most recently rendered activity (NONE if nothing yet). Persisted in RTC
+// memory so it survives deep sleep, matching e-ink panel persistence.
+Activity getLastDisplayedActivity();
 
 void startActivity(Activity activity);
 void startActivitiesTask();
