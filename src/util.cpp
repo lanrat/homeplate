@@ -109,8 +109,9 @@ void lowBatteryCheck()
         if (mqttConnected())
         {
             Serial.println("[MAIN] Sending low battery MQTT notification");
+            // Blocks until the broker ACKs the alert (bounded), so no extra
+            // delay is needed here to give the publish time to reach the wire.
             mqttSendLowBatteryAlert(voltage);
-            vTaskDelay(2 * SECOND / portTICK_PERIOD_MS);
         }
         setSleepDuration(0xFFFFFFFF);
         gotoSleepNow();

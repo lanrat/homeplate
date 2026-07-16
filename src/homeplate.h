@@ -311,6 +311,17 @@ private:
 #define MQTT_RECOVER_TIME_MS (30 * SECOND) // Wait 30 seconds after a failed connection attempt
 #define MQTT_RESEND_CONFIG_EVERY 10
 #define MQTT_RETAIN_SENSOR_VALUE true
+// How long sendMQTTStatusTask holds off sleep waiting for the broker to ACK the
+// sensor-state publishes. Only hit if the broker or link is unusually slow.
+#define MQTT_STATUS_ACK_TIMEOUT_MS (20 * SECOND)
+// How long mqttStopTask waits for the outbox to drain and the MQTT DISCONNECT
+// to reach the wire before giving up and forcing the socket closed.
+#define MQTT_DISCONNECT_TIMEOUT_MS (3 * SECOND)
+// Priority and core for espMqttClient's internal task (it does all the socket
+// I/O and invokes our callbacks). Matches the priority the old connect task ran
+// at, so publishes aren't starved by the activity/display tasks.
+#define MQTT_CLIENT_TASK_PRIORITY 3
+#define MQTT_CLIENT_TASK_CORE 1
 
 // MQTT discovery topic (compile-time constant)
 #define MQTT_DISCOVERY_TOPIC "homeassistant"
