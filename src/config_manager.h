@@ -96,3 +96,10 @@ void applyTimezone();
 // setup_mode button. Consumed (cleared) at boot.
 void setForcePortalFlag(bool v);
 bool consumeForcePortalFlag();
+
+// One-shot "this boot follows a config-portal save" NVS flag, set just before
+// the portal reboots. Consumed (cleared) at boot into the portalSaveReboot
+// global. Lets the MQTT handler clear stale retained /set only after a portal
+// save, not on every cold boot.
+void setPortalSavedFlag(bool v);
+bool consumePortalSavedFlag();

@@ -883,14 +883,16 @@ static bool handleConfigCommand(const char *topic, const char *payload, size_t l
       return true;
     }
 
-    // Fresh boot policy: NVS wins. A retained /set is a stale instruction
-    // from a previous HA session; applying it would revert WiFi-manager
-    // portal changes (the portal saves to NVS then ESP.restart()s, so the
-    // post-save boot is sleepBoot==false). On sleep-wake we still apply
-    // retained commands — that's how HA-while-asleep changes propagate.
-    if (isRetained && !sleepBoot)
+    // Portal-save policy: NVS wins. After a config-portal save, a retained
+    // /set is a stale instruction from a previous HA session; applying it
+    // would revert the values just saved in the portal (which writes NVS then
+    // ESP.restart()s, setting the portalSaveReboot flag consumed at boot). So
+    // clear it. On every other boot — deep-sleep wake OR an ordinary cold boot
+    // (reflash, reset, power cycle) — we apply retained commands, so a change
+    // made in HA while the device was asleep or rebooting still propagates.
+    if (isRetained && portalSaveReboot)
     {
-      Serial.printf("[MQTT][CFG] Fresh boot, clearing stale retained set for %s\n", e.key);
+      Serial.printf("[MQTT][CFG] Portal-save boot, clearing stale retained set for %s\n", e.key);
       mqttClient.publish(cmdTopic, 1, true, "");
       publishConfigState(e);
       return true;

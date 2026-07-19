@@ -281,6 +281,30 @@ bool consumeForcePortalFlag()
     return v;
 }
 
+// Set just before the config portal reboots the device (see startWiFiManager).
+// The next boot consumes this to distinguish a portal save from any other cold
+// boot (reflash, reset, power cycle), so only a portal save clears stale
+// retained MQTT /set commands. Uses NVS rather than RTC memory because RTC
+// persistence across ESP.restart()/reflash is chip- and reset-type-dependent,
+// whereas NVS survival is unambiguous.
+void setPortalSavedFlag(bool v)
+{
+    preferences.begin(NVS_NAMESPACE, false);
+    preferences.putBool("portal_saved", v);
+    preferences.end();
+}
+
+bool consumePortalSavedFlag()
+{
+    preferences.begin(NVS_NAMESPACE, false);
+    bool v = preferences.getBool("portal_saved", false);
+    if (v) {
+        preferences.remove("portal_saved");
+    }
+    preferences.end();
+    return v;
+}
+
 // ---- WiFiManager ----
 
 bool startWiFiManager(bool forcePortal)
@@ -624,6 +648,11 @@ bool startWiFiManager(bool forcePortal)
     // because WiFiManager persists WiFi credentials after the callback runs.
     if (configSaved)
     {
+        // Mark this as a portal-save reboot so the next boot clears any stale
+        // retained MQTT /set commands (which would otherwise revert the values
+        // just saved here). Other cold boots leave retained commands intact so
+        // pending HA changes still apply on the next wake.
+        setPortalSavedFlag(true);
         Serial.println("[CONFIG] Rebooting to apply new settings...");
         vTaskDelay(500 / portTICK_PERIOD_MS); // let serial flush
         ESP.restart();

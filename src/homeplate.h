@@ -17,6 +17,7 @@ extern void vApplicationStackOverflowHook(xTaskHandle *pxTask,
 
 extern Inkplate display;
 extern bool sleepBoot;
+extern bool portalSaveReboot;
 extern uint bootCount, activityCount, timeToSleep;
 
 #define max(x, y) (((x) >= (y)) ? (x) : (y))

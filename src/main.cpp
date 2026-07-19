@@ -13,6 +13,11 @@ const GFXfont *fonts[] = {&FONT_SPLASH, &FONT_TITLE, &FONT_HEADING, &FONT_BODY, 
 const size_t fontsCount = sizeof(fonts) / sizeof(fonts[0]);
 
 bool sleepBoot = false;
+// True only when this boot immediately follows a config-portal save (consumed
+// from an NVS flag below). Used by the MQTT config handler to clear stale
+// retained /set commands after a portal save without clobbering pending HA
+// changes on ordinary cold boots (reflash, reset, power cycle).
+bool portalSaveReboot = false;
 
 // Store int in rtc data, to remain persistent during deep sleep, reset on power up.
 RTC_DATA_ATTR uint bootCount = 0;
@@ -33,6 +38,8 @@ void setup()
     inkplateMutexInit();
 
     sleepBoot = (rtc_get_reset_reason(0) == DEEPSLEEP_RESET); // test for deep sleep wake
+    // Consume the portal-save flag once per boot (before the MQTT task starts).
+    portalSaveReboot = consumePortalSavedFlag();
 
     // only run on fresh boot
     if (!sleepBoot)
