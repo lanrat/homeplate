@@ -25,15 +25,25 @@ extern uint bootCount, activityCount, timeToSleep;
 #define REF_WIDTH 1200
 #define REF_HEIGHT 825
 
-// Compile-time proportional scaling macros
-#define scaleX(px) ((int32_t)(px) * E_INK_WIDTH / REF_WIDTH)
-#define scaleY(px) ((int32_t)(px) * E_INK_HEIGHT / REF_HEIGHT)
+// Rotation-aware display dimensions. Some drivers rotate the panel in
+// begin() — the Inkplate 13 Spectra's portrait-native panel is rotated to
+// landscape, transposing the library's compile-time E_INK_WIDTH/E_INK_HEIGHT
+// constants relative to the drawing coordinate space. display.width()/height()
+// track rotation, so layout code must use these instead of the E_INK_*
+// constants. Only valid after display.begin(); not usable in #if directives.
+#define HP_WIDTH ((int32_t)display.width())
+#define HP_HEIGHT ((int32_t)display.height())
+
+// Proportional scaling macros
+#define scaleX(px) ((int32_t)(px) * HP_WIDTH / REF_WIDTH)
+#define scaleY(px) ((int32_t)(px) * HP_HEIGHT / REF_HEIGHT)
 
 // Font roles and tier-specific font includes
 #if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2) \
  || defined(ARDUINO_INKPLATE6PLUS) || defined(ARDUINO_INKPLATE6PLUSV2) \
- || defined(ARDUINO_INKPLATE6FLICK) || defined(ARDUINO_INKPLATE5V2)
-  // Large tier: 720-825px height
+ || defined(ARDUINO_INKPLATE6FLICK) || defined(ARDUINO_INKPLATE5V2) \
+ || defined(ARDUINO_INKPLATE13SPECTRA)
+  // Large tier: 720-1200px height
   #include "fonts/Roboto_12.h"
   #include "fonts/Roboto_16.h"
   #include "fonts/Roboto_32.h"
@@ -78,7 +88,18 @@ extern uint bootCount, activityCount, timeToSleep;
 //   HP_ACCENT secondary accent (charts, dividers)
 //   HP_WARN   warnings (low battery, errors)
 //   HP_OK     success indicator
-#ifdef INKPLATE_IS_COLOR
+#if defined(ARDUINO_INKPLATE13SPECTRA)
+// The Spectra driver's drawPixel() takes logical palette indices 0-5 and
+// silently drops anything above 5, but the library's INKPLATE_BLUE (5) and
+// INKPLATE_GREEN (6) defines hold raw Spectra-6 panel codes, not indices —
+// passing them draws green and nothing, respectively. Use the logical
+// indices directly for blue and green.
+#define HP_FG     INKPLATE_BLACK
+#define HP_BG     INKPLATE_WHITE
+#define HP_ACCENT 4 // blue
+#define HP_WARN   INKPLATE_RED
+#define HP_OK     5 // green
+#elif defined(INKPLATE_IS_COLOR)
 #define HP_FG     INKPLATE_BLACK
 #define HP_BG     INKPLATE_WHITE
 #define HP_ACCENT INKPLATE_BLUE

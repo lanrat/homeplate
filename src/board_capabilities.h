@@ -15,7 +15,8 @@
     && !defined(ARDUINO_INKPLATE6PLUS) \
     && !defined(ARDUINO_INKPLATE6PLUSV2) \
     && !defined(ARDUINO_INKPLATE6FLICK) \
-    && !defined(ARDUINO_INKPLATECOLOR)
+    && !defined(ARDUINO_INKPLATECOLOR) \
+    && !defined(ARDUINO_INKPLATE13SPECTRA)
 #error "Unsupported board selection, please select a supported Inkplate board."
 #endif
 
@@ -51,6 +52,13 @@
 #define WAKE_BUTTON GPIO_NUM_13
 // GPIO 13 is a regular bidirectional pin with internal pull-up available.
 #define WAKE_BUTTON_MODE INPUT_PULLUP
+#elif defined(ARDUINO_INKPLATE13SPECTRA)
+// The Spectra's wake button is on GPIO 18 (ESP32-S3), shared with the
+// PCF85063 RTC's open-drain INT line, so the button is active-low like the
+// other boards. GPIO 18 is RTC-capable on the S3, so ext0 deep-sleep wake
+// works.
+#define WAKE_BUTTON GPIO_NUM_18
+#define WAKE_BUTTON_MODE INPUT_PULLUP
 #endif
 
 // ==== Panel capability flags ====
@@ -58,7 +66,7 @@
 // runtime display-mode switching — they are full-refresh, single-palette only.
 // Call sites should #ifdef on these rather than on individual board macros so
 // new boards (color or B&W) only need to be added to the lists above.
-#if defined(ARDUINO_INKPLATECOLOR)
+#if defined(ARDUINO_INKPLATECOLOR) || defined(ARDUINO_INKPLATE13SPECTRA)
 #define INKPLATE_IS_COLOR
 #else
 #define INKPLATE_HAS_PARTIAL_UPDATE

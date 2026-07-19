@@ -650,8 +650,8 @@ void displayConfigModeScreen(const char *apSsid)
     uint32_t qrPadRight = scaleX(100);
     uint32_t qrTextGap = scaleX(50);
 
-    uint32_t qrY = (E_INK_HEIGHT - (qrcode.size * qrSize)) / 2;
-    uint32_t qrX = E_INK_WIDTH - (qrcode.size * qrSize) - qrPadRight;
+    uint32_t qrY = (HP_HEIGHT - (qrcode.size * qrSize)) / 2;
+    uint32_t qrX = HP_WIDTH - (qrcode.size * qrSize) - qrPadRight;
 
     i2cStart();
     displayStart();
@@ -664,7 +664,7 @@ void displayConfigModeScreen(const char *apSsid)
     // Title
     display.setFont(&FONT_TITLE);
     display.setTextSize(1);
-    centerTextX("HomePlate Setup", 0, E_INK_WIDTH, scaleY(100), false);
+    centerTextX("HomePlate Setup", 0, HP_WIDTH, scaleY(100), false);
 
     // Instructions
     display.setFont(&FONT_HEADING);
@@ -705,13 +705,13 @@ void displayUnconfiguredScreen()
 
     display.setFont(&FONT_TITLE);
     display.setTextSize(1);
-    centerTextX("HomePlate", 0, E_INK_WIDTH, scaleY(300), false);
+    centerTextX("HomePlate", 0, HP_WIDTH, scaleY(300), false);
 
     display.setFont(&FONT_HEADING);
-    centerTextX("Unconfigured - Sleeping", 0, E_INK_WIDTH, scaleY(420), false);
+    centerTextX("Unconfigured - Sleeping", 0, HP_WIDTH, scaleY(420), false);
 
     display.setFont(&FONT_BODY);
-    centerTextX("Will retry on next wake cycle.", 0, E_INK_WIDTH, scaleY(500), false);
+    centerTextX("Will retry on next wake cycle.", 0, HP_WIDTH, scaleY(500), false);
 
     displayRefresh();
     displayEnd();
