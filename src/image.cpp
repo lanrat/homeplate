@@ -106,7 +106,7 @@ void displayStats()
     int16_t x1, y1;
     uint16_t w, h;
     display.getTextBounds(timeBuf, 0, 0, &x1, &y1, &w, &h);
-    display.setCursor(E_INK_WIDTH - w - 5, E_INK_HEIGHT - 5);
+    display.setCursor(HP_WIDTH - w - 5, HP_HEIGHT - 5);
 
     display.print(timeBuf);
     displayEnd();
@@ -189,6 +189,8 @@ bool drawImageFromURL(const char *url) {
     pendingDitherOverride = -1;
 
     displayStatusMessage("Downloading image...");
+    // Intentionally the compile-time E_INK_* constants: this is a buffer size,
+    // and width*height is the same in either orientation.
     static int32_t len = E_INK_WIDTH * E_INK_HEIGHT + 100;
     Serial.printf("[IMAGE] Downloading image: %s\n", url);
     std::map<String, String> respHeaders;
@@ -263,11 +265,11 @@ bool drawImageFromBuffer(uint8_t *buff, size_t size, bool center, int8_t ditherO
         int xLoc = 0;
         int yLoc = 0;
         if (center) {
-            if (img.width < E_INK_WIDTH) {
-                xLoc = (E_INK_WIDTH - img.width) / 2;
+            if (img.width < HP_WIDTH) {
+                xLoc = (HP_WIDTH - img.width) / 2;
             }
-            if (img.height < E_INK_HEIGHT) {
-                yLoc = (E_INK_HEIGHT - img.height) / 2;
+            if (img.height < HP_HEIGHT) {
+                yLoc = (HP_HEIGHT - img.height) / 2;
             }
             Serial.printf("[IMAGE] Centering Image at %dx%d\n",xLoc, yLoc);
         }
@@ -377,7 +379,7 @@ void displayStatusMessage(const char *format, ...)
     const int16_t mar = 5;           // margin
     const int16_t statusWidth = scaleX(400); // extra space to clear for text
     const int16_t x = mar;
-    const int16_t y = E_INK_HEIGHT - mar;
+    const int16_t y = HP_HEIGHT - mar;
 
     // get text size for box
     int16_t x1, y1;
@@ -407,15 +409,15 @@ void splashScreen()
     display.selectDisplayMode(INKPLATE_1BIT);
     display.setTextColor(HP_FG, HP_BG);
 
-    FontSizing font = findFontSizeFit(splashName, E_INK_WIDTH, E_INK_HEIGHT);
+    FontSizing font = findFontSizeFit(splashName, HP_WIDTH, HP_HEIGHT);
     display.setFont(font.font);
     display.setTextSize(1);
 
     int16_t x1, y1;
     uint16_t w, h;
     display.getTextBounds(splashName, 100, 100, &x1, &y1, &w, &h);
-    int16_t x = (E_INK_WIDTH - w) / 2;
-    int16_t y = (E_INK_HEIGHT - h) / 2 + h;
+    int16_t x = (HP_WIDTH - w) / 2;
+    int16_t y = (HP_HEIGHT - h) / 2 + h;
 
     display.setCursor(x, y);
     display.print(splashName);

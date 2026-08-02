@@ -31,7 +31,7 @@ FontSizing findFontSizeFit(const char *m, uint16_t max_width, uint16_t max_heigh
         // Serial.printf("[MESSAGE][DEBUG] Testing font # %u with height = %u and width = %u  bounds = (%d, %d) lineHeight = %d\n", i, font.height, font.width, x1, y1, font.lineHeight);
         if (font.width <= max_width && font.height <= max_height)
         {
-            // Serial.printf("[MESSAGE] Using font %u with height = %u and width = %u  bounds = (%d, %d) screen(%d, %d) lineHeight = %d\n", i, font.height, font.width, x1, y1, E_INK_WIDTH, E_INK_HEIGHT, font.lineHeight);
+            // Serial.printf("[MESSAGE] Using font %u with height = %u and width = %u  bounds = (%d, %d) screen(%d, %d) lineHeight = %d\n", i, font.height, font.width, x1, y1, HP_WIDTH, HP_HEIGHT, font.lineHeight);
             return font;
         }
     }
@@ -74,7 +74,7 @@ void displayMessage(const char *m)
     display.setTextSize(1);
     display.clearDisplay();
 
-    FontSizing font = findFontSizeFit(message, E_INK_WIDTH, E_INK_HEIGHT);
+    FontSizing font = findFontSizeFit(message, HP_WIDTH, HP_HEIGHT);
     display.setFont(font.font);
 
     char *savePtr;
@@ -85,14 +85,14 @@ void displayMessage(const char *m)
     int16_t y = 0;
     int16_t x = 0;
     int16_t x1b, y1b;                                                 // unused
-    int16_t upperYBound = ((E_INK_HEIGHT - font.height) / 2) * 0.75f; // * 0.Nf to shift everything up a hair
+    int16_t upperYBound = ((HP_HEIGHT - font.height) / 2) * 0.75f; // * 0.Nf to shift everything up a hair
     // Serial.printf("[MESSAGE][DEBUG] upper Y = %d, yAdvance=%d\n", upperYBound, font.yAdvance);
     while (pch != NULL)
     {
         line++;
 
         display.getTextBounds(pch, 0, 100, &x1b, &y1b, &w, &h);
-        x = (E_INK_WIDTH - w) / 2;
+        x = (HP_WIDTH - w) / 2;
         y = upperYBound + (font.yAdvance * line);
         // Serial.printf("[MESSAGE] Line %u, upperYBound=%d, y=%d: %s\n", line, upperYBound, y, pch);
         display.setCursor(x, y);

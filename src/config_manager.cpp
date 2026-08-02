@@ -287,6 +287,30 @@ bool consumeForcePortalFlag()
     return v;
 }
 
+// Set just before the config portal reboots the device (see startWiFiManager).
+// The next boot consumes this to distinguish a portal save from any other cold
+// boot (reflash, reset, power cycle), so only a portal save clears stale
+// retained MQTT /set commands. Uses NVS rather than RTC memory because RTC
+// persistence across ESP.restart()/reflash is chip- and reset-type-dependent,
+// whereas NVS survival is unambiguous.
+void setPortalSavedFlag(bool v)
+{
+    preferences.begin(NVS_NAMESPACE, false);
+    preferences.putBool("portal_saved", v);
+    preferences.end();
+}
+
+bool consumePortalSavedFlag()
+{
+    preferences.begin(NVS_NAMESPACE, false);
+    bool v = preferences.getBool("portal_saved", false);
+    if (v) {
+        preferences.remove("portal_saved");
+    }
+    preferences.end();
+    return v;
+}
+
 // ---- WiFiManager ----
 
 bool startWiFiManager(bool forcePortal)
@@ -651,6 +675,11 @@ bool startWiFiManager(bool forcePortal)
     // because WiFiManager persists WiFi credentials after the callback runs.
     if (configSaved)
     {
+        // Mark this as a portal-save reboot so the next boot clears any stale
+        // retained MQTT /set commands (which would otherwise revert the values
+        // just saved here). Other cold boots leave retained commands intact so
+        // pending HA changes still apply on the next wake.
+        setPortalSavedFlag(true);
         Serial.println("[CONFIG] Rebooting to apply new settings...");
         vTaskDelay(500 / portTICK_PERIOD_MS); // let serial flush
         ESP.restart();
@@ -677,8 +706,8 @@ void displayConfigModeScreen(const char *apSsid)
     uint32_t qrPadRight = scaleX(100);
     uint32_t qrTextGap = scaleX(50);
 
-    uint32_t qrY = (E_INK_HEIGHT - (qrcode.size * qrSize)) / 2;
-    uint32_t qrX = E_INK_WIDTH - (qrcode.size * qrSize) - qrPadRight;
+    uint32_t qrY = (HP_HEIGHT - (qrcode.size * qrSize)) / 2;
+    uint32_t qrX = HP_WIDTH - (qrcode.size * qrSize) - qrPadRight;
 
     i2cStart();
     displayStart();
@@ -691,7 +720,7 @@ void displayConfigModeScreen(const char *apSsid)
     // Title
     display.setFont(&FONT_TITLE);
     display.setTextSize(1);
-    centerTextX("HomePlate Setup", 0, E_INK_WIDTH, scaleY(100), false);
+    centerTextX("HomePlate Setup", 0, HP_WIDTH, scaleY(100), false);
 
     // Instructions
     display.setFont(&FONT_HEADING);
@@ -732,13 +761,13 @@ void displayUnconfiguredScreen()
 
     display.setFont(&FONT_TITLE);
     display.setTextSize(1);
-    centerTextX("HomePlate", 0, E_INK_WIDTH, scaleY(300), false);
+    centerTextX("HomePlate", 0, HP_WIDTH, scaleY(300), false);
 
     display.setFont(&FONT_HEADING);
-    centerTextX("Unconfigured - Sleeping", 0, E_INK_WIDTH, scaleY(420), false);
+    centerTextX("Unconfigured - Sleeping", 0, HP_WIDTH, scaleY(420), false);
 
     display.setFont(&FONT_BODY);
-    centerTextX("Will retry on next wake cycle.", 0, E_INK_WIDTH, scaleY(500), false);
+    centerTextX("Will retry on next wake cycle.", 0, HP_WIDTH, scaleY(500), false);
 
     displayRefresh();
     displayEnd();
