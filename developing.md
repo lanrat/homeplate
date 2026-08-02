@@ -17,6 +17,7 @@ pio run -e inkplate6plus   # Inkplate 6 Plus
 pio run -e inkplate6plusv2 # Inkplate 6 Plus v2
 pio run -e inkplate6flick  # Inkplate 6 Flick
 pio run -e inkplate6color  # Inkplate 6 COLOR (7-color ACeP panel)
+pio run -e inkplate13spectra # Inkplate 13 Spectra (13.3" 6-color Spectra panel, ESP32-S3)
 ```
 
 > **Note:** Running `pio run` without `-e` builds all supported Inkplate board variants (the special-purpose `ota`, `debug`, `vcom`, `waveform_eeprom`, and `native` envs are excluded from the default set and must be invoked explicitly with `-e <env>`). `pio run` only compiles — it will not upload to a connected device. To flash, see the next section.
@@ -54,20 +55,23 @@ board_flag = -DARDUINO_INKPLATE10
 
 `board_flag` values for each variant:
 
-| Board             | `board_flag`                  |
-|-------------------|-------------------------------|
-| `inkplate5`       | `-DARDUINO_INKPLATE5`         |
-| `inkplate5v2`     | `-DARDUINO_INKPLATE5V2`       |
-| `inkplate6`       | `-DARDUINO_INKPLATE6`         |
-| `inkplate6v2`     | `-DARDUINO_INKPLATE6V2`       |
-| `inkplate6plus`   | `-DARDUINO_INKPLATE6PLUS`     |
-| `inkplate6plusv2` | `-DARDUINO_INKPLATE6PLUSV2`   |
-| `inkplate6flick`  | `-DARDUINO_INKPLATE6FLICK`    |
-| `inkplate10`      | `-DARDUINO_INKPLATE10`        |
-| `inkplate10v2`    | `-DARDUINO_INKPLATE10V2`      |
-| `inkplate6color`  | `-DARDUINO_INKPLATECOLOR`     |
+| Board               | `board_flag`                   |
+|---------------------|--------------------------------|
+| `inkplate5`         | `-DARDUINO_INKPLATE5`          |
+| `inkplate5v2`       | `-DARDUINO_INKPLATE5V2`        |
+| `inkplate6`         | `-DARDUINO_INKPLATE6`          |
+| `inkplate6v2`       | `-DARDUINO_INKPLATE6V2`        |
+| `inkplate6plus`     | `-DARDUINO_INKPLATE6PLUS`      |
+| `inkplate6plusv2`   | `-DARDUINO_INKPLATE6PLUSV2`    |
+| `inkplate6flick`    | `-DARDUINO_INKPLATE6FLICK`     |
+| `inkplate10`        | `-DARDUINO_INKPLATE10`         |
+| `inkplate10v2`      | `-DARDUINO_INKPLATE10V2`       |
+| `inkplate6color`    | `-DARDUINO_INKPLATECOLOR`      |
+| `inkplate13spectra` | `-DARDUINO_INKPLATE13SPECTRA`  |
 
 This setting only affects the four special-purpose envs above. The default board envs and CI builds are unaffected.
+
+> **Note:** The special-purpose envs assume the classic-ESP32 boards (`board = esp32dev`). The Inkplate 13 Spectra is ESP32-S3 based, so to use a special-purpose env with it you must also copy the `board` and `board_build.partitions` lines from `[env:inkplate13spectra]` into that env and change its build flags to use `${inkplate_defaults.build_flags_common}` (the classic envs' `-mfix-esp32-psram-cache-issue` flag does not apply to the S3).
 
 ## Serial Monitoring
 

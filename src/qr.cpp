@@ -22,8 +22,8 @@ void displayWiFiQR()
     uint32_t padRight = scaleX(100);
     uint32_t padText = scaleX(100);
 
-    uint32_t y = (E_INK_HEIGHT - (qrcode.size * size)) / 2;  // center QR code vertically
-    uint32_t x = (E_INK_WIDTH - (qrcode.size * size) - padRight); // proportional padding on right side
+    uint32_t y = (HP_HEIGHT - (qrcode.size * size)) / 2;  // center QR code vertically
+    uint32_t x = (HP_WIDTH - (qrcode.size * size) - padRight); // proportional padding on right side
 
     // serialPrintQR(qrcode);  // for testing
     displayStart();
@@ -44,10 +44,10 @@ void displayWiFiQR()
     y = y + scaleY(60);
 
     // do some math to resize the wifi information to fit in the bounding box
-    FontSizing font = findFontSizeFit(plateCfg.qrWifiName, x-padText, (E_INK_HEIGHT-y/2));
+    FontSizing font = findFontSizeFit(plateCfg.qrWifiName, x-padText, (HP_HEIGHT-y/2));
     display.setFont(font.font);
     h = centerTextX(plateCfg.qrWifiName, padText, x - padText, y + h + scaleY(30));
-    font = findFontSizeFit(plateCfg.qrWifiPassword, x - padText, (E_INK_HEIGHT-y));
+    font = findFontSizeFit(plateCfg.qrWifiPassword, x - padText, (HP_HEIGHT-y));
     h = centerTextX(plateCfg.qrWifiPassword, padText, x - padText, y + (h + scaleY(30)) * 2);
 
     i2cStart();
@@ -87,12 +87,12 @@ void displayTextQR(const char *text)
 
     // Compute pixel-per-module to fill the shorter screen axis with padding.
     uint32_t pad   = scaleY(60);
-    uint32_t avail = (E_INK_WIDTH < E_INK_HEIGHT ? E_INK_WIDTH : E_INK_HEIGHT) - 2 * pad;
+    uint32_t avail = (HP_WIDTH < HP_HEIGHT ? HP_WIDTH : HP_HEIGHT) - 2 * pad;
     uint32_t pixelsPerModule = avail / qrcode.size;
     if (pixelsPerModule < 2) pixelsPerModule = 2; // never go invisibly small
     uint32_t totalPx = qrcode.size * pixelsPerModule;
-    uint32_t x = (E_INK_WIDTH  - totalPx) / 2;
-    uint32_t y = (E_INK_HEIGHT - totalPx) / 2;
+    uint32_t x = (HP_WIDTH  - totalPx) / 2;
+    uint32_t y = (HP_HEIGHT - totalPx) / 2;
 
     displayStart();
 #ifdef INKPLATE_HAS_DISPLAY_MODES

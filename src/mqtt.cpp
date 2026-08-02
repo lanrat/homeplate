@@ -1,4 +1,4 @@
-#include <AsyncMqttClient.h>
+#include <espMqttClient.h>
 #include <ArduinoJson.h>
 #include "homeplate.h"
 
@@ -23,14 +23,98 @@ static const char *mqttUniqueId(const char *id)
   return uidBuf;
 }
 
-AsyncMqttClient mqttClient;
+// espMqttClient spawns its own task to drive the socket; all callbacks below
+// run on it. Constructing it here starts that task at static-init time, but it
+// immediately suspends itself in the disconnected state and is only resumed by
+// connect(), so there's no cost when MQTT is unconfigured.
+espMqttClient mqttClient(MQTT_CLIENT_TASK_PRIORITY, MQTT_CLIENT_TASK_CORE);
 xTaskHandle mqttTaskHandle;
 bool mqttFailed = false;
 JsonDocument mqtt_filter;
 
-static bool mqttWaiting; // is MQTT waiting for status to be sent
+static bool mqttWaiting; // is MQTT waiting for status to be delivered
 static bool mqttRun;     // should another MQTT status update be sent
 static bool mqttKill;    // should the status task stop running
+
+// ============================================================================
+// Delivery tracking for sensor-state publishes
+// ----------------------------------------------------------------------------
+// publish() only appends to the client's outbox and returns; the packet reaches
+// the wire later, on the client task. mqttWaiting used to be cleared as soon as
+// the publishes were *enqueued*, which made mqttRunning() — and therefore the
+// sleep guard in sleep.cpp — meaningless: the device could (and did) deep-sleep
+// with sensor states still queued, and disconnect discarded them.
+//
+// So record the packetId of every state publish and clear it from onMqttPublish
+// (fired on QoS 1 PUBACK / QoS 2 PUBCOMP). mqttWaiting now stays true until the
+// broker has actually confirmed all of them. See issue #82.
+//
+// Touched from both the status task and the client task, hence the spinlock.
+// ============================================================================
+
+#define MQTT_MAX_PENDING_ACKS 8
+
+static portMUX_TYPE pendingAckMux = portMUX_INITIALIZER_UNLOCKED;
+static uint16_t pendingAcks[MQTT_MAX_PENDING_ACKS];
+static size_t pendingAckCount;
+
+// Record a publish() result. packetId 0 means the publish failed outright, so
+// there is nothing to wait for. Only call this for QoS >= 1 publishes — QoS 0
+// returns 1 without ever being ACKed, which would stall the wait until timeout.
+static void trackPendingAck(uint16_t packetId, const char *what)
+{
+  if (packetId == 0)
+  {
+    Serial.printf("[MQTT][WARNING] publish failed for %s\n", what);
+    return;
+  }
+  taskENTER_CRITICAL(&pendingAckMux);
+  bool room = pendingAckCount < MQTT_MAX_PENDING_ACKS;
+  if (room)
+    pendingAcks[pendingAckCount++] = packetId;
+  taskEXIT_CRITICAL(&pendingAckMux);
+  if (!room)
+    Serial.printf("[MQTT][WARNING] pending ack table full, not tracking %s\n", what);
+}
+
+static void clearPendingAcks()
+{
+  taskENTER_CRITICAL(&pendingAckMux);
+  pendingAckCount = 0;
+  taskEXIT_CRITICAL(&pendingAckMux);
+}
+
+static bool pendingAcksEmpty()
+{
+  taskENTER_CRITICAL(&pendingAckMux);
+  bool empty = (pendingAckCount == 0);
+  taskEXIT_CRITICAL(&pendingAckMux);
+  return empty;
+}
+
+// Wait for the broker to confirm every tracked publish. Bounded, and bails out
+// early if the connection drops (the packets are gone at that point anyway).
+// Returns true if everything was ACKed.
+static bool waitForPendingAcks(uint32_t timeoutMs, const char *what)
+{
+  unsigned long start = millis();
+  while (!pendingAcksEmpty())
+  {
+    if (!mqttClient.connected())
+    {
+      Serial.printf("[MQTT][WARNING] disconnected before %s was ACKed\n", what);
+      return false;
+    }
+    if (millis() - start > timeoutMs)
+    {
+      Serial.printf("[MQTT][WARNING] %s not fully ACKed after %ums\n", what, timeoutMs);
+      return false;
+    }
+    vTaskDelay(50 / portTICK_PERIOD_MS);
+  }
+  Serial.printf("[MQTT] %s delivered (ACKed in %lums)\n", what, millis() - start);
+  return true;
+}
 
 // State topic buffers (populated at startup)
 static char state_topic_wifi_signal[128];
@@ -124,7 +208,7 @@ void mqttSendWiFiStatus()
   char buff[256];
   serializeJson(doc, buff);
   Serial.printf("[MQTT] Sending MQTT State: [%s] %s\n", state_topic_wifi_signal, buff);
-  mqttClient.publish(state_topic_wifi_signal, 1, MQTT_RETAIN_SENSOR_VALUE, buff);
+  trackPendingAck(mqttClient.publish(state_topic_wifi_signal, 1, MQTT_RETAIN_SENSOR_VALUE, buff), "wifi_signal");
 }
 
 #ifdef INKPLATE_HAS_TEMPERATURE
@@ -149,7 +233,7 @@ void mqttSendTempStatus()
   doc["temperature"] = temperature;
   serializeJson(doc, buff);
   Serial.printf("[MQTT] Sending MQTT State: [%s] %s\n", state_topic_temperature, buff);
-  mqttClient.publish(state_topic_temperature, 1, MQTT_RETAIN_SENSOR_VALUE, buff);
+  trackPendingAck(mqttClient.publish(state_topic_temperature, 1, MQTT_RETAIN_SENSOR_VALUE, buff), "temperature");
 }
 #endif
 
@@ -176,7 +260,7 @@ void mqttSendBatteryStatus()
   doc["battery"] = percent;
   serializeJson(doc, buff);
   Serial.printf("[MQTT] Sending MQTT State: [%s] %s\n", state_topic_battery, buff);
-  mqttClient.publish(state_topic_battery, 1, MQTT_RETAIN_SENSOR_VALUE, buff);
+  trackPendingAck(mqttClient.publish(state_topic_battery, 1, MQTT_RETAIN_SENSOR_VALUE, buff), "battery");
 }
 
 void mqttSendBootStatus(uint boot, uint activityCount, const char *bootReason, uint sleepDuration)
@@ -189,7 +273,7 @@ void mqttSendBootStatus(uint boot, uint activityCount, const char *bootReason, u
   doc["sleep_duration"] = sleepDuration;
   serializeJson(doc, buff);
   Serial.printf("[MQTT] Sending MQTT State: [%s] %s\n", state_topic_boot, buff);
-  mqttClient.publish(state_topic_boot, 1, MQTT_RETAIN_SENSOR_VALUE, buff);
+  trackPendingAck(mqttClient.publish(state_topic_boot, 1, MQTT_RETAIN_SENSOR_VALUE, buff), "boot");
 }
 
 void mqttSendLowBatteryAlert(double voltage)
@@ -203,7 +287,11 @@ void mqttSendLowBatteryAlert(double voltage)
   char buff[256];
   serializeJson(doc, buff);
   Serial.printf("[MQTT] Sending Low Battery Alert: [%s] %s\n", state_topic_low_battery_alert, buff);
-  mqttClient.publish(state_topic_low_battery_alert, 2, true, buff);
+  trackPendingAck(mqttClient.publish(state_topic_low_battery_alert, 2, true, buff), "low_battery_alert");
+  // This one is published on the way to an indefinite power-down, so there is
+  // no later wake to retry on. Block until the broker confirms it rather than
+  // letting the caller hope a fixed delay was long enough.
+  waitForPendingAcks(MQTT_STATUS_ACK_TIMEOUT_MS, "low battery alert");
 }
 
 void sendHAConfig()
@@ -798,14 +886,16 @@ static bool handleConfigCommand(const char *topic, const char *payload, size_t l
       return true;
     }
 
-    // Fresh boot policy: NVS wins. A retained /set is a stale instruction
-    // from a previous HA session; applying it would revert WiFi-manager
-    // portal changes (the portal saves to NVS then ESP.restart()s, so the
-    // post-save boot is sleepBoot==false). On sleep-wake we still apply
-    // retained commands — that's how HA-while-asleep changes propagate.
-    if (isRetained && !sleepBoot)
+    // Portal-save policy: NVS wins. After a config-portal save, a retained
+    // /set is a stale instruction from a previous HA session; applying it
+    // would revert the values just saved in the portal (which writes NVS then
+    // ESP.restart()s, setting the portalSaveReboot flag consumed at boot). So
+    // clear it. On every other boot — deep-sleep wake OR an ordinary cold boot
+    // (reflash, reset, power cycle) — we apply retained commands, so a change
+    // made in HA while the device was asleep or rebooting still propagates.
+    if (isRetained && portalSaveReboot)
     {
-      Serial.printf("[MQTT][CFG] Fresh boot, clearing stale retained set for %s\n", e.key);
+      Serial.printf("[MQTT][CFG] Portal-save boot, clearing stale retained set for %s\n", e.key);
       mqttClient.publish(cmdTopic, 1, true, "");
       publishConfigState(e);
       return true;
@@ -991,37 +1081,73 @@ void onMqttConnect(bool sessionPresent)
   publishAllActionStates();
 }
 
-void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
+void onMqttDisconnect(espMqttClientTypes::DisconnectReason reason)
 {
-  Serial.println("[MQTT] Disconnected from MQTT.");
+  Serial.printf("[MQTT] Disconnected from MQTT: %s\n",
+                espMqttClientTypes::disconnectReasonToString(reason));
 }
 
-void onMqttSubscribe(uint16_t packetId, uint8_t qos)
+// Fires 23 times per boot (action topic + 13 config commands + 2 buttons + 7
+// action commands), so only say something when the broker actually refuses a
+// subscription — a granted one carries no information.
+void onMqttSubscribe(uint16_t packetId, const espMqttClientTypes::SubscribeReturncode *returncodes, size_t len)
 {
-  Serial.printf("[MQTT] Subscribe acknowledged: packetId: %u qos: %u \n", packetId, qos);
+  for (size_t i = 0; i < len; i++)
+  {
+    if (returncodes[i] == espMqttClientTypes::SubscribeReturncode::FAIL)
+      Serial.printf("[MQTT][ERROR] Subscribe rejected by broker: packetId: %u\n", packetId);
+    else if (DEBUG_PRINT)
+      Serial.printf("[MQTT] Subscribe acknowledged: packetId: %u qos: %s\n", packetId,
+                    espMqttClientTypes::subscribeReturncodeToString(returncodes[i]));
+  }
+}
+
+// Fired on QoS 1 PUBACK / QoS 2 PUBCOMP — the broker has taken ownership of the
+// message. Runs on the client task.
+void onMqttPublish(uint16_t packetId)
+{
+  taskENTER_CRITICAL(&pendingAckMux);
+  for (size_t i = 0; i < pendingAckCount; i++)
+  {
+    if (pendingAcks[i] == packetId)
+    {
+      pendingAcks[i] = pendingAcks[--pendingAckCount];
+      break;
+    }
+  }
+  taskEXIT_CRITICAL(&pendingAckMux);
 }
 
 void onMqttUnsubscribe(uint16_t packetId)
 {
-  Serial.println("[MQTT] Unsubscribe acknowledged.");
-  Serial.print("  packetId: ");
-  Serial.println(packetId);
+  Serial.printf("[MQTT] Unsubscribe acknowledged: packetId: %u\n", packetId);
 }
 
-void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
+void onMqttMessage(const espMqttClientTypes::MessageProperties &properties, const char *topic,
+                   const uint8_t *payloadBytes, size_t len, size_t index, size_t total)
 {
   if (!topic) {
     Serial.println("[MQTT] Invalid message: null topic");
     return;
   }
-  // AsyncMqttClient delivers empty retained publishes (e.g. the device's
-  // own clear-on-handle publishes to action/<key>/set echoed back via the
-  // subscription) as payload=NULL, len=0. Treat them as legitimate empty
-  // messages — handleConfigCommand / handleActionCommand both early-out
-  // on len==0. Substitute a 1-byte buffer so memcpy(buf, payload, 0) is
-  // strictly defined per C standard.
-  static char emptyPayload[1] = {0};
-  if (!payload) payload = emptyPayload;
+
+  // Payloads larger than the client's RX buffer arrive as several callbacks;
+  // none of the handlers below reassemble, so only act on messages delivered
+  // whole. Our own topics are all far smaller than one buffer.
+  if (index != 0 || len != total) {
+    Serial.printf("[MQTT] Ignoring chunked payload for %s (%zu bytes at %zu of %zu)\n",
+                  topic, len, index, total);
+    return;
+  }
+
+  // Empty retained publishes (e.g. the device's own clear-on-handle publishes
+  // to action/<key>/set echoed back via the subscription) can arrive with a
+  // null pointer and len=0. Treat them as legitimate empty messages —
+  // handleConfigCommand / handleActionCommand both early-out on len==0.
+  // Substitute a 1-byte buffer so memcpy(buf, payload, 0) is strictly defined
+  // per the C standard.
+  static const char emptyPayload[1] = {0};
+  const char *payload = payloadBytes ? reinterpret_cast<const char *>(payloadBytes) : emptyPayload;
 
   const size_t MAX_MQTT_PAYLOAD_SIZE = 8192;
   if (len > MAX_MQTT_PAYLOAD_SIZE) {
@@ -1029,15 +1155,10 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
     return;
   }
 
-  Serial.println("[MQTT] Publish received.");
-  Serial.print("  topic: ");
-  Serial.println(topic);
-  Serial.print("  qos: ");
-  Serial.println(properties.qos);
-  Serial.print("  retain: ");
-  Serial.println(properties.retain);
-  Serial.print("  len: ");
-  Serial.println(len);
+  // One line, not six: the handlers below log the topics they act on, so this
+  // only needs to account for messages nothing claims.
+  Serial.printf("[MQTT] Publish received: [%s] qos: %u retain: %u len: %zu\n",
+                topic, properties.qos, properties.retain, len);
 
   // Dispatch to config/button handlers first (exact topic match). These
   // accept zero-length payloads (e.g. retained-clear for buttons) and return
@@ -1056,7 +1177,9 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
 
   if (len > 0)
   {
-    mqttClient.publish(mqttActionTopic, 1, true);
+    // Clear the retained action so it doesn't refire on the next reconnect.
+    // (AsyncMqttClient defaulted the payload; espMqttClient requires one.)
+    mqttClient.publish(mqttActionTopic, 1, true, "");
 
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, payload, len, DeserializationOption::Filter(mqtt_filter));
@@ -1166,6 +1289,7 @@ void startMQTTTask()
   mqttClient.onSubscribe(onMqttSubscribe);
   mqttClient.onUnsubscribe(onMqttUnsubscribe);
   mqttClient.onMessage(onMqttMessage);
+  mqttClient.onPublish(onMqttPublish);
 
   mqtt_filter["action"] = true;
   mqtt_filter["message"] = true;
@@ -1194,9 +1318,38 @@ void mqttStopTask()
   if (mqttTaskHandle != NULL)
   {
     Serial.println("[MQTT] Stopping and disconnecting...");
+    // Stop the supervisor first so it can't race us by reconnecting.
     vTaskDelete(mqttTaskHandle);
-    mqttClient.disconnect();
     mqttTaskHandle = NULL;
+  }
+
+  if (mqttClient.disconnected())
+    return;
+
+  // A non-forced disconnect drains the outbox, sends the MQTT DISCONNECT, and
+  // only then closes the socket — but all of that happens later, on the client
+  // task. disconnect() returns as soon as the teardown is *initiated*, so we
+  // have to wait for it to finish: our caller tears WiFi down immediately
+  // after, and without this the DISCONNECT never reaches the wire and the
+  // broker logs a keepalive timeout instead of a clean close. See issue #82.
+  unsigned long start = millis();
+  if (!mqttClient.disconnect())
+  {
+    // Not in a state where a clean disconnect is possible (e.g. still mid
+    // connect). Nothing worth draining — just tear the socket down.
+    mqttClient.disconnect(true);
+  }
+  while (!mqttClient.disconnected() && millis() - start < MQTT_DISCONNECT_TIMEOUT_MS)
+    vTaskDelay(20 / portTICK_PERIOD_MS);
+
+  if (mqttClient.disconnected())
+  {
+    Serial.printf("[MQTT] clean disconnect confirmed in %lums\n", millis() - start);
+  }
+  else
+  {
+    Serial.println("[MQTT][WARNING] DISCONNECT not confirmed before WiFi teardown, forcing");
+    mqttClient.disconnect(true);
   }
 }
 
@@ -1224,12 +1377,18 @@ void sendMQTTStatusTask(void *param)
     mqttWaiting = true;
 
     waitForMQTT();
+    clearPendingAcks();
     mqttSendBootStatus(bootCount, activityCount, bootReason(), timeToSleep);
     mqttSendWiFiStatus();
 #ifdef INKPLATE_HAS_TEMPERATURE
     mqttSendTempStatus();
 #endif
     mqttSendBatteryStatus();
+
+    // Hold mqttWaiting — and with it the sleep guard in sleep.cpp — until the
+    // broker has ACKed every state above. The publishes are only queued at this
+    // point; sleeping now would discard them.
+    waitForPendingAcks(MQTT_STATUS_ACK_TIMEOUT_MS, "status update");
 
     mqttWaiting = false;
     mqttRun = false;

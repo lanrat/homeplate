@@ -224,8 +224,8 @@ Settings that previously could only be changed through the WiFiManager setup por
 | Sleep Minutes | number | `sleep_min` | 1–1440 min | next sleep |
 | Quick Sleep Seconds | number | `quick_sleep` | 0–86400 s | next quick sleep |
 | Default Activity | select | `def_activity` | HomeAssistant / Trmnl / Info / GuestWifi | next default dispatch |
-| Image URL | text | `image_url` | up to 256 chars | next HomeAssistant activity |
-| TRMNL URL | text | `trmnl_url` | up to 256 chars | next TRMNL activity |
+| Image URL | text | `image_url` | up to 255 chars | next HomeAssistant activity |
+| TRMNL URL | text | `trmnl_url` | up to 255 chars | next TRMNL activity |
 | TRMNL ID | text | `trmnl_id` | up to 64 chars | next TRMNL activity |
 | TRMNL Token | text (password) | `trmnl_token` | up to 64 chars | next TRMNL activity |
 | TRMNL Logging | switch | `trmnl_log` | ON / OFF | next TRMNL activity |
@@ -332,7 +332,7 @@ cards:
             topic: homeplate/homeplate/activity/run
             qos: '1'
             retain: true
-            payload_template: >-
+            payload: >-
               { "action": "message",  "message": "{{
               states('input_text.homeplate_message') }}"}
           target: {}
@@ -346,7 +346,7 @@ cards:
             topic: homeplate/homeplate/activity/run
             qos: '1'
             retain: true
-            payload_template: >-
+            payload: >-
               { "action": "img",  "message": "{{ states('input_text.homeplate_message')
               }}"}
           target: {}

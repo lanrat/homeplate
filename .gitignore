@@ -6,3 +6,7 @@
 src/config.h
 src/config.cpp
 vendor/
+__pycache__/
+# local checkout of the Inkplate library for reference; PlatformIO fetches its
+# own copy per platformio.ini (inkplate_lib), so this must not be committed.
+/Inkplate-Arduino-library/

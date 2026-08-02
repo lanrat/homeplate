@@ -17,6 +17,7 @@ extern void vApplicationStackOverflowHook(xTaskHandle *pxTask,
 
 extern Inkplate display;
 extern bool sleepBoot;
+extern bool portalSaveReboot;
 extern uint bootCount, activityCount, timeToSleep;
 
 #define max(x, y) (((x) >= (y)) ? (x) : (y))
@@ -25,15 +26,25 @@ extern uint bootCount, activityCount, timeToSleep;
 #define REF_WIDTH 1200
 #define REF_HEIGHT 825
 
-// Compile-time proportional scaling macros
-#define scaleX(px) ((int32_t)(px) * E_INK_WIDTH / REF_WIDTH)
-#define scaleY(px) ((int32_t)(px) * E_INK_HEIGHT / REF_HEIGHT)
+// Rotation-aware display dimensions. Some drivers rotate the panel in
+// begin() — the Inkplate 13 Spectra's portrait-native panel is rotated to
+// landscape, transposing the library's compile-time E_INK_WIDTH/E_INK_HEIGHT
+// constants relative to the drawing coordinate space. display.width()/height()
+// track rotation, so layout code must use these instead of the E_INK_*
+// constants. Only valid after display.begin(); not usable in #if directives.
+#define HP_WIDTH ((int32_t)display.width())
+#define HP_HEIGHT ((int32_t)display.height())
+
+// Proportional scaling macros
+#define scaleX(px) ((int32_t)(px) * HP_WIDTH / REF_WIDTH)
+#define scaleY(px) ((int32_t)(px) * HP_HEIGHT / REF_HEIGHT)
 
 // Font roles and tier-specific font includes
 #if defined(ARDUINO_INKPLATE10) || defined(ARDUINO_INKPLATE10V2) \
  || defined(ARDUINO_INKPLATE6PLUS) || defined(ARDUINO_INKPLATE6PLUSV2) \
- || defined(ARDUINO_INKPLATE6FLICK) || defined(ARDUINO_INKPLATE5V2)
-  // Large tier: 720-825px height
+ || defined(ARDUINO_INKPLATE6FLICK) || defined(ARDUINO_INKPLATE5V2) \
+ || defined(ARDUINO_INKPLATE13SPECTRA)
+  // Large tier: 720-1200px height
   #include "fonts/Roboto_12.h"
   #include "fonts/Roboto_16.h"
   #include "fonts/Roboto_32.h"
@@ -78,7 +89,18 @@ extern uint bootCount, activityCount, timeToSleep;
 //   HP_ACCENT secondary accent (charts, dividers)
 //   HP_WARN   warnings (low battery, errors)
 //   HP_OK     success indicator
-#ifdef INKPLATE_IS_COLOR
+#if defined(ARDUINO_INKPLATE13SPECTRA)
+// The Spectra driver's drawPixel() takes logical palette indices 0-5 and
+// silently drops anything above 5, but the library's INKPLATE_BLUE (5) and
+// INKPLATE_GREEN (6) defines hold raw Spectra-6 panel codes, not indices —
+// passing them draws green and nothing, respectively. Use the logical
+// indices directly for blue and green.
+#define HP_FG     INKPLATE_BLACK
+#define HP_BG     INKPLATE_WHITE
+#define HP_ACCENT 4 // blue
+#define HP_WARN   INKPLATE_RED
+#define HP_OK     5 // green
+#elif defined(INKPLATE_IS_COLOR)
 #define HP_FG     INKPLATE_BLACK
 #define HP_BG     INKPLATE_WHITE
 #define HP_ACCENT INKPLATE_BLUE
@@ -325,6 +347,17 @@ private:
 #define MQTT_RECOVER_TIME_MS (30 * SECOND) // Wait 30 seconds after a failed connection attempt
 #define MQTT_RESEND_CONFIG_EVERY 10
 #define MQTT_RETAIN_SENSOR_VALUE true
+// How long sendMQTTStatusTask holds off sleep waiting for the broker to ACK the
+// sensor-state publishes. Only hit if the broker or link is unusually slow.
+#define MQTT_STATUS_ACK_TIMEOUT_MS (20 * SECOND)
+// How long mqttStopTask waits for the outbox to drain and the MQTT DISCONNECT
+// to reach the wire before giving up and forcing the socket closed.
+#define MQTT_DISCONNECT_TIMEOUT_MS (3 * SECOND)
+// Priority and core for espMqttClient's internal task (it does all the socket
+// I/O and invokes our callbacks). Matches the priority the old connect task ran
+// at, so publishes aren't starved by the activity/display tasks.
+#define MQTT_CLIENT_TASK_PRIORITY 3
+#define MQTT_CLIENT_TASK_CORE 1
 
 // MQTT discovery topic (compile-time constant)
 #define MQTT_DISCOVERY_TOPIC "homeassistant"

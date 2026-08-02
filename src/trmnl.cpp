@@ -101,8 +101,8 @@ bool trmnlDisplay(const char *url)
         {"RSSI", String(WiFi.RSSI())},
         {"Refresh-Rate", String(getSleepDuration())},
         {"Accept", "application/json"},
-        {"Width", String(E_INK_WIDTH)},
-        {"Height", String(E_INK_HEIGHT)},
+        {"Width", String(HP_WIDTH)},
+        {"Height", String(HP_HEIGHT)},
         {"Model", DEVICE_MODEL},
     };
 

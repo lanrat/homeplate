@@ -1,18 +1,21 @@
 #include "homeplate.h"
 #include <esp_chip_info.h>
 
+// Intentionally the compile-time E_INK_WIDTH (not HP_WIDTH, which is runtime
+// and can't appear in #if): this only picks a layout density by panel size,
+// so orientation doesn't matter.
 #if E_INK_WIDTH < 800
 // Small displays (Inkplate 6 COLOR 600px): symmetric layout with tight margins.
 // (32ths) 1 left | 6 label1 | 8 data1 | 2 middle gap | 6 label2 | 8 data2 | 1 right
-#define COL1_NAME_X (1  * (E_INK_WIDTH / 32))
-#define COL1_DATA_X (7  * (E_INK_WIDTH / 32))
-#define COL2_NAME_X (17 * (E_INK_WIDTH / 32))
-#define COL2_DATA_X (23 * (E_INK_WIDTH / 32))
+#define COL1_NAME_X (1  * (HP_WIDTH / 32))
+#define COL1_DATA_X (7  * (HP_WIDTH / 32))
+#define COL2_NAME_X (17 * (HP_WIDTH / 32))
+#define COL2_DATA_X (23 * (HP_WIDTH / 32))
 #else
-#define COL1_NAME_X 1 * (E_INK_WIDTH / 8)
-#define COL1_DATA_X 2 * (E_INK_WIDTH / 8)
-#define COL2_NAME_X 5 * (E_INK_WIDTH / 8)
-#define COL2_DATA_X 6 * (E_INK_WIDTH / 8)
+#define COL1_NAME_X 1 * (HP_WIDTH / 8)
+#define COL1_DATA_X 2 * (HP_WIDTH / 8)
+#define COL2_NAME_X 5 * (HP_WIDTH / 8)
+#define COL2_DATA_X 6 * (HP_WIDTH / 8)
 #endif
 
 #define REDRAW_NETWORK 0
@@ -71,16 +74,16 @@ const char *wl_status_to_string(wl_status_t status)
 void displayBoundaryBox()
 {
   int bw = max(scaleX(10), 2);
-  display.fillRect(0, 0, bw, E_INK_HEIGHT, HP_FG);                // left
-  display.fillRect(E_INK_WIDTH - bw, 0, bw, E_INK_HEIGHT, HP_FG); // right
-  display.fillRect(0, 0, E_INK_WIDTH, bw, HP_FG);                 // top
-  display.fillRect(0, E_INK_HEIGHT - bw, E_INK_WIDTH, bw, HP_FG); // bottom
+  display.fillRect(0, 0, bw, HP_HEIGHT, HP_FG);                // left
+  display.fillRect(HP_WIDTH - bw, 0, bw, HP_HEIGHT, HP_FG); // right
+  display.fillRect(0, 0, HP_WIDTH, bw, HP_FG);                 // top
+  display.fillRect(0, HP_HEIGHT - bw, HP_WIDTH, bw, HP_FG); // bottom
 }
 
 void cleanField(uint32_t x, uint32_t y)
 {
-  display.fillRect(x, y - lineHeight, (E_INK_WIDTH / 8), lineHeight, HP_BG);
-  //Serial.printf("fillRect(x:%u, y:%u, w:%u, h:%u)\n", x, y, (E_INK_WIDTH / 8), lineHeight);
+  display.fillRect(x, y - lineHeight, (HP_WIDTH / 8), lineHeight, HP_BG);
+  //Serial.printf("fillRect(x:%u, y:%u, w:%u, h:%u)\n", x, y, (HP_WIDTH / 8), lineHeight);
 }
 
 void drawNetwork(uint32_t *yref, bool clean)
@@ -204,11 +207,11 @@ void displayInfoScreen()
   // Title
   display.setFont(&FONT_HEADING);
   display.setTextSize(1);
-  uint32_t y = centerTextX("HomePlate Info", 0, E_INK_WIDTH, scaleY(100), false);
+  uint32_t y = centerTextX("HomePlate Info", 0, HP_WIDTH, scaleY(100), false);
   display.setFont(&FONT_BODY);
   // version
   snprintf(buff, 1024, "Version: [%s]", VERSION);
-  y = centerTextX(buff, 0, E_INK_WIDTH, y + scaleY(110), false);
+  y = centerTextX(buff, 0, HP_WIDTH, y + scaleY(110), false);
 
   // column 1
   // Model
@@ -258,7 +261,7 @@ void displayInfoScreen()
   display.setCursor(COL1_NAME_X, y);
   display.print("Display:");
   display.setCursor(COL1_DATA_X, y);
-  display.printf("%dx%d", E_INK_WIDTH, E_INK_HEIGHT);
+  display.printf("%dx%d", HP_WIDTH, HP_HEIGHT);
   // Dither
   y += lineHeight;
   display.setCursor(COL1_NAME_X, y);

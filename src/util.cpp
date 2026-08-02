@@ -109,8 +109,9 @@ void lowBatteryCheck()
         if (mqttConnected())
         {
             Serial.println("[MAIN] Sending low battery MQTT notification");
+            // Blocks until the broker ACKs the alert (bounded), so no extra
+            // delay is needed here to give the publish time to reach the wire.
             mqttSendLowBatteryAlert(voltage);
-            vTaskDelay(2 * SECOND / portTICK_PERIOD_MS);
         }
         setSleepDuration(0xFFFFFFFF);
         gotoSleepNow();
@@ -182,15 +183,15 @@ void displayBatteryWarning()
 
     const int16_t pad = 3; // padding
     const int16_t mar = 5; // margin
-    int16_t x = E_INK_WIDTH / 2;
-    int16_t y = E_INK_HEIGHT - mar;
+    int16_t x = HP_WIDTH / 2;
+    int16_t y = HP_HEIGHT - mar;
 
     // get text size for box
     int16_t x1, y1;
     uint16_t w, h;
     display.getTextBounds(statusBuffer, x, y, &x1, &y1, &w, &h);
 
-    x = (E_INK_WIDTH / 2) - (w / 2);
+    x = (HP_WIDTH / 2) - (w / 2);
 
     // background box to set internal buffer colors
     display.fillRect(x - pad, y - pad - h, w + (pad * 2), h + (pad * 2), HP_BG);
