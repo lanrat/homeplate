@@ -133,6 +133,9 @@ extern uint bootCount, activityCount, timeToSleep;
 
 // WiFi
 void configureWiFi();
+void registerWiFiLogEvents();
+void registerWiFiEvents();
+void logScanResultsForSSID(const char *ssid, bool rescan);
 void wifiConnectTask();
 void wifiStopTask();
 void waitForWiFi();

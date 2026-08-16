@@ -38,11 +38,142 @@ void WiFiGotIP(WiFiEvent_t event, WiFiEventInfo_t info)
     displayStatusMessage("WiFi connected");
 }
 
+// wifiReasonName: human readable name for a WIFI_REASON_* code. The core's
+// table has no entries for the IDF 5.x NO_AP_FOUND_* variants and returns ""
+// for them -- and those are exactly the codes that explain why an AP that is
+// in range was still rejected, so name them here.
+static const char *wifiReasonName(uint8_t reason)
+{
+    switch (reason)
+    {
+    case WIFI_REASON_NO_AP_FOUND_W_COMPATIBLE_SECURITY:
+        return "NO_AP_FOUND_W_COMPATIBLE_SECURITY";
+    case WIFI_REASON_NO_AP_FOUND_IN_AUTHMODE_THRESHOLD:
+        return "NO_AP_FOUND_IN_AUTHMODE_THRESHOLD";
+    case WIFI_REASON_NO_AP_FOUND_IN_RSSI_THRESHOLD:
+        return "NO_AP_FOUND_IN_RSSI_THRESHOLD";
+    default:
+    {
+        // the core returns "" for codes it does not know
+        const char *name = WiFi.disconnectReasonName((wifi_err_reason_t)reason);
+        return (name != NULL && name[0] != '\0') ? name : "UNKNOWN";
+    }
+    }
+}
+
+// authModeName: name for a scanned AP's security. The core has an equivalent
+// table but it is static and compiled out below ARDUHAL_LOG_LEVEL_VERBOSE.
+static const char *authModeName(wifi_auth_mode_t mode)
+{
+    switch (mode)
+    {
+    case WIFI_AUTH_OPEN:
+        return "OPEN";
+    case WIFI_AUTH_WEP:
+        return "WEP";
+    case WIFI_AUTH_WPA_PSK:
+        return "WPA_PSK";
+    case WIFI_AUTH_WPA2_PSK:
+        return "WPA2_PSK";
+    case WIFI_AUTH_WPA_WPA2_PSK:
+        return "WPA_WPA2_PSK";
+    case WIFI_AUTH_ENTERPRISE:
+        return "ENTERPRISE";
+    case WIFI_AUTH_WPA3_PSK:
+        return "WPA3_PSK";
+    case WIFI_AUTH_WPA2_WPA3_PSK:
+        return "WPA2_WPA3_PSK";
+    case WIFI_AUTH_WAPI_PSK:
+        return "WAPI_PSK";
+    default:
+        return "UNKNOWN";
+    }
+}
+
 void WiFiStationDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
 {
-    Serial.println("[WIFI] Disconnected from WiFi access point");
-    Serial.print("[WIFI] WiFi lost connection. Reason: ");
-    Serial.println(info.wifi_sta_disconnected.reason);
+    uint8_t reason = info.wifi_sta_disconnected.reason;
+    Serial.printf("[WIFI] Disconnected from WiFi access point. Reason: %u %s (status: %d)\n",
+                  reason, wifiReasonName(reason), (int)WiFi.status());
+}
+
+// logScanResultsForSSID: log every scanned AP matching ssid, with BSSID, signal,
+// channel and security. A disconnect reason alone cannot tell "SSID not in
+// range" from "in range but too weak", and cannot show that several APs share
+// the SSID (which matters because the ESP32 default fast scan takes the first
+// match, not the strongest). Uses the cached scan when there is one -- during
+// portal setup that is WiFiManager's own scan, so this costs nothing. Pass
+// rescan=true to scan when no cache is available.
+void logScanResultsForSSID(const char *ssid, bool rescan)
+{
+    if (ssid == NULL || strlen(ssid) == 0)
+    {
+        Serial.println("[WIFI] no target SSID to look for in scan results");
+        return;
+    }
+
+    bool ownScan = false;
+    int16_t n = WiFi.scanComplete();
+    if (n < 0 && rescan)
+    {
+        Serial.println("[WIFI] scanning for networks...");
+        n = WiFi.scanNetworks();
+        ownScan = true;
+    }
+    if (n < 0)
+    {
+        Serial.printf("[WIFI] no scan results available for '%s' (scanComplete: %d)\n", ssid, (int)n);
+        return;
+    }
+
+    uint16_t matches = 0;
+    for (int16_t i = 0; i < n; i++)
+    {
+        if (WiFi.SSID(i) != ssid)
+            continue;
+        matches++;
+        Serial.printf("[WIFI] scan match '%s': BSSID %s, RSSI %d, channel %d, auth %s\n",
+                      ssid, WiFi.BSSIDstr(i).c_str(), (int)WiFi.RSSI(i), (int)WiFi.channel(i),
+                      authModeName(WiFi.encryptionType(i)));
+    }
+    Serial.printf("[WIFI] '%s' matched %u of %d scanned networks\n", ssid, (unsigned)matches, (int)n);
+
+    // only free results we created, WiFiManager still needs its own scan
+    if (ownScan)
+        WiFi.scanDelete();
+}
+
+// registerWiFiLogEvents: install the log-only WiFi event handlers, so the very
+// first connection attempt reports why it failed instead of failing silently.
+// Safe to call during setup because neither handler touches the display or I2C.
+// Idempotent -- onEvent() appends, so registering twice would double every line.
+void registerWiFiLogEvents()
+{
+    static bool registered = false;
+    if (registered)
+        return;
+    registered = true;
+
+    WiFi.onEvent(WiFiStationConnected, ARDUINO_EVENT_WIFI_STA_CONNECTED);
+    WiFi.onEvent(WiFiStationDisconnected, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+}
+
+// registerWiFiEvents: add the handler that draws on the display. Deliberately
+// kept out of the setup path: WiFiGotIP paints a status message, and on boards
+// with partial update that holds the display + I2C mutexes for a full e-ink
+// pass, from the event task (priority 19, above lwIP). During setup that stalls
+// everything else waiting on I2C -- the RTC read stretched from 3ms to ~970ms --
+// and reshuffles the boot sequence around the first download's TLS handshake.
+void registerWiFiEvents()
+{
+    registerWiFiLogEvents();
+
+    static bool registered = false;
+    if (registered)
+        return;
+    registered = true;
+
+    WiFi.onEvent(WiFiGotIP, ARDUINO_EVENT_WIFI_STA_GOT_IP);
 }
 
 // configureWiFi: apply STA mode, hostname, and (optional) static IP from
@@ -85,7 +216,12 @@ void keepWiFiAlive(void *parameter)
         configureWiFi();
         // Use stored credentials from WiFiManager (no args)
         Serial.printf("[WIFI] Connecting to SSID: %s\n", WiFi.SSID().c_str());
-        WiFi.begin();
+        // Disconnect first: if the core's auto-reconnect still has a connect in
+        // flight, begin() is rejected by esp_wifi_set_config() with
+        // ESP_ERR_WIFI_STATE and silently does nothing for the whole timeout.
+        WiFi.disconnect();
+        if (WiFi.begin() == WL_CONNECT_FAILED)
+            Serial.println("[WIFI] begin() failed");
 
         unsigned long startAttemptTime = millis();
 
@@ -121,9 +257,7 @@ void wifiConnectTask()
         return;
     }
 
-    WiFi.onEvent(WiFiStationConnected, ARDUINO_EVENT_WIFI_STA_CONNECTED);
-    WiFi.onEvent(WiFiGotIP, ARDUINO_EVENT_WIFI_STA_GOT_IP);
-    WiFi.onEvent(WiFiStationDisconnected, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+    registerWiFiEvents();
 
     printDebug("[WIFI] starting...");
     xTaskCreatePinnedToCore(

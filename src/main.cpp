@@ -160,6 +160,12 @@ void setup()
             forcePortal = true;
         }
     }
+    // Register the log-only WiFi event handlers before WiFiManager connects, so
+    // a failed first connection logs its disconnect reason instead of failing
+    // silently. The display-touching handler stays out of setup (see
+    // registerWiFiEvents) so it can't block I2C mid-boot.
+    registerWiFiLogEvents();
+
     Serial.println("[SETUP] starting WiFiManager");
     if (!startWiFiManager(forcePortal))
     {

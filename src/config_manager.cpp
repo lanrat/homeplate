@@ -317,8 +317,13 @@ bool startWiFiManager(bool forcePortal)
 
     WiFiManager wm;
 
-    wm.setConnectRetries(5);
-    wm.setConnectTimeout(20);
+    // One long attempt rather than several short ones: WiFiManager re-issues
+    // WiFi.begin() per retry without disconnecting first, which arduino-esp32
+    // 3.x rejects with ESP_ERR_WIFI_STATE while a connect is still in flight.
+    // Retries beyond the first only log confusing errors and burn the timeout;
+    // the core's own auto-reconnect keeps trying for the whole window anyway.
+    wm.setConnectRetries(1);
+    wm.setConnectTimeout(60);
     wm.setConfigPortalTimeout(15 * 60); // 15 minutes
 
     // Menu layout: include "custom" so setCustomMenuHTML content appears
@@ -573,6 +578,14 @@ bool startWiFiManager(bool forcePortal)
     wm.addParameter(&p_dkern);
     wm.addParameter(&p_ota);
 
+    // Log what the portal's scan knows about the SSID the user picked, before
+    // the connect is attempted. This callback runs while WiFiManager's own scan
+    // results are still cached, so it needs no extra scan, and it gives a
+    // failure afterwards something to be interpreted against: signal, channel,
+    // security, and whether several APs share the SSID.
+    wm.setPreSaveConfigCallback([&wm]()
+                                { logScanResultsForSSID(wm.server->arg("s").c_str(), false); });
+
     // ---- Save callback ----
     bool configSaved = false;
     wm.setSaveParamsCallback([&]()
@@ -640,6 +653,10 @@ bool startWiFiManager(bool forcePortal)
     else
     {
         Serial.println("[CONFIG] WiFiManager timeout - no connection");
+        // Nothing connected: show what a scan sees for the configured SSID so
+        // the serial log identifies the cause (out of range, weak signal,
+        // security we refuse, or several APs sharing the SSID).
+        logScanResultsForSSID(WiFi.SSID().c_str(), true);
     }
     Serial.printf("[CONFIG] WiFi saved: %s\n", wm.getWiFiIsSaved() ? "yes" : "no");
 
