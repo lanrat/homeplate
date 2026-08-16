@@ -9,6 +9,11 @@ void displayRefresh()
 #else
     WakeLock lock("display-refresh", 10);
 #endif
+    // Every full repaint — image, message, info, QR, config screens — funnels
+    // through here, so this is the one place that reliably knows the cached
+    // image is no longer what's on the glass. drawImageFromURL re-arms the
+    // cache after its own successful render.
+    invalidateImageCache();
     display.display();
 }
 
@@ -188,6 +193,10 @@ void displayBatteryWarning()
     display.print(statusBuffer);
     display.partialUpdate(sleepBoot);
     displayEnd();
+    // Unlike the transient progress overlays, this warning stays up until
+    // something repaints over it — so the cached image is no longer what the
+    // panel shows, and a 304 must not skip the render that would clear it.
+    invalidateImageCache();
 #endif
     i2cEnd();
 }

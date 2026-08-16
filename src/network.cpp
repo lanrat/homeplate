@@ -282,13 +282,23 @@ void wifiStopTask()
     }
 }
 
-uint8_t* httpGetRetry(uint32_t trys, const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec, std::map<String, String> *responseHeadersOut) {
+uint8_t* httpGetRetry(uint32_t trys, const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec, std::map<String, String> *responseHeadersOut, int *httpCodeOut) {
     uint8_t* ret = 0;
     for (uint32_t i = 0; i < trys; i++) {
         Serial.printf("[NET] download attempt: %d\n", i);
-        ret = httpGet(url, headers, defaultLen, timeout_sec, responseHeadersOut);
+        int code = 0;
+        ret = httpGet(url, headers, defaultLen, timeout_sec, responseHeadersOut, &code);
+        if (httpCodeOut) {
+            *httpCodeOut = code;
+        }
         if (ret != nullptr) {
             return ret;
+        }
+        // 304 is a complete answer, not a failure — the server is telling us the
+        // resource we already have is still current. Retrying just asks the same
+        // question two more times and delays the (skipped) render by 2 seconds.
+        if (code == HTTP_CODE_NOT_MODIFIED) {
+            return nullptr;
         }
         // wait before trying again
         vTaskDelay(1 * SECOND/portTICK_PERIOD_MS);
@@ -332,7 +342,10 @@ int httpPost(const char* url, std::map<String, String> *headers, const char* bod
     return httpCode;
 }
 
-uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec, std::map<String, String> *responseHeadersOut) {
+uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec, std::map<String, String> *responseHeadersOut, int *httpCodeOut) {
+    if (httpCodeOut) {
+        *httpCodeOut = 0;
+    }
     // Input validation
     if (!url || strlen(url) == 0) {
         Serial.println("[NET] Invalid URL: null or empty");
@@ -362,14 +375,23 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
         }
     }
 
-    static const char* watchedHeaders[] = { "X-Dither" };
+    // ETag / Last-Modified are collected so callers can cache them and issue a
+    // conditional GET on the next fetch (see drawImageFromURL).
+    static const char* watchedHeaders[] = { "X-Dither", "ETag", "Last-Modified" };
     if (responseHeadersOut) {
         http.collectHeaders(watchedHeaders, sizeof(watchedHeaders) / sizeof(watchedHeaders[0]));
     }
 
     int httpCode = http.GET();
+    if (httpCodeOut) {
+        *httpCodeOut = httpCode;
+    }
 
     if (responseHeadersOut) {
+        // Start clean: httpGetRetry reuses one map across attempts, and a
+        // header from an earlier attempt (or from a 304 preceding a re-fetch)
+        // must not be mistaken for one the response we actually use sent.
+        responseHeadersOut->clear();
         // collectHeaders() reserves a slot per watched header even when the
         // server didn't send it; http.header(i) then returns "". Skip empties
         // so callers can use find() as "header was actually present".
@@ -378,6 +400,20 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
             if (val.length() == 0) continue;
             (*responseHeadersOut)[http.headerName(i)] = val;
         }
+    }
+
+    // 304 has no body by definition, so getSize() reports 0 or -1 and the size
+    // validation below would reject it as "invalid buffer size". Return before
+    // that: nullptr with *httpCodeOut == 304 means "nothing changed", which is
+    // a success the caller acts on, not an error.
+    // Deliberately leaves *defaultLen alone: callers keep it as a persistent
+    // buffer-size hint across calls, and a bodyless response has no size to
+    // report. The 304 status is what tells the caller there is nothing to read.
+    if (httpCode == HTTP_CODE_NOT_MODIFIED) {
+        Serial.printf("[NET] 304 Not Modified: %s\n", url);
+        http.end();
+        WiFi.setSleep(sleep);
+        return nullptr;
     }
 
     int32_t size = http.getSize();

@@ -1,3 +1,4 @@
+#include <HTTPClient.h> // HTTP_CODE_NOT_MODIFIED
 #include "homeplate.h"
 
 #define IMAGE_HTTP_REQUEST_TIMEOUT 15
@@ -10,6 +11,106 @@
 static int8_t pendingDitherOverride = -1;
 
 void setPendingDitherOverride(int8_t v) { pendingDitherOverride = v; }
+
+// Conditional-GET cache. Holds the validators the server sent with the image
+// currently on the panel, so the next fetch can ask "still the same?" and skip
+// the render (and the e-ink refresh) on a 304.
+//
+// RTC_DATA_ATTR because the panel keeps its pixels across deep sleep, so a
+// validator captured on the previous wake still describes what is on the glass.
+// A power cycle zeroes RTC memory, which is exactly right: setup() clears and
+// repaints the panel on a cold boot, so a surviving validator would be lying.
+static const size_t IMG_ETAG_SIZE = 64;
+static const size_t IMG_LAST_MODIFIED_SIZE = 40; // "Www, dd Mmm yyyy hh:mm:ss GMT" + slack
+RTC_DATA_ATTR static char imgEtag[IMG_ETAG_SIZE] = "";
+RTC_DATA_ATTR static char imgLastModified[IMG_LAST_MODIFIED_SIZE] = "";
+// Validators are per-resource. The IMG activity renders arbitrary URLs pushed
+// over MQTT and TRMNL renders its own image_url, so without this an ETag from
+// one URL could be sent to another — and a coincidental 304 would wedge the
+// wrong image on screen.
+RTC_DATA_ATTR static uint32_t imgUrlHash = 0;
+// True only while the cached image is believed to be the thing on the panel.
+// Cleared by anything that puts pixels on the glass — full repaints via
+// displayRefresh, partial ones via displayStatusMessage and
+// displayBatteryWarning — so a 304 can never skip a render that something
+// else has made necessary.
+RTC_DATA_ATTR static bool imgOnScreen = false;
+
+// FNV-1a. Only used to tell "same URL as last time" from "different URL"; a
+// collision costs one stale frame until the next change, not correctness of
+// anything persistent.
+static uint32_t urlHash(const char *s)
+{
+    uint32_t h = 2166136261u;
+    for (; *s != '\0'; s++)
+    {
+        h ^= (uint8_t)*s;
+        h *= 16777619u;
+    }
+    return h;
+}
+
+void invalidateImageCache()
+{
+    if (imgOnScreen || imgEtag[0] != '\0' || imgLastModified[0] != '\0')
+    {
+        Serial.println("[IMAGE] panel repainted, dropping conditional-GET validators");
+    }
+    imgEtag[0] = '\0';
+    imgLastModified[0] = '\0';
+    imgUrlHash = 0;
+    imgOnScreen = false;
+}
+
+// True when we hold validators for this exact URL and believe it is still the
+// image on the panel — i.e. a 304 would be safe to act on.
+static bool imageCacheUsable(const char *url)
+{
+    return imageCacheArmed() && imgUrlHash == urlHash(url);
+}
+
+// URL-agnostic form of the above: "this wake might end without repainting".
+// Callers that paint progress text before the target URL is known use this to
+// stay quiet, since a skipped render leaves that text stranded on the panel.
+bool imageCacheArmed()
+{
+    return imgOnScreen && (imgEtag[0] != '\0' || imgLastModified[0] != '\0');
+}
+
+// Remember the validators for the image we just put on the panel. Absent
+// headers leave the cache empty, so a server that sends neither simply never
+// gets a conditional request and nothing changes for it.
+static void rememberImageValidators(const char *url, std::map<String, String> &respHeaders)
+{
+    imgEtag[0] = '\0';
+    imgLastModified[0] = '\0';
+
+    // Drop rather than truncate: a truncated validator is a different string,
+    // so it would never match and we'd pay for the conditional request forever.
+    auto etag = respHeaders.find("ETag");
+    if (etag != respHeaders.end() && etag->second.length() < sizeof(imgEtag))
+    {
+        strlcpy(imgEtag, etag->second.c_str(), sizeof(imgEtag));
+    }
+    auto lastMod = respHeaders.find("Last-Modified");
+    if (lastMod != respHeaders.end() && lastMod->second.length() < sizeof(imgLastModified))
+    {
+        strlcpy(imgLastModified, lastMod->second.c_str(), sizeof(imgLastModified));
+    }
+
+    imgUrlHash = urlHash(url);
+    imgOnScreen = (imgEtag[0] != '\0' || imgLastModified[0] != '\0');
+
+    if (imgOnScreen)
+    {
+        Serial.printf("[IMAGE] cached validators: ETag(%s) Last-Modified(%s)\n",
+                      imgEtag[0] ? imgEtag : "-", imgLastModified[0] ? imgLastModified : "-");
+    }
+    else
+    {
+        Serial.println("[IMAGE] server sent no ETag/Last-Modified, unchanged-image skip unavailable");
+    }
+}
 
 // Enum to represent the different image types we can detect.
 enum class ImageType {
@@ -188,13 +289,56 @@ bool drawImageFromURL(const char *url) {
     int8_t mqttOverride = pendingDitherOverride;
     pendingDitherOverride = -1;
 
-    displayStatusMessage("Downloading image...");
+    // Ask the server whether the image we already have is still current. Only
+    // meaningful when we hold validators for this same URL and believe it is
+    // still the thing on the panel.
+    std::map<String, String> reqHeaders;
+    bool conditional = imageCacheUsable(url);
+    if (conditional)
+    {
+        if (imgEtag[0] != '\0')
+            reqHeaders["If-None-Match"] = imgEtag;
+        if (imgLastModified[0] != '\0')
+            reqHeaders["If-Modified-Since"] = imgLastModified;
+    }
+
+    // displayStatusMessage paints on the panel, and a 304 skips the full update
+    // that would otherwise wipe it — leaving "Downloading image..." stranded
+    // over an image that never changed. Only announce the download when a
+    // render is certain to follow.
+    if (!conditional)
+    {
+        displayStatusMessage("Downloading image...");
+    }
+
     // Intentionally the compile-time E_INK_* constants: this is a buffer size,
     // and width*height is the same in either orientation.
     static int32_t len = E_INK_WIDTH * E_INK_HEIGHT + 100;
-    Serial.printf("[IMAGE] Downloading image: %s\n", url);
+    Serial.printf("[IMAGE] Downloading image%s: %s\n", conditional ? " (conditional)" : "", url);
     std::map<String, String> respHeaders;
-    uint8_t *buff = httpGetRetry(3, url, NULL, &len, IMAGE_HTTP_REQUEST_TIMEOUT, &respHeaders);
+    int httpCode = 0;
+    uint8_t *buff = httpGetRetry(3, url, conditional ? &reqHeaders : NULL, &len,
+                                 IMAGE_HTTP_REQUEST_TIMEOUT, &respHeaders, &httpCode);
+
+    if (!buff && httpCode == HTTP_CODE_NOT_MODIFIED)
+    {
+        // Re-check rather than trusting the pre-request test: another activity
+        // could have repainted the panel while the request was in flight, which
+        // would make "unchanged" true of the server and false of the glass.
+        if (imageCacheUsable(url))
+        {
+            Serial.println("[IMAGE] unchanged (304), skipping render");
+            return true;
+        }
+        // Either the panel was repainted while the request was in flight, or
+        // the server sent an unsolicited 304 (we asked unconditionally). Either
+        // way we have no body and nothing trustworthy on screen — go get it.
+        Serial.printf("[IMAGE] unusable 304 (%s), re-fetching unconditionally\n",
+                      conditional ? "panel repainted mid-request" : "not requested conditionally");
+        len = E_INK_WIDTH * E_INK_HEIGHT + 100;
+        buff = httpGetRetry(3, url, NULL, &len, IMAGE_HTTP_REQUEST_TIMEOUT, &respHeaders, &httpCode);
+    }
+
     if (!buff)
     {
         Serial.println("[IMAGE] Download failed");
@@ -225,13 +369,28 @@ bool drawImageFromURL(const char *url) {
         ditherOverride = parseDitherName(it->second.c_str());
     }
 
-    bool good = drawImageFromBuffer(buff, len, false, ditherOverride);
+    // renderOk, not the return value: drawImageFromBuffer returns true whenever
+    // it painted *something*, including the "Image Display Error" banner it
+    // draws when the decode fails. Caching validators on that would let the
+    // next 304 skip past a stuck error screen.
+    bool renderOk = false;
+    bool good = drawImageFromBuffer(buff, len, false, ditherOverride, &renderOk);
     free(buff);
+    // drawImageFromBuffer's own displayRefresh() invalidated the cache on its
+    // way through, so this both re-arms it and leaves a failed or aborted
+    // render with no claim on the panel.
+    if (good && renderOk)
+    {
+        rememberImageValidators(url, respHeaders);
+    }
     return good;
 }
 
-bool drawImageFromBuffer(uint8_t *buff, size_t size, bool center, int8_t ditherOverride) {
+bool drawImageFromBuffer(uint8_t *buff, size_t size, bool center, int8_t ditherOverride, bool *renderOk) {
     WakeLock lock("image-render", 60);
+    if (renderOk) {
+        *renderOk = false;
+    }
     displayStatusMessage("Rendering image...");
 
     displayStart();
@@ -331,6 +490,9 @@ bool drawImageFromBuffer(uint8_t *buff, size_t size, bool center, int8_t ditherO
     displayEnd();
     i2cEnd();
     Serial.println("[IMAGE] displaying done.");
+    if (renderOk) {
+        *renderOk = good;
+    }
     return true;
 }
 
@@ -368,6 +530,15 @@ void displayStatusMessage(const char *format, ...)
     Serial.printf("[STATUS] %s\n", statusBuffer);
 
 #ifdef INKPLATE_HAS_PARTIAL_UPDATE
+    // Partial-paint counterpart to the invalidation in displayRefresh. Most
+    // status text outlives the call — "Image Download Failed", "WiFi failed!",
+    // an OTA error — with no full repaint behind it to clear it. Skipping the
+    // next render on a 304 would strand that text over an otherwise-correct
+    // image until the image itself changed, so any paint here gives up the
+    // right to skip. Callers that can avoid painting (the boot message, the
+    // download notice) gate on imageCacheArmed() instead; without that gating
+    // this line would fire every wake and the skip would never happen.
+    invalidateImageCache();
     i2cStart();
     displayStart();
     display.selectDisplayMode(INKPLATE_1BIT);

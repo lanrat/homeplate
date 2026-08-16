@@ -229,12 +229,17 @@ Settings that previously could only be changed through the WiFiManager setup por
 | TRMNL Token | text (password) | `trmnl_token` | up to 64 chars | next TRMNL activity |
 | TRMNL Logging | switch | `trmnl_log` | ON / OFF | next TRMNL activity |
 | Dither Kernel | select | `dither_kern` | `off` + each kernel name | next image render |
-| Show Update Time | switch | `disp_time` | ON / OFF | next render |
+| Show Update Time | switch | `disp_time` | ON / OFF | next render (see note) |
 | Timezone | text | `timezone` | POSIX TZ string | immediate (no reboot) |
 | Guest WiFi SSID | text | `qr_name` | up to 64 chars | next GuestWifi render |
 | Guest WiFi Password | text (password) | `qr_pass` | up to 64 chars | next GuestWifi render |
 | Reboot | button (diagnostic) | `cmd/reboot` | — | immediate |
 | Enter Setup Mode | button (diagnostic) | `cmd/setup_mode` | — | reboots into WiFiManager portal |
+
+**Note on Show Update Time:** if your image server sends `ETag` or
+`Last-Modified`, HomePlate skips the render entirely when the image hasn't
+changed (see [setup.md](setup.md#unchanged-images)), so the on-screen timestamp
+only advances on refreshes that actually redrew something.
 
 **Topics** (where `<node>` is `mqtt_node_id`, default `homeplate`):
 

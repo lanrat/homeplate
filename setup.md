@@ -128,6 +128,27 @@ All settings below can be configured through the WiFi portal. They are saved to 
 | Show Update Time | Display timestamp on image updates (`true`/`false`)   | `true`  |
 | Enable OTA       | Enable over-the-air firmware updates (`true`/`false`) | `false` |
 
+### Unchanged images
+
+When the image server sends an `ETag` or `Last-Modified` header, HomePlate
+remembers it and sends a conditional request on the next refresh. If the server
+answers `304 Not Modified`, the download body and the e-ink refresh are both
+skipped and the panel is left as-is — saving the most expensive part of a wake
+cycle when the image has not actually changed. Servers that send neither header
+never get a conditional request and behave exactly as before.
+
+Two things worth knowing:
+
+- **Show Update Time goes stale on skipped refreshes.** The timestamp is drawn
+  during a render, so if nothing changed for an hour the on-screen time still
+  reads from the last real update.
+- **The on-screen boot message is suppressed** on wakes that might skip the
+  render, since a skip would leave it stranded over the unchanged image. It
+  still appears on cold boots and is always logged to serial.
+- Anything that repaints the panel (a message, the info or QR screen, an error
+  banner, a low-battery warning) drops the cached validator, so the next refresh
+  redraws the image unconditionally.
+
 ## Timezone Strings
 
 The timezone setting uses POSIX TZ strings. Common examples:

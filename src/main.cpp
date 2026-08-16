@@ -96,7 +96,20 @@ void setup()
     i2cEnd();
     displayEnd();
 
-    displayStatusMessage("Boot %d %s", bootCount, bootReason());
+    // Stay quiet when the image on the panel may survive this wake untouched:
+    // a 304 skips the full repaint that would otherwise wipe this text, which
+    // would strand "Boot 42 TIMER" over an unchanged image until something
+    // next redraws — possibly hours on a static dashboard. On a cold boot the
+    // cache is zeroed, so the message still appears when it's most useful.
+    if (!imageCacheArmed())
+    {
+        displayStatusMessage("Boot %d %s", bootCount, bootReason());
+    }
+    else
+    {
+        Serial.printf("[SETUP] Boot %d %s (status message suppressed, render may be skipped)\n",
+                      bootCount, bootReason());
+    }
 
     // print battery state
     double voltage = 0;

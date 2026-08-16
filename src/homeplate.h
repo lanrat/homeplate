@@ -150,10 +150,22 @@ void displayInfoScreen();
 
 // Image
 bool drawImageFromURL(const char *url);
-bool drawImageFromBuffer(uint8_t *buff, size_t size, bool center = true, int8_t ditherOverride = -1);
+// Returns true if it painted anything at all — including the error banner it
+// draws when the decode fails. Pass renderOk to learn whether the *image*
+// actually rendered, which is a stricter condition than the return value.
+bool drawImageFromBuffer(uint8_t *buff, size_t size, bool center = true, int8_t ditherOverride = -1, bool *renderOk = nullptr);
 // Stash a per-request dither override for the next drawImageFromURL() call.
 // Consumed (cleared to -1) on use. Use sentinel -1 = "no override".
 void setPendingDitherOverride(int8_t v);
+// Drop the cached ETag / Last-Modified for the image on the panel, so the next
+// drawImageFromURL() issues an unconditional GET and repaints. Call from any
+// code path that puts something else on the glass.
+void invalidateImageCache();
+// True when this wake may end in a skipped render (we hold validators for an
+// image believed to still be on the panel). Progress text painted before that
+// is known would be stranded on the glass by the skip, so callers of
+// displayStatusMessage that run early in a wake should gate on this.
+bool imageCacheArmed();
 
 // Dither
 // Parse a user-supplied dither name (HTTP header or MQTT field).
@@ -230,8 +242,11 @@ void displayBatteryWarning();
 void printDebug(const char *s);
 
 // network
-uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec = 5, std::map<String, String> *responseHeadersOut = nullptr);
-uint8_t* httpGetRetry(uint32_t trys, const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec, std::map<String, String> *responseHeadersOut = nullptr);
+// httpCodeOut (optional) receives the HTTP status of the final attempt. It is
+// the only way to tell a successful-but-bodyless response (304 Not Modified)
+// from a failure: both return nullptr.
+uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec = 5, std::map<String, String> *responseHeadersOut = nullptr, int *httpCodeOut = nullptr);
+uint8_t* httpGetRetry(uint32_t trys, const char* url, std::map<String, String> *headers, int32_t* defaultLen, uint32_t timeout_sec, std::map<String, String> *responseHeadersOut = nullptr, int *httpCodeOut = nullptr);
 int httpPost(const char* url, std::map<String, String> *headers, const char* body);
 
 // message
