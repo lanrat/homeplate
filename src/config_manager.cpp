@@ -62,6 +62,7 @@ void logConfig()
     // Sleep
     Serial.printf("[CONFIG]   sleepMinutes      = %d\n", plateCfg.sleepMinutes);
     Serial.printf("[CONFIG]   quickSleepSec     = %d\n", plateCfg.quickSleepSec);
+    Serial.printf("[CONFIG]   alwaysOn          = %s\n", plateCfg.alwaysOn ? "true" : "false");
 
     // Content
     Serial.printf("[CONFIG]   imageUrl          = %s\n", plateCfg.imageUrl);
@@ -117,6 +118,7 @@ void loadConfig()
     strlcpy(plateCfg.timezone, TIMEZONE, sizeof(plateCfg.timezone));
     plateCfg.sleepMinutes = TIME_TO_SLEEP_MIN;
     plateCfg.quickSleepSec = TIME_TO_QUICK_SLEEP_SEC;
+    plateCfg.alwaysOn = ALWAYS_ON;
     strlcpy(plateCfg.imageUrl, IMAGE_URL, sizeof(plateCfg.imageUrl));
     strlcpy(plateCfg.defaultActivityStr, DEFAULT_ACTIVITY_STR, sizeof(plateCfg.defaultActivityStr));
     strlcpy(plateCfg.trmnlUrl, TRMNL_URL, sizeof(plateCfg.trmnlUrl));
@@ -149,6 +151,7 @@ void loadConfig()
     loadString("ntp_server", plateCfg.ntpServer, sizeof(plateCfg.ntpServer), plateCfg.ntpServer);
     loadString("timezone", plateCfg.timezone, sizeof(plateCfg.timezone), plateCfg.timezone);
     plateCfg.sleepMinutes = preferences.getUShort("sleep_min", plateCfg.sleepMinutes);
+    plateCfg.alwaysOn = preferences.getBool("always_on", plateCfg.alwaysOn);
     plateCfg.quickSleepSec = preferences.getUShort("quick_sleep", plateCfg.quickSleepSec);
     loadString("image_url", plateCfg.imageUrl, sizeof(plateCfg.imageUrl), plateCfg.imageUrl);
     loadString("def_activity", plateCfg.defaultActivityStr, sizeof(plateCfg.defaultActivityStr), plateCfg.defaultActivityStr);
@@ -214,6 +217,7 @@ void saveConfig()
     saveString("ntp_server", plateCfg.ntpServer);
     saveString("timezone", plateCfg.timezone);
     preferences.putUShort("sleep_min", plateCfg.sleepMinutes);
+    preferences.putBool("always_on", plateCfg.alwaysOn);
     preferences.putUShort("quick_sleep", plateCfg.quickSleepSec);
     saveString("image_url", plateCfg.imageUrl);
     saveString("def_activity", plateCfg.defaultActivityStr);
@@ -449,6 +453,8 @@ bool startWiFiManager(bool forcePortal)
     char quickSleepStr[8];
     snprintf(quickSleepStr, sizeof(quickSleepStr), "%d", plateCfg.quickSleepSec);
     WiFiManagerParameter p_qsleep("quick_sleep", "Quick Sleep Seconds", quickSleepStr, 7, "type=\"number\" min=\"0\" max=\"86400\"");
+    WiFiManagerParameter p_alwayson("always_on", "Always On (never sleep)", "T", 2, plateCfg.alwaysOn ? "type=\"checkbox\" style=\"margin-top:0.5em\" checked" : "type=\"checkbox\" style=\"margin-top:0.5em\"", WFM_LABEL_AFTER);
+    WiFiManagerParameter h_alwayson_note("<p style='font-size:0.8em;margin-top:0'>Stays connected so Home Assistant commands apply immediately, refreshing every Sleep Minutes. <b>Requires external power</b> &mdash; this will drain a battery in well under a day.</p>");
 
     // Section: Content
     WiFiManagerParameter h_content("<hr><h3>Content</h3>");
@@ -550,6 +556,8 @@ bool startWiFiManager(bool forcePortal)
     wm.addParameter(&h_sleep);
     wm.addParameter(&p_sleep);
     wm.addParameter(&p_qsleep);
+    wm.addParameter(&p_alwayson);
+    wm.addParameter(&h_alwayson_note);
 
     wm.addParameter(&h_content);
     wm.addParameter(&p_imgurl);
@@ -602,6 +610,7 @@ bool startWiFiManager(bool forcePortal)
         int sm = atoi(p_sleep.getValue());
         plateCfg.sleepMinutes = (sm > 0) ? sm : 1;
         plateCfg.quickSleepSec = atoi(p_qsleep.getValue());
+        plateCfg.alwaysOn = (strncmp(p_alwayson.getValue(), "T", 1) == 0);
 
         strlcpy(plateCfg.imageUrl, p_imgurl.getValue(), sizeof(plateCfg.imageUrl));
         strlcpy(plateCfg.defaultActivityStr, wm.server->arg("def_activity").c_str(), sizeof(plateCfg.defaultActivityStr));

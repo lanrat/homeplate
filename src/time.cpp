@@ -25,11 +25,19 @@ bool getNTPSynced()
     return ntpSynced;
 }
 
+// Set for as long as an ntpSync task exists. waitForWiFi() inside the retry
+// loop blocks indefinitely while WiFi is down, so the task can outlive its
+// nominal 5 attempts by any amount — and the always-on resync loop must not
+// stack up a fresh 8k task on top of one that is still parked.
+static volatile bool ntpSyncRunning = false;
+
 void ntpSync(void *parameter)
 {
+    ntpSyncRunning = true;
     if (strlen(plateCfg.ntpServer) == 0)
     {
         Serial.println("[TIME] NTP server not configured, skipping sync");
+        ntpSyncRunning = false;
         vTaskDelete(NULL);
         return;
     }
@@ -95,7 +103,35 @@ void ntpSync(void *parameter)
         break;
     }
     printDebugStackSpace();
+    ntpSyncRunning = false;
     vTaskDelete(NULL); // end self task
+}
+
+// A sleeping device re-syncs by boot count (see getNtpSyncInterval), which
+// works because every refresh is a fresh boot. An always-on device boots once
+// and then never again, so that check can never fire and the clock would drift
+// untouched for as long as the device stays up. Re-sync on elapsed time
+// instead, on the same roughly-daily cadence.
+#define NTP_ALWAYS_ON_RESYNC_SEC (24 * 60 * 60)
+
+static void ntpResyncLoop(void *parameter)
+{
+    while (true)
+    {
+        vTaskDelay((NTP_ALWAYS_ON_RESYNC_SEC * SECOND) / portTICK_PERIOD_MS);
+        if (ntpSyncRunning)
+        {
+            // Almost certainly parked in waitForWiFi(). Spawning a second one
+            // would not reach the network either, and over a long outage the
+            // 8k stacks would accumulate one per day until the heap is gone.
+            Serial.println("[TIME] always-on: previous NTP sync still running, skipping this round");
+            continue;
+        }
+        Serial.println("[TIME] always-on: periodic NTP re-sync");
+        // ntpSync deletes itself when done, so each round is a fresh task
+        // rather than a long-lived one holding an 8k stack between syncs.
+        xTaskCreate(ntpSync, "NTP_TASK", 8192, NULL, NTP_TASK_PRIORITY, NULL);
+    }
 }
 
 void setupTimeAndSyncTask()
@@ -144,6 +180,11 @@ void setupTimeAndSyncTask()
                 NULL,              /* Parameter passed as input of the task */
                 NTP_TASK_PRIORITY, /* Priority of the task. */
                 NULL);             /* Task handle. */
+        }
+
+        if (plateCfg.alwaysOn)
+        {
+            xTaskCreate(ntpResyncLoop, "NTP_RESYNC_TASK", 2048, NULL, NTP_TASK_PRIORITY, NULL);
         }
     }
 }

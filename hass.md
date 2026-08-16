@@ -222,6 +222,7 @@ Settings that previously could only be changed through the WiFiManager setup por
 |---|---|---|---|---|
 | Sleep Minutes | number | `sleep_min` | 1–1440 min | next sleep |
 | Quick Sleep Seconds | number | `quick_sleep` | 0–86400 s | next quick sleep |
+| Always On | switch | `always_on` | ON / OFF | next sleep decision |
 | Default Activity | select | `def_activity` | HomeAssistant / Trmnl / Info / GuestWifi | next default dispatch |
 | Image URL | text | `image_url` | up to 255 chars | next HomeAssistant activity |
 | TRMNL URL | text | `trmnl_url` | up to 255 chars | next TRMNL activity |

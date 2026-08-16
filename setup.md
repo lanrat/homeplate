@@ -82,10 +82,32 @@ All settings below can be configured through the WiFi portal. They are saved to 
 
 ### Sleep
 
-| Setting             | Description                           | Default       |
-|---------------------|---------------------------------------|---------------|
-| Sleep Minutes       | Minutes between display refreshes     | `20`          |
-| Quick Sleep Seconds | Sleep duration for Info/QR activities | `300` (5 min) |
+| Setting             | Description                                          | Default       |
+|---------------------|------------------------------------------------------|---------------|
+| Sleep Minutes       | Minutes between display refreshes                    | `20`          |
+| Quick Sleep Seconds | Sleep duration for Info/QR activities                | `300` (5 min) |
+| Always On           | Never sleep; stay connected (external power only)    | `false`       |
+
+#### Always On
+
+Normally the device deep-sleeps between refreshes. It is off the network while
+asleep, so nothing — including Home Assistant — can reach it; MQTT commands are
+retained on the broker and applied at the next wake.
+
+**Always On** keeps the device awake and connected instead. MQTT commands take
+effect immediately rather than at the next wake, which is the point of the
+mode: the panel updates when a state actually changes, not on a timer. The
+default activity still re-runs every **Sleep Minutes** as a backstop, so the
+panel stays current even if MQTT drops.
+
+**This requires external power.** A HomePlate that never sleeps will flatten a
+battery in well under a day. Nothing stops you enabling it on battery, and the
+low-battery cutoff still forces a deep sleep to avoid deep-discharging the
+cell, but the device is not designed to run this way unpowered.
+
+Pair this with an image server that sends `ETag` or `Last-Modified` (see
+[Unchanged images](#unchanged-images)) — otherwise the panel does a full e-ink
+refresh every Sleep Minutes whether or not anything changed.
 
 ### Content
 

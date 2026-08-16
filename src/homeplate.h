@@ -285,7 +285,10 @@ const char *activityToString(Activity a);
 // memory so it survives deep sleep, matching e-ink panel persistence.
 Activity getLastDisplayedActivity();
 
-void startActivity(Activity activity);
+// force bypasses the 60-second debounce that suppresses re-queuing the default
+// activity while it is already running. Used by the always-on refresh timer,
+// which is authoritative about when a refresh is due.
+void startActivity(Activity activity, bool force = false);
 void startActivitiesTask();
 bool stopActivity();
 void sleepTask();
@@ -369,5 +372,9 @@ private:
 // Sleep
 #define SLEEP_TIMEOUT_SEC 15
 #define MAX_REFRESH_SEC 60*60*24 // 1 day
+// Shortest refresh cadence honored in always-on mode. Comfortably above
+// MIN_ACTIVITY_RESTART_SECS, whose debounce would otherwise silently drop the
+// refresh, and a backstop against a zero period spinning the sleep task.
+#define ALWAYS_ON_MIN_PERIOD_SEC 10
 
 

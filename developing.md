@@ -40,7 +40,7 @@ After the initial USB flash, you can update over WiFi using PlatformIO OTA. Firs
 pio run -e ota
 ```
 
-> **Note:** OTA must be enabled on the device (see the **Enable OTA** setting in [setup.md](setup.md#display--ota)), and the device must be awake (not sleeping) when you initiate the OTA flash.
+> **Note:** OTA must be enabled on the device (see the **Enable OTA** setting in [setup.md](setup.md#display--ota)), and the device must be awake (not sleeping) when you initiate the OTA flash. With [Always On](setup.md#always-on) enabled the device is always reachable, so there is no wake window to catch.
 
 ## Selecting your board for special-purpose envs
 

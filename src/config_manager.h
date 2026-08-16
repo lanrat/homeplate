@@ -17,6 +17,11 @@ struct HomePlateConfig {
     // Sleep
     uint16_t sleepMinutes;
     uint16_t quickSleepSec;
+    // Never deep-sleep: stay awake and connected so MQTT commands take effect
+    // immediately, re-running the default activity every sleepMinutes instead
+    // of sleeping between renders. Intended for externally-powered devices —
+    // on battery it will flatten the pack in well under a day.
+    bool alwaysOn;
 
     // Content
     char imageUrl[257];

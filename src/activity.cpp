@@ -67,13 +67,13 @@ static bool getResetActivity() {
     return value;
 }
 
-void startActivity(Activity activity)
+void startActivity(Activity activity, bool force)
 {
     Activity defaultAct = activityFromString(plateCfg.defaultActivityStr);
     if (xSemaphoreTake(startActivityMutex, (SECOND) / portTICK_PERIOD_MS) == pdTRUE)
     {
         // dont re-queue main Activity is run within 60 sec and already running
-        if (activity == defaultAct && activityCurrent == defaultAct && ((millis() - lastActivityTime) / SECOND < 60))
+        if (!force && activity == defaultAct && activityCurrent == defaultAct && ((millis() - lastActivityTime) / SECOND < 60))
         {
             Serial.printf("[ACTIVITY] startActivity(%d) main activity already running within time limit, skipping\n", activity);
             xSemaphoreGive(startActivityMutex);

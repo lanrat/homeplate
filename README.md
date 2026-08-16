@@ -45,6 +45,8 @@ HomePlate supports multiple display modes called activities. See [activities.md]
 * OTA updates over WiFi
 * Partial screen updates in grayscale mode (B&W boards only; the Inkplate COLOR and 13 Spectra panels only support full refreshes).
 * Power saving sleep mode.
+* Optional always-on mode for externally-powered devices, so MQTT commands apply immediately instead of at the next wake.
+* Skips the e-ink refresh when the image server reports the image is unchanged.
 * Display any image from MQTT command
 * Supports PNG, BMP, and JPEG images
 

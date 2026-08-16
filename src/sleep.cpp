@@ -82,15 +82,26 @@ void gotoSleepNow()
     esp_deep_sleep_start(); // Put ESP32 into deep sleep. Program stops here.
 }
 
+// Wraparound-safe "has the deadline passed?". millis() rolls over every ~49
+// days; before always-on the device rebooted every sleep cycle so it could
+// never get there, but an externally-powered device now can. Casting the
+// unsigned difference to int32_t treats it as a signed delta — positive means
+// the deadline is behind us. Same approach as the wake lock expiry check.
+static bool deadlinePassed(unsigned long deadline)
+{
+    return (int32_t)(millis() - deadline) >= 0;
+}
+
 void delaySleep(uint seconds)
 {
-    unsigned long timeLeft = sleepTime - millis();
+    unsigned long now = millis();
+    int32_t timeLeft = (int32_t)(sleepTime - now);
     // if the bumped time is farther in the future than our current sleep time
-    int ms = seconds * SECOND;
+    int32_t ms = (int32_t)(seconds * SECOND);
     if (ms > timeLeft)
     {
         Serial.printf("[SLEEP] delaying sleep for %u seconds\n", seconds);
-        sleepTime = ms + millis();
+        sleepTime = now + ms;
     }
 }
 
@@ -100,7 +111,7 @@ void checkSleep(void *parameter)
     {
         printDebug("[SLEEP] sleep loop..");
         // check the sleep time
-        while (sleepTime > millis())
+        while (!deadlinePassed(sleepTime))
         {
             vTaskDelay(SECOND / portTICK_PERIOD_MS);
         }
@@ -109,6 +120,44 @@ void checkSleep(void *parameter)
         if (anyWakeLocksHeld())
         {
             vTaskDelay(SECOND / portTICK_PERIOD_MS);
+            continue;
+        }
+
+        if (plateCfg.alwaysOn)
+        {
+            // Never deep-sleep. Re-run the default activity on the cadence the
+            // sleep duration would have used, and leave WiFi and MQTT up so
+            // commands from Home Assistant apply immediately instead of at the
+            // next wake — which is the whole point of the mode.
+            waitForOTA();
+            uint32_t period = getSleepDuration();
+            if (period == 0)
+            {
+                period = (uint32_t)plateCfg.sleepMinutes * 60;
+            }
+            // Floor the cadence. A zero period would re-arm the deadline to
+            // "now" and spin this task, and anything under
+            // MIN_ACTIVITY_RESTART_SECS is silently swallowed by the debounce
+            // in runActivities — so a short MQTT `refresh` would look like it
+            // did nothing at all. Deep sleep never needed this: the ESP32
+            // timer takes any value and every wake is a fresh boot.
+            if (period < ALWAYS_ON_MIN_PERIOD_SEC)
+            {
+                period = ALWAYS_ON_MIN_PERIOD_SEC;
+            }
+            sleepTime = millis() + ((unsigned long)period * SECOND);
+            // Heap numbers because this is the one build that runs for weeks:
+            // every render ps_malloc()s a full-frame buffer, and fragmentation
+            // that a nightly reboot used to paper over now has to be watched.
+            Serial.printf("[SLEEP] always-on: refreshing now, next in %u seconds (%u min), up %lus, heap %u free / %u largest\n",
+                          period, period / 60, millis() / SECOND,
+                          ESP.getFreeHeap(), ESP.getMaxAllocHeap());
+            // force: startActivity()'s 60-second debounce assumes the default
+            // activity is only re-queued by a button or an MQTT command. Here
+            // the timer is authoritative, and at sleepMinutes=1 the debounce
+            // would swallow the refresh outright. A deep-sleep wake dodges it
+            // only because the statics it tests reset across the reboot.
+            startActivity(activityFromString(plateCfg.defaultActivityStr), true);
             continue;
         }
 
@@ -135,7 +184,13 @@ void checkSleep(void *parameter)
 
 void sleepTask()
 {
-    sleepTime = (SLEEP_TIMEOUT_SEC * SECOND) + millis();
+    // SLEEP_TIMEOUT_SEC is a floor on how long to stay up before deep-sleeping,
+    // which has no meaning when we never sleep: the first refresh is the one
+    // setup() already queued. Start the always-on timer a full period out, or
+    // it fires 15 seconds after boot and immediately re-renders what the boot
+    // activity just drew.
+    uint32_t initialSec = plateCfg.alwaysOn ? (uint32_t)plateCfg.sleepMinutes * 60 : SLEEP_TIMEOUT_SEC;
+    sleepTime = ((unsigned long)initialSec * SECOND) + millis();
 
     xTaskCreate(
         checkSleep,

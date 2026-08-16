@@ -43,6 +43,9 @@
 #ifndef TIME_TO_QUICK_SLEEP_SEC
 #define TIME_TO_QUICK_SLEEP_SEC (5 * 60)
 #endif
+#ifndef ALWAYS_ON
+#define ALWAYS_ON false
+#endif
 #ifndef IMAGE_URL
 #define IMAGE_URL ""
 #endif
