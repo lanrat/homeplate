@@ -74,10 +74,35 @@ jobs:
             cp "$row" flash-package/
           done
 
+          # Resolve the env's board and its MCU. ESP Web Tools refuses to flash
+          # when the manifest's chipFamily doesn't match the chip it detects
+          # ("Your ESP32-S3 board is not supported"), so this can't be assumed
+          # to be a classic ESP32 — inkplate13spectra is an ESP32-S3.
+          BOARD=$(pio project config --json-output | python3 -c "
+          import json, sys
+          cfg = dict(json.load(sys.stdin))
+          print(dict(cfg['env:${{ matrix.environment }}'])['board'])
+          ")
+          pio boards --json-output "$BOARD" > board.json
+
           # Generate ESP Web Tools manifest from idedata
           python3 -c "
-          import json
+          import json, sys
           d = json.load(open('$IDEDATA'))
+          # ESP Web Tools chipFamily strings, keyed by PlatformIO board 'mcu'.
+          CHIP_FAMILY = {
+            'esp8266': 'ESP8266',
+            'esp32': 'ESP32',
+            'esp32s2': 'ESP32-S2',
+            'esp32s3': 'ESP32-S3',
+            'esp32c2': 'ESP32-C2',
+            'esp32c3': 'ESP32-C3',
+            'esp32c6': 'ESP32-C6',
+            'esp32h2': 'ESP32-H2',
+          }
+          mcu = next(b['mcu'] for b in json.load(open('board.json')) if b['id'] == '$BOARD').lower()
+          if mcu not in CHIP_FAMILY:
+            sys.exit('unknown mcu %r for board $BOARD; add it to CHIP_FAMILY' % mcu)
           parts = [{'path': '${{ matrix.environment }}/' + p['path'].rsplit('/',1)[1], 'offset': int(p['offset'],16)} for p in d['extra']['flash_images']]
           # Application offset: idedata.json under pioarduino / arduino-esp32 v3
           # no longer includes 'application_offset' under 'extra'. Fall back to
@@ -90,10 +115,11 @@ jobs:
             'name': 'HomePlate (${{ matrix.environment }})',
             'version': 'VERSION_PLACEHOLDER',
             'new_install_prompt_erase': True,
-            'builds': [{'chipFamily': 'ESP32', 'parts': parts}]
+            'builds': [{'chipFamily': CHIP_FAMILY[mcu], 'parts': parts}]
           }
           json.dump(manifest, open('flash-package/manifest.json','w'), indent=2)
           "
+          rm board.json
       - name: Upload firmware
         uses: actions/upload-artifact@v7
         with:
