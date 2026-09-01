@@ -4,6 +4,13 @@
 
 RTC_DATA_ATTR char current_filename[64] = "";
 
+// Matches the image path's retry policy. The first attempt after boot races
+// espMqttClient flushing its discovery/config burst, and a TLS handshake that
+// loses that race dies on a heap allocation rather than anything retryable at
+// the network layer — a second later there is room and the same request works.
+#define TRMNL_HTTP_REQUEST_TRIES 3
+#define TRMNL_HTTP_REQUEST_TIMEOUT 15
+
 // TRMNL Log support
 #define TRMNL_LOG_MAX_ENTRIES 8
 
@@ -139,7 +146,8 @@ bool trmnlDisplay(const char *url)
     snprintf(ver_buffer, 50, "%s", VERSION);
     headers["FW-Version"] = ver_buffer;
 
-    uint8_t *buff = httpGet(url, &headers, &defaultLen);
+    uint8_t *buff = httpGetRetry(TRMNL_HTTP_REQUEST_TRIES, url, &headers, &defaultLen,
+                                 TRMNL_HTTP_REQUEST_TIMEOUT);
     if (!buff)
     {
         Serial.println("[TRMNL] Download failed");
