@@ -363,11 +363,21 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
     bool sleep = WiFi.getSleep();
     WiFi.setSleep(false);
 
+    // The wake lock covers HTTPClient's default 5s connect timeout plus the
+    // read timeout set below, which is the worst case for a request that fails
+    // by timing out rather than by being refused.
     WakeLock lock("http-get", timeout_sec + 5);
     HTTPClient http;
 
     // Connect with HTTP
     http.begin(url);
+
+    // Without this the request runs on HTTPCLIENT_DEFAULT_TCP_TIMEOUT (5s), not
+    // timeout_sec, and servers that render the image on demand (TRMNL HA and
+    // other headless-browser screenshotters routinely need >5s) get cut off
+    // mid-request. setTimeout() takes a uint16_t of milliseconds, so clamp.
+    uint32_t timeout_ms = timeout_sec * 1000;
+    http.setTimeout(timeout_ms > UINT16_MAX ? UINT16_MAX : (uint16_t)timeout_ms);
 
     if (headers) {
         for (const auto& header : *headers) {
@@ -385,6 +395,25 @@ uint8_t* httpGet(const char* url, std::map<String, String> *headers, int32_t* de
     int httpCode = http.GET();
     if (httpCodeOut) {
         *httpCodeOut = httpCode;
+    }
+
+    // A negative code is an HTTPC_ERROR_*, not a status: there is no response to
+    // read. Falling through would allocate a buffer and call writeToStream() on
+    // a dead socket, which reports a misleading HTTPC_ERROR_NOT_CONNECTED (-4)
+    // in place of the real failure (e.g. -11 read timeout, -1 refused).
+    if (httpCode < 0) {
+        // errorToString() calls -1 "connection refused", but HTTPClient returns
+        // it for every failure to establish a connection: DNS, TCP, and a failed
+        // TLS handshake (including the out-of-memory kind a boot-time heap
+        // squeeze produces). Don't claim a refusal we can't distinguish — point
+        // at the driver lines that carry the real reason.
+        String reason = (httpCode == HTTPC_ERROR_CONNECTION_REFUSED)
+            ? String("could not connect (DNS/TCP/TLS; see any ssl_client or lwip errors above)")
+            : HTTPClient::errorToString(httpCode);
+        Serial.printf("[NET] GET failed: %d (%s) for URL %s\n", httpCode, reason.c_str(), url);
+        http.end();
+        WiFi.setSleep(sleep);
+        return nullptr;
     }
 
     if (responseHeadersOut) {
