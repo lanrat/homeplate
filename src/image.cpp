@@ -197,7 +197,9 @@ imageInfo getImageInfo(uint8_t *buff, size_t size) {
 void displayStats()
 {
     displayStart();
-    display.setTextColor(HP_FG, HP_BG); // Set text color to foreground on background
+    // Drawn over the just-rendered image, so the panel is still in DISPLAY_MODE
+    // here — the _3BIT tokens are the ones that mean black-on-white there.
+    display.setTextColor(HP_FG_3BIT, HP_BG_3BIT);
     display.setFont(&FONT_SMALL);
     display.setTextSize(1);
 

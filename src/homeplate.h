@@ -128,6 +128,27 @@ extern uint bootCount, activityCount, timeToSleep;
 #define C_GREY_6 6
 #define C_WHITE 7
 
+// Display mode used for image rendering on boards that can switch modes.
+#ifdef INKPLATE_HAS_DISPLAY_MODES
+#define DISPLAY_MODE INKPLATE_3BIT
+#endif
+
+// Foreground/background for draw calls made while the panel is still in
+// DISPLAY_MODE — i.e. anything drawn over a rendered image, before the mode is
+// switched back. HP_FG/HP_BG are the library's 1-bit constants on B&W boards
+// (BLACK 1 / WHITE 0), and writePixelInternal() stores the value straight into
+// the 3-bit framebuffer as a grey level, so HP_FG lands on grey 1 instead of
+// black and HP_BG on grey 0 — which is black, not white. Use these instead.
+// Color boards have a single palette and no mode switching, so they alias
+// HP_FG/HP_BG.
+#if defined(INKPLATE_HAS_DISPLAY_MODES) && DISPLAY_MODE == INKPLATE_3BIT
+#define HP_FG_3BIT C_BLACK
+#define HP_BG_3BIT C_WHITE
+#else
+#define HP_FG_3BIT HP_FG
+#define HP_BG_3BIT HP_BG
+#endif
+
 // for second to ms conversions
 #define SECOND 1000
 
@@ -326,11 +347,6 @@ private:
 
 // enable SD card (currently unused)
 #define USE_SDCARD false
-
-// set some display defaults
-#ifdef INKPLATE_HAS_DISPLAY_MODES
-#define DISPLAY_MODE INKPLATE_3BIT
-#endif
 
 // debounce time limit for static activities
 #define MIN_ACTIVITY_RESTART_SECS 5
