@@ -319,6 +319,13 @@ bool startWiFiManager(bool forcePortal)
     // settings only take effect on the STA connect path.
     configureWiFi();
 
+    // Deep sleep wake: try the AP that worked last time before paying for a
+    // full scan. Never when the portal was asked for.
+    if (!forcePortal && wifiFastConnect())
+        return true;
+    // Never hand WiFiManager a BSSID-locked config (see wifiUnpinAP).
+    wifiUnpinAP();
+
     WiFiManager wm;
 
     // One long attempt rather than several short ones: WiFiManager re-issues
@@ -658,6 +665,7 @@ bool startWiFiManager(bool forcePortal)
     if (connected)
     {
         Serial.printf("[CONFIG] WiFi connected via WiFiManager, SSID: %s\n", WiFi.SSID().c_str());
+        wifiRememberAP();
     }
     else
     {

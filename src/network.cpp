@@ -1,5 +1,6 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <esp_wifi.h>
 #include "homeplate.h"
 #include "bufferstream.h"
 
@@ -200,6 +201,105 @@ void configureWiFi()
     }
 }
 
+// ---- Fast reconnect after deep sleep ----
+//
+// A battery device wakes every few minutes and joins WiFi from scratch: a
+// scan, association, then DHCP. Remembering the AP that worked last
+// time (BSSID + channel) in RTC memory lets the next wake skip the scan and go
+// straight to that AP. Combined with a static IP it also skips DHCP, which is
+// the slow and fragile part at the edge of coverage.
+//
+// The cache is only trusted on a deep sleep wake. If the cached AP does not
+// answer within WIFI_FAST_CONNECT_TIMEOUT_MS the cache is dropped and the
+// normal WiFiManager path does a full scan, so a moved/rebooted AP self-heals.
+#define WIFI_AP_CACHE_MAGIC 0x48504150 // "HPAP"
+typedef struct
+{
+    uint32_t magic;
+    uint8_t bssid[6];
+    int32_t channel;
+} WiFiAPCache;
+RTC_DATA_ATTR static WiFiAPCache apCache = {0, {0}, 0};
+
+void wifiRememberAP()
+{
+    uint8_t *bssid = WiFi.BSSID();
+    int32_t channel = WiFi.channel();
+    if (bssid == NULL || channel <= 0)
+        return;
+    memcpy(apCache.bssid, bssid, sizeof(apCache.bssid));
+    apCache.channel = channel;
+    apCache.magic = WIFI_AP_CACHE_MAGIC;
+}
+
+void wifiForgetAP()
+{
+    apCache.magic = 0;
+}
+
+// wifiUnpinAP: clear the BSSID/channel lock that wifiFastConnect() put in the
+// driver's running config. A later argument-less WiFi.begin() (WiFiManager,
+// keepWiFiAlive) reuses the running config and would otherwise keep looking
+// for that one AP. Written with the default (flash) storage on purpose, so a
+// lock that ever reached NVS is cleaned up too. Call while disconnected.
+void wifiUnpinAP()
+{
+    wifi_config_t conf;
+    if (esp_wifi_get_config(WIFI_IF_STA, &conf) != ESP_OK || !conf.sta.bssid_set)
+        return;
+    conf.sta.bssid_set = false;
+    conf.sta.channel = 0;
+    esp_wifi_set_config(WIFI_IF_STA, &conf);
+}
+
+// wifiFastConnect: try the cached AP directly using the credentials WiFiManager
+// stored in the WiFi driver's NVS. Returns true when connected (with an IP).
+bool wifiFastConnect()
+{
+    if (!sleepBoot || apCache.magic != WIFI_AP_CACHE_MAGIC)
+        return false;
+
+    // WiFi.SSID()/psk() only report the *connected* AP on arduino-esp32 3.x,
+    // so read the credentials WiFiManager saved straight from the driver.
+    wifi_config_t conf;
+    if (esp_wifi_get_config(WIFI_IF_STA, &conf) != ESP_OK || conf.sta.ssid[0] == 0)
+    {
+        Serial.println("[WIFI] fast connect skipped: no stored credentials");
+        wifiForgetAP();
+        return false;
+    }
+    char ssid[sizeof(conf.sta.ssid) + 1] = {0};
+    char psk[sizeof(conf.sta.password) + 1] = {0};
+    memcpy(ssid, conf.sta.ssid, sizeof(conf.sta.ssid));
+    memcpy(psk, conf.sta.password, sizeof(conf.sta.password));
+
+    Serial.printf("[WIFI] fast connect to '%s' BSSID %02x:%02x:%02x:%02x:%02x:%02x channel %d\n",
+                  ssid, apCache.bssid[0], apCache.bssid[1], apCache.bssid[2],
+                  apCache.bssid[3], apCache.bssid[4], apCache.bssid[5], (int)apCache.channel);
+    unsigned long start = millis();
+    // Keep the BSSID lock in RAM only: in NVS it would pin every later
+    // connect to this one AP, and it would cost a flash write per wake.
+    // (WiFi.persistent() only applies when the driver is first started, which
+    // has already happened here, so set the storage directly.)
+    esp_wifi_set_storage(WIFI_STORAGE_RAM);
+    WiFi.begin(ssid, psk, apCache.channel, apCache.bssid, true);
+    esp_wifi_set_storage(WIFI_STORAGE_FLASH);
+    while (WiFi.status() != WL_CONNECTED && millis() - start < WIFI_FAST_CONNECT_TIMEOUT_MS)
+        vTaskDelay(20 / portTICK_PERIOD_MS);
+
+    if (WiFi.status() == WL_CONNECTED)
+    {
+        Serial.printf("[WIFI] fast connect OK in %lu ms, IP %s\n", millis() - start, WiFi.localIP().toString().c_str());
+        return true;
+    }
+
+    Serial.printf("[WIFI] fast connect failed after %lu ms, falling back to full scan\n", millis() - start);
+    wifiForgetAP();
+    WiFi.disconnect();
+    wifiUnpinAP();
+    return false;
+}
+
 void keepWiFiAlive(void *parameter)
 {
     printDebug("[WIFI] loop start...");
@@ -220,6 +320,7 @@ void keepWiFiAlive(void *parameter)
         // flight, begin() is rejected by esp_wifi_set_config() with
         // ESP_ERR_WIFI_STATE and silently does nothing for the whole timeout.
         WiFi.disconnect();
+        wifiUnpinAP(); // a mid-session drop may mean the cached AP is gone
         if (WiFi.begin() == WL_CONNECT_FAILED)
             Serial.println("[WIFI] begin() failed");
 
@@ -245,6 +346,7 @@ void keepWiFiAlive(void *parameter)
         }
 
         Serial.printf("[WIFI] Connected: %s BSSID: %s\n", WiFi.localIP().toString().c_str(), WiFi.BSSIDstr().c_str());
+        wifiRememberAP();
         printDebugStackSpace();
     }
 }
