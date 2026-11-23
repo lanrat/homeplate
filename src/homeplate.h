@@ -157,6 +157,10 @@ void configureWiFi();
 void registerWiFiLogEvents();
 void registerWiFiEvents();
 void logScanResultsForSSID(const char *ssid, bool rescan);
+bool wifiFastConnect();
+void wifiRememberAP();
+void wifiForgetAP();
+void wifiPrepareFullConnect();
 void wifiConnectTask();
 void wifiStopTask();
 void waitForWiFi();
@@ -353,6 +357,13 @@ private:
 
 // network settings
 #define WIFI_TIMEOUT_MS (20 * SECOND) // 20 second WiFi connection timeout
+#define WIFI_FAST_CONNECT_TIMEOUT_MS (5 * SECOND) // give up on the cached AP after this and fall back to a full scan
+#ifndef WIFI_FAST_CONNECT_MIN_RSSI
+#define WIFI_FAST_CONNECT_MIN_RSSI (-75)            // a cached AP weaker than this is dropped after the wake
+#endif
+#ifndef WIFI_FULL_CONNECT_INTERVAL_MIN
+#define WIFI_FULL_CONNECT_INTERVAL_MIN (24 * 60)    // force a full connect at least this often (in minutes of sleep)
+#endif
 #define WIFI_RECOVER_TIME_MS (30 * SECOND)    // Wait 30 seconds after a failed connection attempt
 
 // input debounce

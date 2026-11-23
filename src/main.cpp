@@ -190,7 +190,7 @@ void setup()
         return; // won't reach here after deep sleep
     }
 
-    Serial.println("[SETUP] WiFi connected, continuing setup");
+    Serial.printf("[SETUP] WiFi connected %lu ms after boot, continuing setup\n", millis());
 
     Serial.println("[SETUP] starting time task");
     setupTimeAndSyncTask();

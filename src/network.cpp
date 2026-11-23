@@ -1,5 +1,6 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <esp_wifi.h>
 #include "homeplate.h"
 #include "bufferstream.h"
 
@@ -185,6 +186,10 @@ void configureWiFi()
 {
     WiFi.mode(WIFI_STA);
     WiFi.setHostname(plateCfg.hostname);
+    // Full connects with explicit credentials (portal save): scan every
+    // channel and join the strongest AP instead of the first match.
+    WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);
+    WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);
     if (strlen(plateCfg.staticIp) > 0)
     {
         if (ip.fromString(plateCfg.staticIp) && gateway.fromString(plateCfg.staticGateway) &&
@@ -198,6 +203,153 @@ void configureWiFi()
                           plateCfg.staticIp, plateCfg.staticSubnet, plateCfg.staticGateway, plateCfg.staticDns);
         }
     }
+}
+
+// ---- Fast reconnect after deep sleep ----
+//
+// A battery device wakes every few minutes and joins WiFi from scratch: a
+// scan, association, then DHCP. Remembering the AP that worked last time
+// (BSSID + channel) in RTC memory lets the next wake skip the scan and go
+// straight to that AP. Combined with a static IP it also skips DHCP, which is
+// the slow and fragile part at the edge of coverage.
+//
+// The cached AP is re-evaluated so a weak one never sticks:
+//  - if the cached AP does not answer within WIFI_FAST_CONNECT_TIMEOUT_MS the
+//    cache is dropped and the normal WiFiManager path runs on the same wake;
+//  - if it answers below WIFI_FAST_CONNECT_MIN_RSSI the wake carries on, but
+//    the cache is dropped so the next wake does a full connect;
+//  - after WIFI_FULL_CONNECT_INTERVAL_MIN of fast wakes a full connect is
+//    forced anyway, to pick up a better AP that appeared meanwhile.
+// Full connects scan every channel and join the strongest AP (see
+// wifiPrepareFullConnect), so the AP that gets cached is the best one in range.
+#define WIFI_AP_CACHE_MAGIC 0x48504150 // "HPAP"
+typedef struct
+{
+    uint32_t magic;
+    uint8_t bssid[6];
+    int32_t channel;
+    uint32_t fastWakes; // fast connects since the last full connect
+} WiFiAPCache;
+RTC_DATA_ATTR static WiFiAPCache apCache = {0, {0}, 0, 0};
+
+// wifiRememberAP: cache the AP we are connected to. Call after a full connect.
+void wifiRememberAP()
+{
+    uint8_t *bssid = WiFi.BSSID();
+    int32_t channel = WiFi.channel();
+    if (bssid == NULL || channel <= 0)
+        return;
+    memcpy(apCache.bssid, bssid, sizeof(apCache.bssid));
+    apCache.channel = channel;
+    apCache.fastWakes = 0;
+    apCache.magic = WIFI_AP_CACHE_MAGIC;
+    Serial.printf("[WIFI] cached AP %s channel %d, RSSI %d\n", WiFi.BSSIDstr().c_str(), (int)channel, (int)WiFi.RSSI());
+}
+
+void wifiForgetAP()
+{
+    apCache.magic = 0;
+}
+
+// wifiPrepareFullConnect: make the driver's running STA config suitable for an
+// argument-less WiFi.begin() (WiFiManager's saved-AP connect, keepWiFiAlive):
+// drop the BSSID/channel lock a fast connect may have left, and scan every
+// channel then join the strongest AP. With the core's default fast scan the
+// first matching AP wins, which on a mesh is often not the closest node.
+// Call while disconnected.
+void wifiPrepareFullConnect()
+{
+    wifi_config_t conf;
+    esp_err_t err = esp_wifi_get_config(WIFI_IF_STA, &conf);
+    if (err != ESP_OK)
+    {
+        Serial.printf("[WIFI][ERROR] reading STA config failed: %s\n", esp_err_to_name(err));
+        return;
+    }
+    if (!conf.sta.bssid_set && conf.sta.channel == 0 &&
+        conf.sta.scan_method == WIFI_ALL_CHANNEL_SCAN && conf.sta.sort_method == WIFI_CONNECT_AP_BY_SIGNAL)
+        return; // already set, avoid a needless config (and NVS) write
+    conf.sta.bssid_set = false;
+    conf.sta.channel = 0;
+    conf.sta.scan_method = WIFI_ALL_CHANNEL_SCAN;
+    conf.sta.sort_method = WIFI_CONNECT_AP_BY_SIGNAL;
+    err = esp_wifi_set_config(WIFI_IF_STA, &conf);
+    if (err != ESP_OK)
+        Serial.printf("[WIFI][ERROR] clearing the cached-AP lock failed: %s (the next connect may keep looking for the cached AP)\n",
+                      esp_err_to_name(err));
+}
+
+// wifiFastConnect: on a deep sleep wake, join the cached AP directly using the
+// credentials WiFiManager saved. Returns true when connected (with an IP).
+bool wifiFastConnect()
+{
+    if (!sleepBoot || apCache.magic != WIFI_AP_CACHE_MAGIC)
+        return false;
+
+    uint16_t sleepMin = plateCfg.sleepMinutes > 0 ? plateCfg.sleepMinutes : 1;
+    if (apCache.fastWakes >= WIFI_FULL_CONNECT_INTERVAL_MIN / sleepMin)
+    {
+        Serial.printf("[WIFI] %u fast connects since the last full connect, doing a full connect\n",
+                      (unsigned)apCache.fastWakes);
+        wifiForgetAP();
+        return false;
+    }
+
+    // WiFi.SSID()/psk() only report the *connected* AP on arduino-esp32 3.x,
+    // so read the credentials WiFiManager saved straight from the driver.
+    wifi_config_t conf;
+    if (esp_wifi_get_config(WIFI_IF_STA, &conf) != ESP_OK || conf.sta.ssid[0] == 0)
+    {
+        Serial.println("[WIFI] fast connect skipped: no stored credentials");
+        wifiForgetAP();
+        return false;
+    }
+    char ssid[sizeof(conf.sta.ssid) + 1] = {0};
+    char psk[sizeof(conf.sta.password) + 1] = {0};
+    memcpy(ssid, conf.sta.ssid, sizeof(conf.sta.ssid));
+    memcpy(psk, conf.sta.password, sizeof(conf.sta.password));
+
+    Serial.printf("[WIFI] fast connect to '%s' BSSID %02x:%02x:%02x:%02x:%02x:%02x channel %d\n",
+                  ssid, apCache.bssid[0], apCache.bssid[1], apCache.bssid[2],
+                  apCache.bssid[3], apCache.bssid[4], apCache.bssid[5], (int)apCache.channel);
+    unsigned long start = millis();
+
+    // Keep the BSSID lock out of NVS for the rest of this wake: the core's
+    // auto-reconnect re-applies the running config with esp_wifi_set_config()
+    // after a failed attempt or a mid-session drop, so wrapping only begin()
+    // is not enough. Storage goes back to flash only on the fallback path,
+    // after the lock is cleared. (WiFi.persistent() only applies when the
+    // driver starts, which has already happened here.)
+    esp_wifi_set_storage(WIFI_STORAGE_RAM);
+    // Only the cached channel needs scanning; configureWiFi() selected an
+    // all-channel scan for full connects.
+    WiFi.setScanMethod(WIFI_FAST_SCAN);
+    WiFi.begin(ssid, psk, apCache.channel, apCache.bssid, true);
+    WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);
+    while (WiFi.status() != WL_CONNECTED && millis() - start < WIFI_FAST_CONNECT_TIMEOUT_MS)
+        vTaskDelay(20 / portTICK_PERIOD_MS);
+
+    if (WiFi.status() == WL_CONNECTED)
+    {
+        int8_t rssi = WiFi.RSSI();
+        Serial.printf("[WIFI] fast connect OK in %lu ms, IP %s, RSSI %d\n",
+                      millis() - start, WiFi.localIP().toString().c_str(), (int)rssi);
+        apCache.fastWakes++;
+        if (rssi < WIFI_FAST_CONNECT_MIN_RSSI)
+        {
+            Serial.printf("[WIFI] cached AP is weak (%d < %d dBm), next wake will do a full connect\n",
+                          (int)rssi, WIFI_FAST_CONNECT_MIN_RSSI);
+            wifiForgetAP();
+        }
+        return true;
+    }
+
+    Serial.printf("[WIFI] fast connect failed after %lu ms, falling back to full connect\n", millis() - start);
+    wifiForgetAP();
+    WiFi.disconnect();
+    wifiPrepareFullConnect();
+    esp_wifi_set_storage(WIFI_STORAGE_FLASH);
+    return false;
 }
 
 void keepWiFiAlive(void *parameter)
@@ -220,6 +372,7 @@ void keepWiFiAlive(void *parameter)
         // flight, begin() is rejected by esp_wifi_set_config() with
         // ESP_ERR_WIFI_STATE and silently does nothing for the whole timeout.
         WiFi.disconnect();
+        wifiPrepareFullConnect(); // a mid-session drop may mean the cached AP is gone
         if (WiFi.begin() == WL_CONNECT_FAILED)
             Serial.println("[WIFI] begin() failed");
 
@@ -245,6 +398,7 @@ void keepWiFiAlive(void *parameter)
         }
 
         Serial.printf("[WIFI] Connected: %s BSSID: %s\n", WiFi.localIP().toString().c_str(), WiFi.BSSIDstr().c_str());
+        wifiRememberAP();
         printDebugStackSpace();
     }
 }
