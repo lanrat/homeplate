@@ -323,8 +323,8 @@ bool startWiFiManager(bool forcePortal)
     // full scan. Never when the portal was asked for.
     if (!forcePortal && wifiFastConnect())
         return true;
-    // Never hand WiFiManager a BSSID-locked config (see wifiUnpinAP).
-    wifiUnpinAP();
+    // Full connect: no BSSID lock, all-channel scan, strongest AP.
+    wifiPrepareFullConnect();
 
     WiFiManager wm;
 
