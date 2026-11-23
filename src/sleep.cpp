@@ -5,6 +5,8 @@
 #define TOUCHPAD_WAKE_MASK (int64_t(1) << GPIO_NUM_34)
 
 static unsigned long sleepTime;
+// Set on a timer wake until MQTT connects (see sleepTask / sleepOnMQTTConnected).
+static bool shortFloorPending = false;
 uint32_t sleepDuration = 0; // set from plateCfg at boot
 uint32_t sleepRefresh = 0;
 
@@ -94,6 +96,8 @@ static bool deadlinePassed(unsigned long deadline)
 
 void delaySleep(uint seconds)
 {
+    // Someone pressed a button or sent a command: keep the regular floor.
+    shortFloorPending = false;
     unsigned long now = millis();
     int32_t timeLeft = (int32_t)(sleepTime - now);
     // if the bumped time is farther in the future than our current sleep time
@@ -182,6 +186,22 @@ void checkSleep(void *parameter)
     }
 }
 
+// sleepOnMQTTConnected: on a timer wake, bring the sleep floor down to
+// SLEEP_TIMER_WAKE_TIMEOUT_SEC from now. Only the first connection counts, and
+// nothing changes once delaySleep() has been called.
+void sleepOnMQTTConnected()
+{
+    if (!shortFloorPending)
+        return;
+    shortFloorPending = false;
+    unsigned long target = millis() + (unsigned long)SLEEP_TIMER_WAKE_TIMEOUT_SEC * SECOND;
+    if ((int32_t)(sleepTime - target) > 0)
+    {
+        Serial.printf("[SLEEP] timer wake: sleep floor shortened to %u s after MQTT connect\n", (unsigned)SLEEP_TIMER_WAKE_TIMEOUT_SEC);
+        sleepTime = target;
+    }
+}
+
 void sleepTask()
 {
     // SLEEP_TIMEOUT_SEC is a floor on how long to stay up before deep-sleeping,
@@ -190,6 +210,20 @@ void sleepTask()
     // it fires 15 seconds after boot and immediately re-renders what the boot
     // activity just drew.
     uint32_t initialSec = plateCfg.alwaysOn ? (uint32_t)plateCfg.sleepMinutes * 60 : SLEEP_TIMEOUT_SEC;
+
+    // A timer wake has nobody in front of the screen. Its work holds wake
+    // locks (render, fetch, OTA) and the MQTT ACK wait, so the 15 s floor only
+    // matters for retained HA commands, which arrive right after the MQTT
+    // connection. Keep 15 s as the deadline until then (a slow or failed
+    // broker still gets its full window), and let sleepOnMQTTConnected()
+    // shorten it. Cold boots and button/touch wakes keep the full floor.
+    if (!plateCfg.alwaysOn && sleepBoot && esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER)
+    {
+        if (strlen(plateCfg.mqttHost) == 0)
+            initialSec = SLEEP_TIMER_WAKE_TIMEOUT_SEC;
+        else
+            shortFloorPending = true;
+    }
     sleepTime = ((unsigned long)initialSec * SECOND) + millis();
 
     xTaskCreate(

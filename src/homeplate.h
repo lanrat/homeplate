@@ -314,6 +314,7 @@ void startActivitiesTask();
 bool stopActivity();
 void sleepTask();
 void delaySleep(uint seconds);
+void sleepOnMQTTConnected();
 
 /*
  * Wake locks
@@ -387,6 +388,13 @@ private:
 
 // Sleep
 #define SLEEP_TIMEOUT_SEC 15
+// Floor for timer wakes, counted from the MQTT connection (or from boot when
+// MQTT is not configured). Nobody is in front of the screen on a timer wake,
+// so this only has to cover retained Home Assistant commands; in-flight work
+// is covered by wake locks and the MQTT ACK wait. See sleepTask().
+#ifndef SLEEP_TIMER_WAKE_TIMEOUT_SEC
+#define SLEEP_TIMER_WAKE_TIMEOUT_SEC 3
+#endif
 #define MAX_REFRESH_SEC 60*60*24 // 1 day
 // Shortest refresh cadence honored in always-on mode. Comfortably above
 // MIN_ACTIVITY_RESTART_SECS, whose debounce would otherwise silently drop the

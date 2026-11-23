@@ -1052,6 +1052,8 @@ void onMqttConnect(bool sessionPresent)
 {
   mqttFailed = false;
   Serial.println("[MQTT] Connected to MQTT.");
+  // Retained HA commands arrive from here on; start the timer-wake floor now.
+  sleepOnMQTTConnected();
   Serial.print("[MQTT] Session present: ");
   Serial.println(sessionPresent);
 
